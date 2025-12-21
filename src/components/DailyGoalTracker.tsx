@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isFuture, parseISO } from "date-fns";
 import { he } from "date-fns/locale";
 import { useDailyGoals } from "@/hooks/useDailyGoals";
+import { DailyGoalProgressChart } from "./DailyGoalProgressChart";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ const COLOR_OPTIONS = [
 export const DailyGoalTracker = () => {
   const {
     goals,
+    logs,
     isLoading,
     createGoal,
     updateGoal,
@@ -502,6 +504,9 @@ export const DailyGoalTracker = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Progress Chart */}
+          <DailyGoalProgressChart goals={activeGoals} logs={logs} />
 
           {/* Calendar */}
           <Card className="glass-card">
