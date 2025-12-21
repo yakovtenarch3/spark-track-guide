@@ -119,7 +119,7 @@ export const QuoteManagement = () => {
               הוסף משפט
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]">
+          <DialogContent className="sm:max-w-[525px]" dir="rtl">
             <DialogHeader>
               <DialogTitle>
                 {editingQuote ? "ערוך משפט מוטיבציה" : "הוסף משפט מוטיבציה חדש"}
@@ -245,7 +245,7 @@ export const QuoteManagement = () => {
       )}
 
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
             <AlertDialogDescription>

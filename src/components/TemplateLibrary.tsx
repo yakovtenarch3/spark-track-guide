@@ -101,7 +101,7 @@ export const TemplateLibrary = ({ onAddHabitFromTemplate }: TemplateLibraryProps
           ספריית תבניות
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center gap-2">
             <BookTemplate className="h-6 w-6" />

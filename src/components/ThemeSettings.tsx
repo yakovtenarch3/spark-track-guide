@@ -105,24 +105,22 @@ export const ThemeSettings = () => {
       </DropdownMenu>
 
       <AlertDialog open={!!themeToDelete} onOpenChange={() => setThemeToDelete(null)}>
-        <AlertDialogContent>
-          <div dir="rtl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>מחיקת ערכת נושא</AlertDialogTitle>
-              <AlertDialogDescription>
-                האם אתה בטוח שברצונך למחוק את ערכת הנושא "{themeToDelete}"? פעולה זו לא ניתנת לביטול.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>ביטול</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => themeToDelete && handleDeleteTheme(themeToDelete)}
-                className="bg-destructive hover:bg-destructive/90"
-              >
-                מחק
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </div>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת ערכת נושא</AlertDialogTitle>
+            <AlertDialogDescription>
+              האם אתה בטוח שברצונך למחוק את ערכת הנושא "{themeToDelete}"? פעולה זו לא ניתנת לביטול.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => themeToDelete && handleDeleteTheme(themeToDelete)}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              מחק
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

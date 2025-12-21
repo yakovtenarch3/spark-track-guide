@@ -80,7 +80,7 @@ const Install = () => {
 
   if (isInstalled) {
     return (
-      <div className="container mx-auto p-6 max-w-2xl">
+      <div className="container mx-auto p-6 max-w-2xl" dir="rtl">
         <Card className="border-primary/20">
           <CardHeader className="text-center">
             <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-primary" />
@@ -100,7 +100,7 @@ const Install = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="container mx-auto p-6 max-w-4xl" dir="rtl">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           התקן את האפליקציה
