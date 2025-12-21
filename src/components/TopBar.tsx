@@ -1,43 +1,54 @@
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Pin, PinOff } from "lucide-react";
+import { Pin, PinOff, Menu } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useSidebarPin } from "@/hooks/useSidebarPin";
 
 export const TopBar = () => {
-  const { toggleSidebar, setOpen } = useSidebar();
+  const { toggleSidebar, setOpen, open, isMobile } = useSidebar();
   const { pinned, togglePinned } = useSidebarPin();
   const location = useLocation();
 
   // Auto-hide after navigation when not pinned
   useEffect(() => {
-    if (!pinned) {
+    if (!pinned && !isMobile) {
       setOpen(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname, pinned]);
+  }, [location.pathname, pinned, isMobile]);
 
   return (
-    <header className="h-12 flex items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10" dir="rtl">
-      <div className="flex items-center gap-2 mr-2">
-        <SidebarTrigger className="mr-1" onClick={() => toggleSidebar()} />
+    <header className="h-14 flex items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50" dir="rtl">
+      <div className="flex items-center gap-2 mr-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => toggleSidebar()}
+          className="h-10 w-10"
+          aria-label="פתח תפריט"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <span className="font-semibold text-lg hidden sm:inline">מעקב הרגלים</span>
       </div>
-      <div className="flex items-center gap-2 ml-2">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={pinned ? "ביטול הצמדה" : "הצמד סיידבר"}
-              onClick={togglePinned}
-            >
-              {pinned ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{pinned ? "ביטול הצמדה (אוטוהייד)" : "הצמד סיידבר"}</TooltipContent>
-        </Tooltip>
+      <div className="flex items-center gap-2 ml-3">
+        {!isMobile && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={pinned ? "ביטול הצמדה" : "הצמד סיידבר"}
+                onClick={togglePinned}
+              >
+                {pinned ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{pinned ? "ביטול הצמדה (אוטוהייד)" : "הצמד סיידבר"}</TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </header>
   );

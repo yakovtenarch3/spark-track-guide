@@ -155,6 +155,107 @@ export const motivationalQuotes: MotivationalQuote[] = [
     author: "סטיב ג'ובס",
     category: "success",
   },
+  // 20 משפטים נוספים
+  {
+    text: "הדרך הטובה ביותר לחזות את העתיד היא ליצור אותו",
+    author: "אברהם לינקולן",
+    category: "action",
+  },
+  {
+    text: "כשאתה חושב שאתה לא יכול יותר - זו בדיוק הנקודה שבה אתה מתחיל להתקדם",
+    author: "אנונימי",
+    category: "strength",
+  },
+  {
+    text: "אל תתפשר על החלומות שלך. תתפשר על השינה",
+    author: "אנונימי",
+    category: "persistence",
+  },
+  {
+    text: "הכישלון הוא לא הסוף - זה רק התחלה עם יותר ניסיון",
+    author: "הנרי פורד",
+    category: "growth",
+  },
+  {
+    text: "אנשים מצליחים עושים מה שאנשים לא מצליחים לא מוכנים לעשות",
+    author: "ג'ים רון",
+    category: "success",
+  },
+  {
+    text: "הדבר היחיד שעומד בין מי שאתה למי שאתה רוצה להיות - זה הפעולה",
+    author: "אנונימי",
+    category: "action",
+  },
+  {
+    text: "אתה לא נכשל עד שאתה מפסיק לנסות",
+    author: "אלברט איינשטיין",
+    category: "persistence",
+  },
+  {
+    text: "גדולה היא מדידה של מאמץ, לא של תוצאה",
+    author: "וינס לומברדי",
+    category: "persistence",
+  },
+  {
+    text: "כל רגע הוא הזדמנות חדשה להתחיל מחדש",
+    author: "אנונימי",
+    category: "growth",
+  },
+  {
+    text: "הצעד הראשון לא צריך להיות מושלם, הוא צריך להיות ראשון",
+    author: "אנונימי",
+    category: "action",
+  },
+  {
+    text: "החיים לא קלים לאף אחד. אבל זה לא אומר שאתה צריך לוותר",
+    author: "מארי קירי",
+    category: "strength",
+  },
+  {
+    text: "תקווה היא לא אסטרטגיה. פעולה כן",
+    author: "אנונימי",
+    category: "action",
+  },
+  {
+    text: "התמדה מנצחת כישרון כשכישרון לא מתמיד",
+    author: "טים נוטקי",
+    category: "persistence",
+  },
+  {
+    text: "העתיד שייך למי שמאמין ביופי החלומות שלו",
+    author: "אלינור רוזוולט",
+    category: "success",
+  },
+  {
+    text: "אל תפחד לאבד. תפחד לא לנסות",
+    author: "מייקל ג'ורדן",
+    category: "action",
+  },
+  {
+    text: "כל מומחה היה פעם מתחיל",
+    author: "הלן הייז",
+    category: "growth",
+  },
+  {
+    text: "הצלחה היא ללכת מכישלון לכישלון בלי לאבד התלהבות",
+    author: "וינסטון צ'רצ'יל",
+    category: "persistence",
+  },
+  {
+    text: "אם אתה רוצה משהו שמעולם לא היה לך, עליך לעשות משהו שמעולם לא עשית",
+    author: "תומס ג'פרסון",
+    category: "action",
+  },
+  {
+    text: "הזמן הטוב ביותר לשתול עץ היה לפני 20 שנה. הזמן הטוב השני הוא עכשיו",
+    author: "פתגם סיני",
+    category: "action",
+  },
+  {
+    text: "אין קיצורי דרך להצלחה. יש רק דרך אחת - עבודה קשה",
+    author: "אנונימי",
+    category: "success",
+  },
 ];
 
 export const getRandomQuote = (): MotivationalQuote => {
