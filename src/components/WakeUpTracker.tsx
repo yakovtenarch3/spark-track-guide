@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { format, subDays, startOfDay, isSameDay, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isFuture, parseISO, differenceInDays } from "date-fns";
+import { WakeUpAnalytics } from "./WakeUpAnalytics";
 import { he } from "date-fns/locale";
 import { useWakeUpLogs } from "@/hooks/useWakeUpLogs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -372,6 +373,12 @@ export const WakeUpTracker = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Wake Up Analytics */}
+      <WakeUpAnalytics 
+        logs={logs} 
+        targetTime={logs[0]?.target_time || "06:00"} 
+      />
 
       {/* Falls History */}
       {fallsHistory.length > 0 && (
