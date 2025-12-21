@@ -71,7 +71,9 @@ import {
   Loader2,
   Sparkles,
   Clock,
+  Swords,
 } from "lucide-react";
+import { CompetitionMode } from "./CompetitionMode";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
@@ -137,6 +139,7 @@ export const DailyGoalTracker = () => {
   const [smartAlerts, setSmartAlerts] = useState<any[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isLoadingAlerts, setIsLoadingAlerts] = useState(false);
+  const [competitionOpen, setCompetitionOpen] = useState(false);
   
   // New goal form
   const [newTitle, setNewTitle] = useState("");
@@ -801,7 +804,26 @@ export const DailyGoalTracker = () => {
             </>
           )}
         </Button>
+        
+        {/* Competition Mode Button */}
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="shrink-0 h-8 w-8 sm:h-9 sm:w-9"
+          onClick={() => setCompetitionOpen(true)}
+          title="מצב תחרות"
+        >
+          <Swords className="w-4 h-4" />
+        </Button>
       </div>
+      
+      {/* Competition Mode Dialog */}
+      <CompetitionMode 
+        goals={goals}
+        logs={logs}
+        open={competitionOpen}
+        onOpenChange={setCompetitionOpen}
+      />
 
       {activeGoals.length === 0 ? (
         <Card className="glass-card">
