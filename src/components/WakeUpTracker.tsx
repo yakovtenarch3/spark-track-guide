@@ -35,7 +35,8 @@ import {
   MessageSquare,
   Bell,
   BellOff,
-  Settings
+  Settings,
+  Eraser
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -606,9 +607,43 @@ export const WakeUpTracker = () => {
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
+          {/* Action Buttons - Three Options */}
+          <div className="grid grid-cols-3 gap-2 py-4">
+            <Button
+              onClick={() => handleSaveWakeUp(true)}
+              className="flex-col h-auto py-4 bg-success hover:bg-success/90"
+              disabled={toggleWakeUp.isPending}
+            >
+              <Check className="w-6 h-6 mb-2" />
+              <span className="text-sm">הצלחתי</span>
+            </Button>
+            <Button
+              onClick={() => handleSaveWakeUp(false)}
+              variant="outline"
+              className="flex-col h-auto py-4 border-destructive/50 text-destructive hover:bg-destructive/10"
+              disabled={toggleWakeUp.isPending}
+            >
+              <X className="w-6 h-6 mb-2" />
+              <span className="text-sm">לא הצלחתי</span>
+            </Button>
+            <Button
+              onClick={handleClearMark}
+              variant="outline"
+              className="flex-col h-auto py-4 border-muted-foreground/30 text-muted-foreground hover:bg-muted/50"
+              disabled={toggleWakeUp.isPending || !selectedDate || !getLogForDate(selectedDate)}
+            >
+              <Eraser className="w-6 h-6 mb-2" />
+              <span className="text-sm">בטל סימון</span>
+            </Button>
+          </div>
+
+          {/* Details Section */}
+          <div className="space-y-4 border-t pt-4">
             <div className="space-y-2">
-              <Label htmlFor="actual-time">שעת קימה בפועל</Label>
+              <Label htmlFor="actual-time" className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                שעת קימה בפועל
+              </Label>
               <Input
                 id="actual-time"
                 type="time"
@@ -619,47 +654,18 @@ export const WakeUpTracker = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="notes">הערות (אופציונלי)</Label>
+              <Label htmlFor="notes" className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                הערות (אופציונלי)
+              </Label>
               <Textarea
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="איך היה הבוקר? מה עזר לך לקום?"
-                className="text-right"
+                className="text-right min-h-[80px]"
               />
             </div>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <div className="flex gap-3">
-              <Button
-                onClick={() => handleSaveWakeUp(true)}
-                className="flex-1 bg-success hover:bg-success/90"
-                disabled={toggleWakeUp.isPending}
-              >
-                <Check className="w-4 h-4 ml-2" />
-                קמתי!
-              </Button>
-              <Button
-                onClick={() => handleSaveWakeUp(false)}
-                variant="outline"
-                className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10"
-                disabled={toggleWakeUp.isPending}
-              >
-                <X className="w-4 h-4 ml-2" />
-                לא קמתי
-              </Button>
-            </div>
-            {selectedDate && getLogForDate(selectedDate) && (
-              <Button
-                onClick={handleClearMark}
-                variant="ghost"
-                className="w-full text-muted-foreground hover:text-foreground"
-                disabled={toggleWakeUp.isPending}
-              >
-                בטל סימון
-              </Button>
-            )}
           </div>
         </DialogContent>
       </Dialog>
