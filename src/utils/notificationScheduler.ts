@@ -32,15 +32,22 @@ const checkAndShowReminders = () => {
   const habitReminders = JSON.parse(localStorage.getItem('habitReminders') || '[]');
   // Check goal reminders
   const goalReminders = JSON.parse(localStorage.getItem('goalReminders') || '[]');
+  // Check wake-up reminder
+  const wakeUpReminder = JSON.parse(localStorage.getItem('wakeUpReminder') || 'null');
   
   const allReminders = [...habitReminders, ...goalReminders];
+  
+  // Add wake-up reminder if exists
+  if (wakeUpReminder) {
+    allReminders.push(wakeUpReminder);
+  }
 
   allReminders.forEach((reminder: any) => {
     if (reminder.hours === currentHours && reminder.minutes === currentMinutes) {
       // Get motivational quote
       const quote = getRandomQuote();
       const motivationalBody = `${reminder.body}\n\n💪 ${quote.text}\n- ${quote.author}`;
-      const icon = reminder.type === 'goal' ? '🎯' : '⏰';
+      const icon = reminder.type === 'wakeup' ? '🌅' : reminder.type === 'goal' ? '🎯' : '⏰';
       
       // Show notification
       if (Notification.permission === 'granted') {
