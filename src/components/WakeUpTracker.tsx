@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format, subDays, startOfDay, isSameDay, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isFuture } from "date-fns";
+import { format, subDays, startOfDay, isSameDay, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isFuture, parseISO, differenceInDays } from "date-fns";
 import { he } from "date-fns/locale";
 import { useWakeUpLogs } from "@/hooks/useWakeUpLogs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Sun, 
   Moon, 
@@ -23,7 +23,10 @@ import {
   Clock,
   TrendingUp,
   Target,
-  Sparkles
+  Sparkles,
+  AlertTriangle,
+  ArrowUp,
+  MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -96,6 +99,56 @@ export const WakeUpTracker = () => {
     if (!log) return "empty";
     return log.woke_up ? "success" : "failed";
   };
+
+  // Calculate falls and recoveries
+  const getFallsHistory = () => {
+    const sortedLogs = [...logs].sort(
+      (a, b) => new Date(b.wake_date).getTime() - new Date(a.wake_date).getTime()
+    );
+    
+    const falls: { date: string; streakBefore: number; recoveryDays: number | null; notes: string | null }[] = [];
+    
+    // Find days where woke_up = false
+    sortedLogs.forEach((log, index) => {
+      if (!log.woke_up) {
+        // Count streak before this fall
+        let streakBefore = 0;
+        const fallDate = parseISO(log.wake_date);
+        
+        for (let i = 1; i <= 365; i++) {
+          const checkDate = format(subDays(fallDate, i), "yyyy-MM-dd");
+          const prevLog = sortedLogs.find(l => l.wake_date === checkDate);
+          if (prevLog?.woke_up) {
+            streakBefore++;
+          } else {
+            break;
+          }
+        }
+        
+        // Find recovery - next success after this fall
+        let recoveryDays: number | null = null;
+        for (let i = 1; i <= 30; i++) {
+          const checkDate = format(addDays(fallDate, i), "yyyy-MM-dd");
+          const nextLog = sortedLogs.find(l => l.wake_date === checkDate);
+          if (nextLog?.woke_up) {
+            recoveryDays = i;
+            break;
+          }
+        }
+        
+        falls.push({
+          date: log.wake_date,
+          streakBefore,
+          recoveryDays,
+          notes: log.notes
+        });
+      }
+    });
+    
+    return falls.slice(0, 10); // Last 10 falls
+  };
+
+  const fallsHistory = getFallsHistory();
 
   if (isLoading) {
     return (
@@ -228,54 +281,75 @@ export const WakeUpTracker = () => {
           </div>
 
           {/* Calendar grid */}
-          <div className="grid grid-cols-7 gap-2">
-            {paddedDays.map((day, index) => {
-              if (!day) {
-                return <div key={`empty-${index}`} className="aspect-square" />;
-              }
+          <TooltipProvider>
+            <div className="grid grid-cols-7 gap-2">
+              {paddedDays.map((day, index) => {
+                if (!day) {
+                  return <div key={`empty-${index}`} className="aspect-square" />;
+                }
 
-              const status = getDayStatus(day);
-              const log = getLogForDate(day);
-              const isCurrentDay = isToday(day);
-              const isFutureDay = isFuture(day);
+                const status = getDayStatus(day);
+                const log = getLogForDate(day);
+                const isCurrentDay = isToday(day);
+                const isFutureDay = isFuture(day);
+                const hasNotes = log?.notes && log.notes.length > 0;
 
-              return (
-                <button
-                  key={day.toISOString()}
-                  onClick={() => handleDayClick(day)}
-                  disabled={isFutureDay}
-                  className={cn(
-                    "aspect-square rounded-xl p-2 flex flex-col items-center justify-center transition-all border relative",
-                    "hover:scale-105 hover:shadow-md",
-                    isCurrentDay && "ring-2 ring-primary shadow-lg",
-                    isFutureDay && "opacity-40 cursor-not-allowed",
-                    status === "success" && "bg-success/20 border-success/40 hover:bg-success/30",
-                    status === "failed" && "bg-destructive/20 border-destructive/40 hover:bg-destructive/30",
-                    status === "empty" && !isFutureDay && "bg-muted/30 border-muted/40 hover:bg-muted/50"
-                  )}
-                >
-                  <span className={cn(
-                    "text-sm font-semibold",
-                    status === "success" && "text-success",
-                    status === "failed" && "text-destructive"
-                  )}>
-                    {format(day, "d")}
-                  </span>
-                  {status === "success" && (
-                    <Check className="w-4 h-4 text-success mt-1" />
-                  )}
-                  {status === "failed" && (
-                    <X className="w-4 h-4 text-destructive mt-1" />
-                  )}
-                  {log?.actual_time && (
-                    <span className="text-[10px] text-muted-foreground mt-0.5">
-                      {log.actual_time.slice(0, 5)}
+                const dayButton = (
+                  <button
+                    key={day.toISOString()}
+                    onClick={() => handleDayClick(day)}
+                    disabled={isFutureDay}
+                    className={cn(
+                      "aspect-square rounded-xl p-2 flex flex-col items-center justify-center transition-all border relative",
+                      "hover:scale-105 hover:shadow-md",
+                      isCurrentDay && "ring-2 ring-primary shadow-lg",
+                      isFutureDay && "opacity-40 cursor-not-allowed",
+                      status === "success" && "bg-success/20 border-success/40 hover:bg-success/30",
+                      status === "failed" && "bg-destructive/20 border-destructive/40 hover:bg-destructive/30",
+                      status === "empty" && !isFutureDay && "bg-muted/30 border-muted/40 hover:bg-muted/50"
+                    )}
+                  >
+                    <span className={cn(
+                      "text-sm font-semibold",
+                      status === "success" && "text-success",
+                      status === "failed" && "text-destructive"
+                    )}>
+                      {format(day, "d")}
                     </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                    {status === "success" && (
+                      <Check className="w-4 h-4 text-success mt-1" />
+                    )}
+                    {status === "failed" && (
+                      <X className="w-4 h-4 text-destructive mt-1" />
+                    )}
+                    {log?.actual_time && (
+                      <span className="text-[10px] text-muted-foreground mt-0.5">
+                        {log.actual_time.slice(0, 5)}
+                      </span>
+                    )}
+                    {hasNotes && (
+                      <MessageSquare className="w-3 h-3 text-info absolute top-1 left-1" />
+                    )}
+                  </button>
+                );
+
+                if (hasNotes) {
+                  return (
+                    <Tooltip key={day.toISOString()}>
+                      <TooltipTrigger asChild>
+                        {dayButton}
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[200px] text-right">
+                        <p className="text-sm">{log.notes}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
+
+                return dayButton;
+              })}
+            </div>
+          </TooltipProvider>
 
           {/* Legend */}
           <div className="flex flex-wrap items-center gap-4 pt-6 border-t mt-6 text-sm">
@@ -298,6 +372,55 @@ export const WakeUpTracker = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Falls History */}
+      {fallsHistory.length > 0 && (
+        <Card className="glass-card">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-warning" />
+              <CardTitle className="text-lg">היסטוריית נפילות והתאוששות</CardTitle>
+            </div>
+            <CardDescription>כמה זמן החזקת מעמד ואיך התאוששת</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {fallsHistory.map((fall, index) => (
+                <div 
+                  key={fall.date} 
+                  className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-muted/50"
+                >
+                  <div className="flex-shrink-0 p-2 bg-destructive/20 rounded-lg">
+                    <X className="w-4 h-4 text-destructive" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">
+                        {format(parseISO(fall.date), "d בMMMM yyyy", { locale: he })}
+                      </span>
+                      {fall.streakBefore > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          <Flame className="w-3 h-3 ml-1" />
+                          {fall.streakBefore} ימים לפני הנפילה
+                        </Badge>
+                      )}
+                    </div>
+                    {fall.notes && (
+                      <p className="text-sm text-muted-foreground">{fall.notes}</p>
+                    )}
+                    {fall.recoveryDays !== null && (
+                      <div className="flex items-center gap-1 text-sm text-success">
+                        <ArrowUp className="w-3 h-3" />
+                        קם אחרי {fall.recoveryDays === 1 ? "יום אחד" : `${fall.recoveryDays} ימים`}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Day Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
