@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isFuture, parseISO } from "date-fns";
 import { he } from "date-fns/locale";
 import { useDailyGoals } from "@/hooks/useDailyGoals";
+import { useNotifications } from "@/hooks/useNotifications";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,6 +34,8 @@ import {
   Coffee,
   Pencil,
   Trash2,
+  Bell,
+  BellOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +71,8 @@ export const DailyGoalTracker = () => {
     getMonthlyStats,
     getFallsHistory,
   } = useDailyGoals();
+  
+  const { scheduleNotification, cancelNotification, permission, requestPermission } = useNotifications();
 
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -81,9 +87,45 @@ export const DailyGoalTracker = () => {
   const [newDescription, setNewDescription] = useState("");
   const [newColor, setNewColor] = useState("#8B5CF6");
   const [newIcon, setNewIcon] = useState("target");
+  const [newReminderEnabled, setNewReminderEnabled] = useState(false);
+  const [newReminderTime, setNewReminderTime] = useState("20:00");
+  
+  // Edit form
+  const [editReminderEnabled, setEditReminderEnabled] = useState(false);
+  const [editReminderTime, setEditReminderTime] = useState("20:00");
 
   const activeGoals = goals.filter((g) => g.is_active);
   const selectedGoal = activeGoals.find((g) => g.id === selectedGoalId) || activeGoals[0];
+
+  // Sync edit form with selected goal
+  useEffect(() => {
+    if (selectedGoal) {
+      setEditReminderEnabled(selectedGoal.reminder_enabled);
+      setEditReminderTime(selectedGoal.reminder_time?.slice(0, 5) || "20:00");
+    }
+  }, [selectedGoal?.id, selectedGoal?.reminder_enabled, selectedGoal?.reminder_time]);
+
+  // Sync all goal reminders to localStorage on load
+  useEffect(() => {
+    const goalsWithReminders = goals.filter(g => g.reminder_enabled && g.reminder_time);
+    goalsWithReminders.forEach(goal => {
+      const reminders = JSON.parse(localStorage.getItem("goalReminders") || "[]");
+      const [hours, minutes] = goal.reminder_time!.slice(0, 5).split(":");
+      const exists = reminders.some((r: any) => r.habitId === goal.id);
+      if (!exists) {
+        reminders.push({
+          habitId: goal.id,
+          title: goal.title,
+          body: `הגיע הזמן לעבוד על היעד: ${goal.title}`,
+          time: goal.reminder_time!.slice(0, 5),
+          hours: parseInt(hours),
+          minutes: parseInt(minutes),
+          type: "goal",
+        });
+        localStorage.setItem("goalReminders", JSON.stringify(reminders));
+      }
+    });
+  }, [goals]);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -112,18 +154,24 @@ export const DailyGoalTracker = () => {
     setNotes("");
   };
 
-  const handleCreateGoal = () => {
+  const handleCreateGoal = async () => {
     if (!newTitle.trim()) return;
+    
     createGoal.mutate({
       title: newTitle,
       description: newDescription || undefined,
       color: newColor,
       icon: newIcon,
+      reminderEnabled: newReminderEnabled,
+      reminderTime: newReminderEnabled ? newReminderTime : undefined,
     });
+    
     setNewTitle("");
     setNewDescription("");
     setNewColor("#8B5CF6");
     setNewIcon("target");
+    setNewReminderEnabled(false);
+    setNewReminderTime("20:00");
     setAddGoalOpen(false);
   };
 
@@ -260,6 +308,31 @@ export const DailyGoalTracker = () => {
                   </Select>
                 </div>
               </div>
+              
+              {/* Reminder settings */}
+              <div className="space-y-3 p-3 rounded-lg bg-muted/30 border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-muted-foreground" />
+                    <Label>תזכורת יומית</Label>
+                  </div>
+                  <Switch
+                    checked={newReminderEnabled}
+                    onCheckedChange={setNewReminderEnabled}
+                  />
+                </div>
+                {newReminderEnabled && (
+                  <div className="space-y-2">
+                    <Label>שעת תזכורת</Label>
+                    <Input
+                      type="time"
+                      value={newReminderTime}
+                      onChange={(e) => setNewReminderTime(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+              
               <Button onClick={handleCreateGoal} className="w-full" disabled={!newTitle.trim()}>
                 צור יעד
               </Button>
@@ -279,6 +352,66 @@ export const DailyGoalTracker = () => {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <p className="text-muted-foreground">יעד: {selectedGoal.title}</p>
+                
+                {/* Reminder settings */}
+                <div className="space-y-3 p-3 rounded-lg bg-muted/30 border">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {editReminderEnabled ? (
+                        <Bell className="w-4 h-4 text-primary" />
+                      ) : (
+                        <BellOff className="w-4 h-4 text-muted-foreground" />
+                      )}
+                      <Label>תזכורת יומית</Label>
+                    </div>
+                    <Switch
+                      checked={editReminderEnabled}
+                      onCheckedChange={(checked) => {
+                        setEditReminderEnabled(checked);
+                        if (checked) {
+                          scheduleNotification(
+                            selectedGoal.title,
+                            `הגיע הזמן לעבוד על היעד: ${selectedGoal.title}`,
+                            editReminderTime,
+                            selectedGoal.id,
+                            "goal"
+                          );
+                        } else {
+                          cancelNotification(selectedGoal.id, "goal");
+                        }
+                        updateGoal.mutate({
+                          id: selectedGoal.id,
+                          reminder_enabled: checked,
+                          reminder_time: checked ? editReminderTime : null,
+                        });
+                      }}
+                    />
+                  </div>
+                  {editReminderEnabled && (
+                    <div className="space-y-2">
+                      <Label>שעת תזכורת</Label>
+                      <Input
+                        type="time"
+                        value={editReminderTime}
+                        onChange={(e) => {
+                          setEditReminderTime(e.target.value);
+                          scheduleNotification(
+                            selectedGoal.title,
+                            `הגיע הזמן לעבוד על היעד: ${selectedGoal.title}`,
+                            e.target.value,
+                            selectedGoal.id,
+                            "goal"
+                          );
+                          updateGoal.mutate({
+                            id: selectedGoal.id,
+                            reminder_time: e.target.value,
+                          });
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+                
                 <Button
                   variant="destructive"
                   className="w-full"
