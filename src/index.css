@@ -156,6 +156,12 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    text-align: right;
+  }
+  
+  /* RTL text alignment for common elements */
+  input, textarea, select {
+    text-align: right;
   }
   
   .glass-card {

@@ -139,7 +139,7 @@ export const GoalsTracking = () => {
               יעד חדש
             </Button>
           </DialogTrigger>
-          <DialogContent className="glass-card">
+          <DialogContent className="glass-card" dir="rtl">
             <DialogHeader>
               <DialogTitle>הוספת יעד חדש</DialogTitle>
             </DialogHeader>

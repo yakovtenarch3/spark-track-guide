@@ -256,7 +256,7 @@ export const AlarmManager = () => {
                   <span className="hidden sm:inline">הוסף שעון</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" dir="rtl">
                 <DialogHeader>
                   <DialogTitle>
                     {editingAlarm ? "ערוך שעון מעורר" : "שעון מעורר חדש"}
@@ -517,7 +517,7 @@ export const AlarmManager = () => {
         open={!!deleteConfirmId}
         onOpenChange={() => setDeleteConfirmId(null)}
       >
-        <AlertDialogContent>
+        <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle>מחיקת שעון מעורר</AlertDialogTitle>
             <AlertDialogDescription>
