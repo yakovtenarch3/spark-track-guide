@@ -19,8 +19,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Edit, Trash2, Sparkles } from "lucide-react";
+import { Plus, Edit, Trash2, Sparkles, Star } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
@@ -33,9 +43,10 @@ const categories = [
 ];
 
 export const QuoteManagement = () => {
-  const { quotes, isLoading, addQuote, updateQuote, deleteQuote } = useCustomQuotes();
+  const { quotes, isLoading, addQuote, updateQuote, deleteQuote, toggleFavorite, isUpdating } = useCustomQuotes();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingQuote, setEditingQuote] = useState<any>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     text: "",
@@ -48,12 +59,14 @@ export const QuoteManagement = () => {
     if (editingQuote) {
       updateQuote({
         id: editingQuote.id,
-        ...formData,
+        text: formData.text,
+        author: formData.author,
+        category: formData.category,
       });
-      setEditingQuote(null);
     } else {
       addQuote(formData);
     }
+    setEditingQuote(null);
     setFormData({ text: "", author: "", category: "success" });
     setIsAddDialogOpen(false);
   };
@@ -72,18 +85,31 @@ export const QuoteManagement = () => {
     updateQuote({ id, is_active: !currentActive });
   };
 
+  const handleDeleteConfirm = () => {
+    if (deleteConfirmId) {
+      deleteQuote(deleteConfirmId);
+      setDeleteConfirmId(null);
+    }
+  };
+
   if (isLoading) {
     return <div className="text-center py-8">טוען...</div>;
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-semibold">משפטי מוטיבציה מותאמים אישית</h3>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+          setIsAddDialogOpen(open);
+          if (!open) {
+            setEditingQuote(null);
+            setFormData({ text: "", author: "", category: "success" });
+          }
+        }}>
           <DialogTrigger asChild>
             <Button onClick={() => {
               setEditingQuote(null);
@@ -143,7 +169,7 @@ export const QuoteManagement = () => {
                 </Select>
               </div>
               <DialogFooter>
-                <Button type="submit">
+                <Button type="submit" disabled={isUpdating}>
                   {editingQuote ? "עדכן" : "הוסף"}
                 </Button>
               </DialogFooter>
@@ -163,27 +189,36 @@ export const QuoteManagement = () => {
       ) : (
         <div className="space-y-3">
           {quotes.map((quote) => (
-            <Card key={quote.id} className="transition-all hover:shadow-md">
+            <Card key={quote.id} className={`transition-all hover:shadow-md ${quote.is_favorite ? 'ring-2 ring-yellow-400/50 bg-yellow-50/10' : ''}`}>
               <CardContent className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="flex-1 space-y-2">
-                    <blockquote className="text-base font-medium">
+                <div className="flex items-start gap-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 mt-1"
+                    onClick={() => toggleFavorite(quote.id, quote.is_favorite)}
+                    aria-label={quote.is_favorite ? "הסר ממועדפים" : "הוסף למועדפים"}
+                  >
+                    <Star className={`w-5 h-5 ${quote.is_favorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
+                  </Button>
+                  <div className="flex-1 space-y-2 min-w-0">
+                    <blockquote className="text-base font-medium break-words">
                       "{quote.text}"
                     </blockquote>
                     <p className="text-sm text-muted-foreground">— {quote.author}</p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
                         {categories.find((c) => c.value === quote.category)?.label}
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 shrink-0">
                     <div className="flex items-center gap-2">
                       <Switch
                         checked={quote.is_active}
                         onCheckedChange={() => handleToggleActive(quote.id, quote.is_active)}
                       />
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
                         {quote.is_active ? "פעיל" : "לא פעיל"}
                       </span>
                     </div>
@@ -197,7 +232,7 @@ export const QuoteManagement = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => deleteQuote(quote.id)}
+                      onClick={() => setDeleteConfirmId(quote.id)}
                     >
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
@@ -208,6 +243,23 @@ export const QuoteManagement = () => {
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
+            <AlertDialogDescription>
+              פעולה זו תמחק את המשפט לצמיתות. לא ניתן לבטל פעולה זו.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              מחק
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
