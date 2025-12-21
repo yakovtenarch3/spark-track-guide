@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, subDays, startOfDay, isSameDay, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isFuture, parseISO, differenceInDays } from "date-fns";
 import { WakeUpAnalytics } from "./WakeUpAnalytics";
 import { he } from "date-fns/locale";
 import { useWakeUpLogs } from "@/hooks/useWakeUpLogs";
+import { useNotifications } from "@/hooks/useNotifications";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 import { 
   Sun, 
   Moon, 
@@ -27,7 +30,10 @@ import {
   Sparkles,
   AlertTriangle,
   ArrowUp,
-  MessageSquare
+  MessageSquare,
+  Bell,
+  BellOff,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,11 +48,65 @@ export const WakeUpTracker = () => {
     monthlyStats 
   } = useWakeUpLogs();
   
+  const { permission, requestPermission } = useNotifications();
+  
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [actualTime, setActualTime] = useState("");
   const [notes, setNotes] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  
+  // Wake-up settings
+  const [targetTime, setTargetTime] = useState(() => {
+    return localStorage.getItem("wakeUpTargetTime") || "06:00";
+  });
+  const [reminderEnabled, setReminderEnabled] = useState(() => {
+    return localStorage.getItem("wakeUpReminderEnabled") === "true";
+  });
+  const [reminderMinutesBefore, setReminderMinutesBefore] = useState(() => {
+    return parseInt(localStorage.getItem("wakeUpReminderMinutes") || "15");
+  });
+
+  // Save wake-up reminder to localStorage
+  useEffect(() => {
+    localStorage.setItem("wakeUpTargetTime", targetTime);
+    localStorage.setItem("wakeUpReminderEnabled", String(reminderEnabled));
+    localStorage.setItem("wakeUpReminderMinutes", String(reminderMinutesBefore));
+    
+    if (reminderEnabled && targetTime) {
+      // Calculate reminder time (before target)
+      const [hours, minutes] = targetTime.split(":").map(Number);
+      let reminderMinutes = hours * 60 + minutes - reminderMinutesBefore;
+      if (reminderMinutes < 0) reminderMinutes += 24 * 60;
+      
+      const reminderHours = Math.floor(reminderMinutes / 60);
+      const reminderMins = reminderMinutes % 60;
+      
+      const reminder = {
+        id: "wakeup",
+        title: "הגיע זמן לקום!",
+        body: `עוד ${reminderMinutesBefore} דקות ליעד הקימה שלך (${targetTime})`,
+        time: `${reminderHours.toString().padStart(2, "0")}:${reminderMins.toString().padStart(2, "0")}`,
+        hours: reminderHours,
+        minutes: reminderMins,
+        type: "wakeup",
+      };
+      
+      localStorage.setItem("wakeUpReminder", JSON.stringify(reminder));
+    } else {
+      localStorage.removeItem("wakeUpReminder");
+    }
+  }, [reminderEnabled, targetTime, reminderMinutesBefore]);
+
+  const handleEnableReminder = async () => {
+    if (permission !== "granted") {
+      const granted = await requestPermission();
+      if (!granted) return;
+    }
+    setReminderEnabled(true);
+    toast.success("התזכורת לקימה הופעלה!");
+  };
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -161,6 +221,87 @@ export const WakeUpTracker = () => {
 
   return (
     <div className="space-y-6">
+      {/* Settings Card */}
+      <Card className="glass-card border-primary/20">
+        <CardContent className="py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/20 rounded-xl">
+                <Target className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium">שעת יעד לקימה</p>
+                <p className="text-sm text-muted-foreground">הגדר את השעה שבה אתה רוצה לקום</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="time"
+                  value={targetTime}
+                  onChange={(e) => setTargetTime(e.target.value)}
+                  className="w-28"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2 border-r pr-4">
+                {reminderEnabled ? (
+                  <Bell className="w-4 h-4 text-success" />
+                ) : (
+                  <BellOff className="w-4 h-4 text-muted-foreground" />
+                )}
+                <Switch
+                  checked={reminderEnabled}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      handleEnableReminder();
+                    } else {
+                      setReminderEnabled(false);
+                      toast.info("התזכורת לקימה בוטלה");
+                    }
+                  }}
+                />
+              </div>
+              
+              {reminderEnabled && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm whitespace-nowrap">דקות לפני:</Label>
+                  <select
+                    value={reminderMinutesBefore}
+                    onChange={(e) => setReminderMinutesBefore(Number(e.target.value))}
+                    className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={15}>15</option>
+                    <option value={30}>30</option>
+                    <option value={45}>45</option>
+                    <option value={60}>60</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {reminderEnabled && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground border-t pt-3">
+              <Clock className="w-4 h-4" />
+              <span>
+                תזכורת תישלח בשעה{" "}
+                {(() => {
+                  const [h, m] = targetTime.split(":").map(Number);
+                  let mins = h * 60 + m - reminderMinutesBefore;
+                  if (mins < 0) mins += 24 * 60;
+                  return `${Math.floor(mins / 60).toString().padStart(2, "0")}:${(mins % 60).toString().padStart(2, "0")}`;
+                })()}
+                {" "}(לפני היעד)
+              </span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="glass-card border-success/20 bg-success/5">
