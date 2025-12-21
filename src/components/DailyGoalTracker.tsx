@@ -130,9 +130,12 @@ export const DailyGoalTracker = () => {
   const [addGoalOpen, setAddGoalOpen] = useState(false);
   const [editGoalOpen, setEditGoalOpen] = useState(false);
   const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [smartAlertsOpen, setSmartAlertsOpen] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [aiStats, setAiStats] = useState<any>(null);
+  const [smartAlerts, setSmartAlerts] = useState<any[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isLoadingAlerts, setIsLoadingAlerts] = useState(false);
   
   // New goal form
   const [newTitle, setNewTitle] = useState("");
@@ -296,6 +299,43 @@ export const DailyGoalTracker = () => {
     }
   };
 
+  const handleGetSmartAlerts = async () => {
+    setIsLoadingAlerts(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("smart-reminders", {
+        body: {},
+      });
+
+      if (error) {
+        if (error.message?.includes("RATE_LIMIT") || error.message?.includes("429")) {
+          toast.error("המערכת עמוסה כרגע. אנא נסה שוב בעוד מספר דקות.");
+        } else if (error.message?.includes("PAYMENT_REQUIRED") || error.message?.includes("402")) {
+          toast.error("נגמרו הקרדיטים. הוסף קרדיטים בהגדרות.");
+        } else {
+          toast.error("שגיאה בטעינת התזכורות");
+        }
+        throw error;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      setSmartAlerts(data.alerts || []);
+      setSmartAlertsOpen(true);
+      
+      if (data.alerts?.length > 0) {
+        toast.warning(`יש ${data.alerts.length} התראות חכמות!`);
+      } else {
+        toast.success(data.message || "אין התראות - מעולה!");
+      }
+    } catch (error) {
+      console.error("Error getting smart reminders:", error);
+    } finally {
+      setIsLoadingAlerts(false);
+    }
+  };
 
   const handleCreateGoal = async () => {
     if (!newTitle.trim()) return;
@@ -728,6 +768,7 @@ export const DailyGoalTracker = () => {
             className="shrink-0 h-8 w-8 sm:h-9 sm:w-9"
             onClick={handleAnalyze}
             disabled={isAnalyzing}
+            title="ניתוח AI"
           >
             {isAnalyzing ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -736,6 +777,29 @@ export const DailyGoalTracker = () => {
             )}
           </Button>
         )}
+        
+        {/* Smart Alerts Button */}
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 relative"
+          onClick={handleGetSmartAlerts}
+          disabled={isLoadingAlerts}
+          title="תזכורות חכמות"
+        >
+          {isLoadingAlerts ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <>
+              <AlertTriangle className="w-4 h-4" />
+              {smartAlerts.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center">
+                  {smartAlerts.length}
+                </span>
+              )}
+            </>
+          )}
+        </Button>
       </div>
 
       {activeGoals.length === 0 ? (
@@ -1252,6 +1316,81 @@ export const DailyGoalTracker = () => {
                 <div className="whitespace-pre-wrap text-foreground leading-relaxed">
                   {aiAnalysis}
                 </div>
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Smart Alerts Dialog */}
+      <Dialog open={smartAlertsOpen} onOpenChange={setSmartAlertsOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-warning" />
+              תזכורות חכמות
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[60vh] pr-4">
+            {smartAlerts.length === 0 ? (
+              <div className="text-center py-8">
+                <Check className="w-12 h-12 mx-auto text-success mb-4" />
+                <p className="text-lg font-medium">הכל בסדר! 💪</p>
+                <p className="text-muted-foreground">אין התראות מיוחדות כרגע</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {smartAlerts.map((alert, index) => (
+                  <Card 
+                    key={index} 
+                    className={cn(
+                      "border-r-4",
+                      alert.riskLevel === "high" 
+                        ? "border-r-destructive bg-destructive/5" 
+                        : "border-r-warning bg-warning/5"
+                    )}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={cn(
+                          "p-2 rounded-full shrink-0",
+                          alert.riskLevel === "high" 
+                            ? "bg-destructive/20" 
+                            : "bg-warning/20"
+                        )}>
+                          <AlertTriangle className={cn(
+                            "w-4 h-4",
+                            alert.riskLevel === "high" 
+                              ? "text-destructive" 
+                              : "text-warning"
+                          )} />
+                        </div>
+                        <div className="flex-1 space-y-2">
+                          <p className="text-sm leading-relaxed">{alert.message}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {alert.currentStreak > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                <Flame className="w-3 h-3 ml-1" />
+                                רצף: {alert.currentStreak} ימים
+                              </Badge>
+                            )}
+                            {alert.isWeakDay && (
+                              <Badge variant="outline" className="text-xs border-warning/50 text-warning">
+                                יום חלש
+                              </Badge>
+                            )}
+                            {alert.isNearDangerZone && (
+                              <Badge variant="outline" className="text-xs border-destructive/50 text-destructive">
+                                אזור סכנה
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </ScrollArea>
