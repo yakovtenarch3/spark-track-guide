@@ -98,6 +98,71 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_goal_logs: {
+        Row: {
+          created_at: string
+          goal_id: string
+          id: string
+          log_date: string
+          notes: string | null
+          succeeded: boolean
+        }
+        Insert: {
+          created_at?: string
+          goal_id: string
+          id?: string
+          log_date: string
+          notes?: string | null
+          succeeded?: boolean
+        }
+        Update: {
+          created_at?: string
+          goal_id?: string
+          id?: string
+          log_date?: string
+          notes?: string | null
+          succeeded?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_goal_logs_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "daily_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_goals: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          icon: string
+          id: string
+          is_active: boolean
+          title: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean
+          title: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean
+          title?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           category: string | null
