@@ -155,6 +155,24 @@ export const useDailyGoals = () => {
     },
   });
 
+  // Delete a log (clear mark)
+  const deleteLog = useMutation({
+    mutationFn: async (logId: string) => {
+      const { error } = await supabase
+        .from("daily_goal_logs")
+        .delete()
+        .eq("id", logId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["daily-goal-logs"] });
+      toast.success("הסימון בוטל!");
+    },
+    onError: () => {
+      toast.error("שגיאה בביטול הסימון");
+    },
+  });
+
   // Get log for specific date and goal
   const getLogForDate = (goalId: string, date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
@@ -295,6 +313,7 @@ export const useDailyGoals = () => {
     createGoal,
     updateGoal,
     deleteGoal,
+    deleteLog,
     toggleDayLog,
     getLogForDate,
     calculateStreak,

@@ -63,6 +63,7 @@ import {
   Calendar,
   CalendarDays,
   CalendarRange,
+  Eraser,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -101,6 +102,7 @@ export const DailyGoalTracker = () => {
     createGoal,
     updateGoal,
     deleteGoal,
+    deleteLog,
     toggleDayLog,
     getLogForDate,
     calculateStreak,
@@ -226,6 +228,16 @@ export const DailyGoalTracker = () => {
     });
     setDialogOpen(false);
     setNotes("");
+  };
+
+  const handleClearLog = () => {
+    if (!selectedDate || !selectedGoal) return;
+    const log = getLogForDate(selectedGoal.id, selectedDate);
+    if (log) {
+      deleteLog.mutate(log.id);
+      setDialogOpen(false);
+      setNotes("");
+    }
   };
 
   const handleCreateGoal = async () => {
@@ -1027,37 +1039,51 @@ export const DailyGoalTracker = () => {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          {/* Action Buttons - Three Options */}
+          <div className="grid grid-cols-3 gap-2 py-4">
+            <Button
+              onClick={() => handleSaveLog(true)}
+              className="flex-col h-auto py-4 bg-success hover:bg-success/90"
+              disabled={toggleDayLog.isPending || deleteLog.isPending}
+            >
+              <Check className="w-6 h-6 mb-2" />
+              <span className="text-sm">הצלחתי</span>
+            </Button>
+            <Button
+              onClick={() => handleSaveLog(false)}
+              variant="outline"
+              className="flex-col h-auto py-4 border-destructive/50 text-destructive hover:bg-destructive/10"
+              disabled={toggleDayLog.isPending || deleteLog.isPending}
+            >
+              <X className="w-6 h-6 mb-2" />
+              <span className="text-sm">לא הצלחתי</span>
+            </Button>
+            <Button
+              onClick={handleClearLog}
+              variant="outline"
+              className="flex-col h-auto py-4 border-muted-foreground/30 text-muted-foreground hover:bg-muted/50"
+              disabled={toggleDayLog.isPending || deleteLog.isPending || !selectedDate || !selectedGoal || !getLogForDate(selectedGoal.id, selectedDate)}
+            >
+              <Eraser className="w-6 h-6 mb-2" />
+              <span className="text-sm">בטל סימון</span>
+            </Button>
+          </div>
+
+          {/* Notes Section */}
+          <div className="space-y-4 border-t pt-4">
             <div className="space-y-2">
-              <Label htmlFor="notes">הערות (אופציונלי)</Label>
+              <Label htmlFor="notes" className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                הערות (אופציונלי)
+              </Label>
               <Textarea
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="מה קרה? איך הרגשת?"
-                className="text-right"
+                className="text-right min-h-[80px]"
               />
             </div>
-          </div>
-
-          <div className="flex gap-3">
-            <Button
-              onClick={() => handleSaveLog(true)}
-              className="flex-1 bg-success hover:bg-success/90"
-              disabled={toggleDayLog.isPending}
-            >
-              <Check className="w-4 h-4 ml-2" />
-              הצלחתי!
-            </Button>
-            <Button
-              onClick={() => handleSaveLog(false)}
-              variant="outline"
-              className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10"
-              disabled={toggleDayLog.isPending}
-            >
-              <X className="w-4 h-4 ml-2" />
-              לא הצלחתי
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
