@@ -8,6 +8,7 @@ import { TopBar } from "@/components/TopBar";
 import Index from "./pages/Index";
 import Habits from "./pages/Habits";
 import WakeUp from "./pages/WakeUp";
+import DailyGoals from "./pages/DailyGoals";
 import Achievements from "./pages/Achievements";
 import Archive from "./pages/Archive";
 import Settings from "./pages/Settings";
@@ -31,6 +32,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/habits" element={<Habits />} />
                 <Route path="/wake-up" element={<WakeUp />} />
+                <Route path="/daily-goals" element={<DailyGoals />} />
                 <Route path="/achievements" element={<Achievements />} />
                 <Route path="/archive" element={<Archive />} />
                 <Route path="/settings" element={<Settings />} />

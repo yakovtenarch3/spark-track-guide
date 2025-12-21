@@ -1,4 +1,4 @@
-import { Home, Target, Trophy, Archive, Settings, Sun } from "lucide-react";
+import { Home, Target, Trophy, Archive, Settings, Sun, ListChecks } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { useSidebarPin } from "@/hooks/useSidebarPin";
@@ -14,6 +14,10 @@ const items = [{
   title: "קימה בבוקר",
   url: "/wake-up",
   icon: Sun
+}, {
+  title: "יעדים יומיים",
+  url: "/daily-goals",
+  icon: ListChecks
 }, {
   title: "הישגים",
   url: "/achievements",
