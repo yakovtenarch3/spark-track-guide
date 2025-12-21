@@ -85,33 +85,38 @@ export const DailyGoalProgressChart = ({ goals, logs }: Props) => {
   if (goals.length === 0) return null;
 
   return (
-    <Card className="glass-card">
-      <CardHeader>
-        <div className="flex items-center justify-between">
+    <Card className="glass-card overflow-hidden">
+      <CardHeader className="p-3 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            <CardTitle className="text-lg">התקדמות ב-14 ימים האחרונים</CardTitle>
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+            <CardTitle className="text-sm sm:text-lg">התקדמות ב-14 ימים האחרונים</CardTitle>
           </div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-xs sm:text-sm text-muted-foreground">
             הצלחה שבועית: <span className="font-bold text-primary">{weeklySuccessRate}%</span>
           </div>
         </div>
-        <CardDescription>מעקב אחר הצלחות וכישלונות ביעדים היומיים</CardDescription>
+        <CardDescription className="text-xs sm:text-sm">מעקב אחר הצלחות וכישלונות ביעדים היומיים</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[300px] w-full">
+      <CardContent className="p-2 sm:p-6">
+        <ChartContainer config={chartConfig} className="h-[180px] sm:h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} barGap={2}>
+            <BarChart data={chartData} barGap={1} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
               <XAxis 
                 dataKey="label" 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 10 }}
                 className="text-muted-foreground"
+                interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={40}
               />
               <YAxis 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 10 }}
                 domain={[-1, 1]}
                 ticks={[-0.5, 0, 1]}
+                width={25}
                 tickFormatter={(value) => {
                   if (value === 1) return "✓";
                   if (value === -0.5) return "✗";
@@ -171,14 +176,14 @@ export const DailyGoalProgressChart = ({ goals, logs }: Props) => {
         </ChartContainer>
 
         {/* Legend */}
-        <div className="flex flex-wrap items-center justify-center gap-4 pt-4 border-t mt-4 text-sm">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 pt-3 sm:pt-4 border-t mt-3 sm:mt-4 text-xs sm:text-sm">
           {goals.map((goal) => (
-            <div key={goal.id} className="flex items-center gap-2">
+            <div key={goal.id} className="flex items-center gap-1.5">
               <div 
-                className="w-3 h-3 rounded-full" 
+                className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0" 
                 style={{ backgroundColor: goal.color }}
               />
-              <span className="text-muted-foreground">{goal.title}</span>
+              <span className="text-muted-foreground truncate max-w-[80px] sm:max-w-none">{goal.title}</span>
             </div>
           ))}
         </div>
