@@ -220,32 +220,30 @@ export const WakeUpTracker = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 overflow-x-hidden max-w-full">
       {/* Settings Card */}
       <Card className="glass-card border-primary/20">
-        <CardContent className="py-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/20 rounded-xl">
-                <Target className="w-5 h-5 text-primary" />
+        <CardContent className="p-3 sm:py-4 sm:px-6">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-primary/20 rounded-lg sm:rounded-xl">
+                <Target className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium">שעת יעד לקימה</p>
-                <p className="text-sm text-muted-foreground">הגדר את השעה שבה אתה רוצה לקום</p>
+                <p className="font-medium text-sm sm:text-base">שעת יעד לקימה</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">הגדר את השעה שבה אתה רוצה לקום</p>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Input
-                  type="time"
-                  value={targetTime}
-                  onChange={(e) => setTargetTime(e.target.value)}
-                  className="w-28"
-                />
-              </div>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+              <Input
+                type="time"
+                value={targetTime}
+                onChange={(e) => setTargetTime(e.target.value)}
+                className="w-24 sm:w-28 h-8 sm:h-9 text-sm"
+              />
               
-              <div className="flex items-center gap-2 border-r pr-4">
+              <div className="flex items-center gap-2 border-r pr-2 sm:pr-4">
                 {reminderEnabled ? (
                   <Bell className="w-4 h-4 text-success" />
                 ) : (
@@ -265,12 +263,12 @@ export const WakeUpTracker = () => {
               </div>
               
               {reminderEnabled && (
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm whitespace-nowrap">דקות לפני:</Label>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Label className="text-xs sm:text-sm whitespace-nowrap">דקות לפני:</Label>
                   <select
                     value={reminderMinutesBefore}
                     onChange={(e) => setReminderMinutesBefore(Number(e.target.value))}
-                    className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                    className="h-8 sm:h-9 rounded-md border border-input bg-background px-2 sm:px-3 text-xs sm:text-sm"
                   >
                     <option value={5}>5</option>
                     <option value={10}>10</option>
@@ -285,8 +283,8 @@ export const WakeUpTracker = () => {
           </div>
           
           {reminderEnabled && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground border-t pt-3">
-              <Clock className="w-4 h-4" />
+            <div className="mt-2 sm:mt-3 flex items-center gap-2 text-xs sm:text-sm text-muted-foreground border-t pt-2 sm:pt-3">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>
                 תזכורת תישלח בשעה{" "}
                 {(() => {
@@ -303,58 +301,58 @@ export const WakeUpTracker = () => {
       </Card>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4">
         <Card className="glass-card border-success/20 bg-success/5">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-success/20 rounded-xl">
-                <Flame className="w-6 h-6 text-success" />
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 bg-success/20 rounded-lg sm:rounded-xl">
+                <Flame className="w-4 h-4 sm:w-6 sm:h-6 text-success" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-success">{currentStreak}</p>
-                <p className="text-sm text-muted-foreground">רצף נוכחי</p>
+                <p className="text-lg sm:text-2xl font-bold text-success">{currentStreak}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">רצף נוכחי</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="glass-card border-warning/20 bg-warning/5">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-warning/20 rounded-xl">
-                <Trophy className="w-6 h-6 text-warning" />
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 bg-warning/20 rounded-lg sm:rounded-xl">
+                <Trophy className="w-4 h-4 sm:w-6 sm:h-6 text-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-warning">{longestStreak}</p>
-                <p className="text-sm text-muted-foreground">שיא רצף</p>
+                <p className="text-lg sm:text-2xl font-bold text-warning">{longestStreak}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">שיא רצף</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="glass-card border-primary/20 bg-primary/5">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-primary/20 rounded-xl">
-                <TrendingUp className="w-6 h-6 text-primary" />
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 bg-primary/20 rounded-lg sm:rounded-xl">
+                <TrendingUp className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-primary">{monthlyStats.percentage}%</p>
-                <p className="text-sm text-muted-foreground">הצלחה החודש</p>
+                <p className="text-lg sm:text-2xl font-bold text-primary">{monthlyStats.percentage}%</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">הצלחה החודש</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="glass-card border-info/20 bg-info/5">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-info/20 rounded-xl">
-                <Target className="w-6 h-6 text-info" />
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 bg-info/20 rounded-lg sm:rounded-xl">
+                <Target className="w-4 h-4 sm:w-6 sm:h-6 text-info" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-info">{monthlyStats.successDays}/{monthlyStats.totalDays}</p>
-                <p className="text-sm text-muted-foreground">ימים החודש</p>
+                <p className="text-lg sm:text-2xl font-bold text-info">{monthlyStats.successDays}/{monthlyStats.totalDays}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">ימים החודש</p>
               </div>
             </div>
           </CardContent>
@@ -364,10 +362,10 @@ export const WakeUpTracker = () => {
       {/* Motivational Message */}
       {currentStreak >= 3 && (
         <Card className="glass-card border-success/30 bg-gradient-to-l from-success/10 to-transparent">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-5 h-5 text-success" />
-              <p className="text-success font-medium">
+          <CardContent className="p-3 sm:py-4 sm:px-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-success flex-shrink-0" />
+              <p className="text-success font-medium text-sm sm:text-base">
                 {currentStreak >= 7 
                   ? `מדהים! ${currentStreak} ימים ברצף! אתה בדרך להרגל קבוע 🎉`
                   : `יופי! ${currentStreak} ימים ברצף, המשך כך! 💪`
@@ -379,43 +377,45 @@ export const WakeUpTracker = () => {
       )}
 
       {/* Calendar */}
-      <Card className="glass-card">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+      <Card className="glass-card overflow-hidden">
+        <CardHeader className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Sun className="w-6 h-6 text-warning" />
-              <CardTitle className="text-2xl">מעקב קימה בבוקר</CardTitle>
+              <Sun className="w-5 h-5 sm:w-6 sm:h-6 text-warning" />
+              <CardTitle className="text-lg sm:text-2xl">מעקב קימה בבוקר</CardTitle>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <Button
                 variant="ghost"
                 size="icon"
+                className="h-8 w-8 sm:h-9 sm:w-9"
                 onClick={() => navigateMonth(-1)}
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
-              <span className="font-semibold min-w-[120px] text-center">
+              <span className="font-semibold min-w-[100px] sm:min-w-[120px] text-center text-sm sm:text-base">
                 {format(currentMonth, "MMMM yyyy", { locale: he })}
               </span>
               <Button
                 variant="ghost"
                 size="icon"
+                className="h-8 w-8 sm:h-9 sm:w-9"
                 onClick={() => navigateMonth(1)}
                 disabled={isSameMonth(currentMonth, new Date())}
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             </div>
           </div>
-          <CardDescription>לחץ על יום כדי לסמן אם קמת בבוקר</CardDescription>
+          <CardDescription className="text-xs sm:text-sm">לחץ על יום כדי לסמן אם קמת בבוקר</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0">
           {/* Week days header */}
-          <div className="grid grid-cols-7 gap-2 mb-4">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-4">
             {weekDays.map((day) => (
               <div
                 key={day}
-                className="text-center text-sm font-medium text-muted-foreground py-2"
+                className="text-center text-xs sm:text-sm font-medium text-muted-foreground py-1 sm:py-2"
               >
                 {day}
               </div>
@@ -424,7 +424,7 @@ export const WakeUpTracker = () => {
 
           {/* Calendar grid */}
           <TooltipProvider>
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
               {paddedDays.map((day, index) => {
                 if (!day) {
                   return <div key={`empty-${index}`} className="aspect-square" />;
@@ -442,7 +442,7 @@ export const WakeUpTracker = () => {
                     onClick={() => handleDayClick(day)}
                     disabled={isFutureDay}
                     className={cn(
-                      "aspect-square rounded-xl p-2 flex flex-col items-center justify-center transition-all border relative",
+                      "aspect-square rounded-lg sm:rounded-xl p-1 sm:p-2 flex flex-col items-center justify-center transition-all border relative",
                       "hover:scale-105 hover:shadow-md",
                       isCurrentDay && "ring-2 ring-primary shadow-lg",
                       isFutureDay && "opacity-40 cursor-not-allowed",
@@ -452,25 +452,25 @@ export const WakeUpTracker = () => {
                     )}
                   >
                     <span className={cn(
-                      "text-sm font-semibold",
+                      "text-xs sm:text-sm font-semibold",
                       status === "success" && "text-success",
                       status === "failed" && "text-destructive"
                     )}>
                       {format(day, "d")}
                     </span>
                     {status === "success" && (
-                      <Check className="w-4 h-4 text-success mt-1" />
+                      <Check className="w-3 h-3 sm:w-4 sm:h-4 text-success" />
                     )}
                     {status === "failed" && (
-                      <X className="w-4 h-4 text-destructive mt-1" />
+                      <X className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
                     )}
                     {log?.actual_time && (
-                      <span className="text-[10px] text-muted-foreground mt-0.5">
+                      <span className="text-[8px] sm:text-[10px] text-muted-foreground">
                         {log.actual_time.slice(0, 5)}
                       </span>
                     )}
                     {hasNotes && (
-                      <MessageSquare className="w-3 h-3 text-info absolute top-1 left-1" />
+                      <MessageSquare className="w-2 h-2 sm:w-3 sm:h-3 text-info absolute top-0.5 left-0.5 sm:top-1 sm:left-1" />
                     )}
                   </button>
                 );
@@ -494,21 +494,21 @@ export const WakeUpTracker = () => {
           </TooltipProvider>
 
           {/* Legend */}
-          <div className="flex flex-wrap items-center gap-4 pt-6 border-t mt-6 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-success/20 border border-success/40 rounded-md flex items-center justify-center">
-                <Check className="w-3 h-3 text-success" />
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 pt-3 sm:pt-6 border-t mt-3 sm:mt-6 text-xs sm:text-sm">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-success/20 border border-success/40 rounded-md flex items-center justify-center">
+                <Check className="w-2 h-2 sm:w-3 sm:h-3 text-success" />
               </div>
               <span className="text-muted-foreground">קמתי בזמן</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-destructive/20 border border-destructive/40 rounded-md flex items-center justify-center">
-                <X className="w-3 h-3 text-destructive" />
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-destructive/20 border border-destructive/40 rounded-md flex items-center justify-center">
+                <X className="w-2 h-2 sm:w-3 sm:h-3 text-destructive" />
               </div>
               <span className="text-muted-foreground">לא קמתי</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-muted/30 border border-muted/40 rounded-md"></div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-muted/30 border border-muted/40 rounded-md"></div>
               <span className="text-muted-foreground">לא סומן</span>
             </div>
           </div>
@@ -523,42 +523,42 @@ export const WakeUpTracker = () => {
 
       {/* Falls History */}
       {fallsHistory.length > 0 && (
-        <Card className="glass-card">
-          <CardHeader>
+        <Card className="glass-card overflow-hidden">
+          <CardHeader className="p-3 sm:p-6">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-warning" />
-              <CardTitle className="text-lg">היסטוריית נפילות והתאוששות</CardTitle>
+              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-warning" />
+              <CardTitle className="text-base sm:text-lg">היסטוריית נפילות והתאוששות</CardTitle>
             </div>
-            <CardDescription>כמה זמן החזקת מעמד ואיך התאוששת</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">כמה זמן החזקת מעמד ואיך התאוששת</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+            <div className="space-y-2 sm:space-y-3">
               {fallsHistory.map((fall, index) => (
                 <div 
                   key={fall.date} 
-                  className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-muted/50"
+                  className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-muted/30 border border-muted/50"
                 >
-                  <div className="flex-shrink-0 p-2 bg-destructive/20 rounded-lg">
-                    <X className="w-4 h-4 text-destructive" />
+                  <div className="flex-shrink-0 p-1.5 sm:p-2 bg-destructive/20 rounded-lg">
+                    <X className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">
+                  <div className="flex-1 space-y-1 min-w-0">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                      <span className="font-medium text-sm sm:text-base">
                         {format(parseISO(fall.date), "d בMMMM yyyy", { locale: he })}
                       </span>
                       {fall.streakBefore > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          <Flame className="w-3 h-3 ml-1" />
-                          {fall.streakBefore} ימים לפני הנפילה
+                        <Badge variant="outline" className="text-[10px] sm:text-xs">
+                          <Flame className="w-2.5 h-2.5 sm:w-3 sm:h-3 ml-1" />
+                          {fall.streakBefore} ימים לפני
                         </Badge>
                       )}
                     </div>
                     {fall.notes && (
-                      <p className="text-sm text-muted-foreground">{fall.notes}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{fall.notes}</p>
                     )}
                     {fall.recoveryDays !== null && (
-                      <div className="flex items-center gap-1 text-sm text-success">
-                        <ArrowUp className="w-3 h-3" />
+                      <div className="flex items-center gap-1 text-xs sm:text-sm text-success">
+                        <ArrowUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                         קם אחרי {fall.recoveryDays === 1 ? "יום אחד" : `${fall.recoveryDays} ימים`}
                       </div>
                     )}
