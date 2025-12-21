@@ -27,6 +27,8 @@ import { he } from "date-fns/locale";
 import { useDailyGoals } from "@/hooks/useDailyGoals";
 import { DailyGoalProgressChart } from "./DailyGoalProgressChart";
 import { useNotifications } from "@/hooks/useNotifications";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +66,12 @@ import {
   CalendarDays,
   CalendarRange,
   Eraser,
+  Brain,
+  Loader2,
+  Sparkles,
+  Clock,
 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "day" | "week" | "month" | "year";
@@ -118,9 +125,14 @@ export const DailyGoalTracker = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [notes, setNotes] = useState("");
+  const [actualValue, setActualValue] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addGoalOpen, setAddGoalOpen] = useState(false);
   const [editGoalOpen, setEditGoalOpen] = useState(false);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiStats, setAiStats] = useState<any>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   // New goal form
   const [newTitle, setNewTitle] = useState("");
@@ -129,6 +141,8 @@ export const DailyGoalTracker = () => {
   const [newIcon, setNewIcon] = useState("target");
   const [newReminderEnabled, setNewReminderEnabled] = useState(false);
   const [newReminderTime, setNewReminderTime] = useState("20:00");
+  const [newTargetValue, setNewTargetValue] = useState("");
+  const [newTargetUnit, setNewTargetUnit] = useState("");
   
   // Edit form
   const [editTitle, setEditTitle] = useState("");
@@ -137,6 +151,8 @@ export const DailyGoalTracker = () => {
   const [editIcon, setEditIcon] = useState("target");
   const [editReminderEnabled, setEditReminderEnabled] = useState(false);
   const [editReminderTime, setEditReminderTime] = useState("20:00");
+  const [editTargetValue, setEditTargetValue] = useState("");
+  const [editTargetUnit, setEditTargetUnit] = useState("");
 
   const activeGoals = goals.filter((g) => g.is_active);
   const selectedGoal = activeGoals.find((g) => g.id === selectedGoalId) || activeGoals[0];
@@ -150,8 +166,10 @@ export const DailyGoalTracker = () => {
       setEditIcon(selectedGoal.icon);
       setEditReminderEnabled(selectedGoal.reminder_enabled);
       setEditReminderTime(selectedGoal.reminder_time?.slice(0, 5) || "20:00");
+      setEditTargetValue(selectedGoal.target_value || "");
+      setEditTargetUnit(selectedGoal.target_unit || "");
     }
-  }, [selectedGoal?.id, selectedGoal?.title, selectedGoal?.description, selectedGoal?.color, selectedGoal?.icon, selectedGoal?.reminder_enabled, selectedGoal?.reminder_time]);
+  }, [selectedGoal?.id, selectedGoal?.title, selectedGoal?.description, selectedGoal?.color, selectedGoal?.icon, selectedGoal?.reminder_enabled, selectedGoal?.reminder_time, selectedGoal?.target_value, selectedGoal?.target_unit]);
 
   // Sync all goal reminders to localStorage on load
   useEffect(() => {
@@ -215,6 +233,7 @@ export const DailyGoalTracker = () => {
     const log = getLogForDate(selectedGoal.id, date);
     setSelectedDate(date);
     setNotes(log?.notes || "");
+    setActualValue(log?.actual_value || "");
     setDialogOpen(true);
   };
 
@@ -225,9 +244,11 @@ export const DailyGoalTracker = () => {
       date: selectedDate,
       succeeded,
       notes: notes || undefined,
+      actualValue: actualValue || undefined,
     });
     setDialogOpen(false);
     setNotes("");
+    setActualValue("");
   };
 
   const handleClearLog = () => {
@@ -237,8 +258,44 @@ export const DailyGoalTracker = () => {
       deleteLog.mutate(log.id);
       setDialogOpen(false);
       setNotes("");
+      setActualValue("");
     }
   };
+
+  const handleAnalyze = async () => {
+    setIsAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-daily-goals", {
+        body: { goalId: selectedGoal?.id },
+      });
+
+      if (error) {
+        if (error.message?.includes("RATE_LIMIT") || error.message?.includes("429")) {
+          toast.error("המערכת עמוסה כרגע. אנא נסה שוב בעוד מספר דקות.");
+        } else if (error.message?.includes("PAYMENT_REQUIRED") || error.message?.includes("402")) {
+          toast.error("נגמרו הקרדיטים. הוסף קרדיטים בהגדרות.");
+        } else {
+          toast.error("שגיאה בניתוח הנתונים");
+        }
+        throw error;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      setAiAnalysis(data.analysis);
+      setAiStats(data.stats);
+      setAnalysisOpen(true);
+      toast.success("הניתוח הושלם בהצלחה! ✨");
+    } catch (error) {
+      console.error("Error analyzing daily goals:", error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
 
   const handleCreateGoal = async () => {
     if (!newTitle.trim()) return;
@@ -250,6 +307,8 @@ export const DailyGoalTracker = () => {
       icon: newIcon,
       reminderEnabled: newReminderEnabled,
       reminderTime: newReminderEnabled ? newReminderTime : undefined,
+      targetValue: newTargetValue || undefined,
+      targetUnit: newTargetUnit || undefined,
     });
     
     setNewTitle("");
@@ -258,6 +317,8 @@ export const DailyGoalTracker = () => {
     setNewIcon("target");
     setNewReminderEnabled(false);
     setNewReminderTime("20:00");
+    setNewTargetValue("");
+    setNewTargetUnit("");
     setAddGoalOpen(false);
   };
 
@@ -271,6 +332,8 @@ export const DailyGoalTracker = () => {
       icon: editIcon,
       reminder_enabled: editReminderEnabled,
       reminder_time: editReminderEnabled ? editReminderTime : null,
+      target_value: editTargetValue || null,
+      target_unit: editTargetUnit || null,
     });
     
     if (editReminderEnabled) {
@@ -482,6 +545,29 @@ export const DailyGoalTracker = () => {
                 )}
               </div>
               
+              {/* Target Value settings */}
+              <div className="space-y-3 p-3 rounded-lg bg-muted/30 border">
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-muted-foreground" />
+                  <Label>יעד מספרי (אופציונלי)</Label>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    value={newTargetValue}
+                    onChange={(e) => setNewTargetValue(e.target.value)}
+                    placeholder="למשל: 06:30 או 8"
+                  />
+                  <Input
+                    value={newTargetUnit}
+                    onChange={(e) => setNewTargetUnit(e.target.value)}
+                    placeholder="יחידה (שעות, דקות...)"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  הגדר יעד מספרי כדי לקבל ניתוח AI מפורט יותר
+                </p>
+              </div>
+              
               <Button onClick={handleCreateGoal} className="w-full" disabled={!newTitle.trim()}>
                 צור יעד
               </Button>
@@ -590,6 +676,28 @@ export const DailyGoalTracker = () => {
                     </div>
                   )}
                 </div>
+                {/* Target Value settings */}
+                <div className="space-y-3 p-3 rounded-lg bg-muted/30 border">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-muted-foreground" />
+                    <Label>יעד מספרי (אופציונלי)</Label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      value={editTargetValue}
+                      onChange={(e) => setEditTargetValue(e.target.value)}
+                      placeholder="למשל: 06:30 או 8"
+                    />
+                    <Input
+                      value={editTargetUnit}
+                      onChange={(e) => setEditTargetUnit(e.target.value)}
+                      placeholder="יחידה (שעות, דקות...)"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    הגדר יעד מספרי כדי לקבל ניתוח AI מפורט יותר
+                  </p>
+                </div>
                 
                 <Button 
                   onClick={handleUpdateGoal} 
@@ -610,6 +718,23 @@ export const DailyGoalTracker = () => {
               </div>
             </DialogContent>
           </Dialog>
+        )}
+        
+        {/* AI Analysis Button */}
+        {selectedGoal && (
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="shrink-0 h-8 w-8 sm:h-9 sm:w-9"
+            onClick={handleAnalyze}
+            disabled={isAnalyzing}
+          >
+            {isAnalyzing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Brain className="w-4 h-4" />
+            )}
+          </Button>
         )}
       </div>
 
@@ -1069,6 +1194,29 @@ export const DailyGoalTracker = () => {
             </Button>
           </div>
 
+          {/* Actual Value Input - Only show if goal has target */}
+          {selectedGoal?.target_value && (
+            <div className="space-y-2 border-t pt-4">
+              <Label htmlFor="actualValue" className="flex items-center gap-2">
+                <Target className="w-4 h-4" />
+                ערך בפועל {selectedGoal.target_unit && `(${selectedGoal.target_unit})`}
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="actualValue"
+                  type="text"
+                  value={actualValue}
+                  onChange={(e) => setActualValue(e.target.value)}
+                  placeholder={`יעד: ${selectedGoal.target_value}`}
+                  className="text-right"
+                />
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                  יעד: {selectedGoal.target_value} {selectedGoal.target_unit || ""}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Notes Section */}
           <div className="space-y-4 border-t pt-4">
             <div className="space-y-2">
@@ -1085,6 +1233,28 @@ export const DailyGoalTracker = () => {
               />
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Analysis Dialog */}
+      <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="w-5 h-5 text-primary" />
+              ניתוח AI - יעדים יומיים
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[60vh] pr-4">
+            {aiAnalysis && (
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <div className="whitespace-pre-wrap text-foreground leading-relaxed">
+                  {aiAnalysis}
+                </div>
+              </div>
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

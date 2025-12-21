@@ -12,6 +12,8 @@ interface DailyGoal {
   is_active: boolean;
   reminder_enabled: boolean;
   reminder_time: string | null;
+  target_value: string | null;
+  target_unit: string | null;
   created_at: string;
 }
 
@@ -21,6 +23,7 @@ interface DailyGoalLog {
   log_date: string;
   succeeded: boolean;
   notes: string | null;
+  actual_value: string | null;
   created_at: string;
 }
 
@@ -57,13 +60,15 @@ export const useDailyGoals = () => {
 
   // Create a new goal
   const createGoal = useMutation({
-    mutationFn: async ({ title, description, color, icon, reminderEnabled, reminderTime }: { 
+    mutationFn: async ({ title, description, color, icon, reminderEnabled, reminderTime, targetValue, targetUnit }: { 
       title: string; 
       description?: string; 
       color?: string;
       icon?: string;
       reminderEnabled?: boolean;
       reminderTime?: string;
+      targetValue?: string;
+      targetUnit?: string;
     }) => {
       const { error } = await supabase.from("daily_goals").insert({
         title,
@@ -72,6 +77,8 @@ export const useDailyGoals = () => {
         icon: icon || "target",
         reminder_enabled: reminderEnabled || false,
         reminder_time: reminderTime || null,
+        target_value: targetValue || null,
+        target_unit: targetUnit || null,
       });
       if (error) throw error;
     },
@@ -119,11 +126,13 @@ export const useDailyGoals = () => {
       date,
       succeeded,
       notes,
+      actualValue,
     }: {
       goalId: string;
       date: Date;
       succeeded: boolean;
       notes?: string;
+      actualValue?: string;
     }) => {
       const dateStr = format(date, "yyyy-MM-dd");
       const existingLog = logs.find(
@@ -133,7 +142,11 @@ export const useDailyGoals = () => {
       if (existingLog) {
         const { error } = await supabase
           .from("daily_goal_logs")
-          .update({ succeeded, notes: notes || null })
+          .update({ 
+            succeeded, 
+            notes: notes || null,
+            actual_value: actualValue || null,
+          })
           .eq("id", existingLog.id);
         if (error) throw error;
       } else {
@@ -142,6 +155,7 @@ export const useDailyGoals = () => {
           log_date: dateStr,
           succeeded,
           notes: notes || null,
+          actual_value: actualValue || null,
         });
         if (error) throw error;
       }
