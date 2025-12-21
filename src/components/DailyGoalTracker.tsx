@@ -353,10 +353,10 @@ export const DailyGoalTracker = () => {
   const fallsHistory = selectedGoal ? getFallsHistory(selectedGoal.id) : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 overflow-x-hidden w-full max-w-full">
       {/* Goals Tabs + Add Button */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex-1 flex items-center gap-2 overflow-x-auto pb-2">
+      <div className="flex items-center gap-2 w-full max-w-full">
+        <div className="flex-1 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide min-w-0">
           {activeGoals.map((goal) => {
             const GoalIcon = getIconComponent(goal.icon);
             const isSelected = selectedGoal?.id === goal.id;
@@ -364,22 +364,22 @@ export const DailyGoalTracker = () => {
               <Button
                 key={goal.id}
                 variant={isSelected ? "default" : "outline"}
-                className="flex items-center gap-2 shrink-0"
+                className="flex items-center gap-1.5 shrink-0 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
                 style={{ 
                   backgroundColor: isSelected ? goal.color : undefined,
                   borderColor: goal.color,
                 }}
                 onClick={() => setSelectedGoalId(goal.id)}
               >
-                <GoalIcon className="w-4 h-4" />
-                {goal.title}
+                <GoalIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="max-w-[80px] sm:max-w-none truncate">{goal.title}</span>
               </Button>
             );
           })}
         </div>
         <Dialog open={addGoalOpen} onOpenChange={setAddGoalOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" className="shrink-0 h-8 w-8 sm:h-9 sm:w-9">
               <Plus className="w-4 h-4" />
             </Button>
           </DialogTrigger>
@@ -479,7 +479,7 @@ export const DailyGoalTracker = () => {
         {selectedGoal && (
           <Dialog open={editGoalOpen} onOpenChange={setEditGoalOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 sm:h-9 sm:w-9">
                 <Pencil className="w-4 h-4" />
               </Button>
             </DialogTrigger>
@@ -618,60 +618,60 @@ export const DailyGoalTracker = () => {
       ) : (
         <>
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4">
             <Card className="glass-card border-success/20 bg-success/5">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-success/20 rounded-xl">
-                    <Flame className="w-6 h-6 text-success" />
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-2 sm:p-3 bg-success/20 rounded-lg sm:rounded-xl">
+                    <Flame className="w-4 h-4 sm:w-6 sm:h-6 text-success" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-success">{currentStreak}</p>
-                    <p className="text-sm text-muted-foreground">רצף נוכחי</p>
+                    <p className="text-lg sm:text-2xl font-bold text-success">{currentStreak}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">רצף נוכחי</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="glass-card border-warning/20 bg-warning/5">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-warning/20 rounded-xl">
-                    <Trophy className="w-6 h-6 text-warning" />
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-2 sm:p-3 bg-warning/20 rounded-lg sm:rounded-xl">
+                    <Trophy className="w-4 h-4 sm:w-6 sm:h-6 text-warning" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-warning">{longestStreak}</p>
-                    <p className="text-sm text-muted-foreground">שיא רצף</p>
+                    <p className="text-lg sm:text-2xl font-bold text-warning">{longestStreak}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">שיא רצף</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="glass-card border-primary/20 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-primary/20 rounded-xl">
-                    <TrendingUp className="w-6 h-6 text-primary" />
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-2 sm:p-3 bg-primary/20 rounded-lg sm:rounded-xl">
+                    <TrendingUp className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-primary">{monthlyStats.percentage}%</p>
-                    <p className="text-sm text-muted-foreground">הצלחה החודש</p>
+                    <p className="text-lg sm:text-2xl font-bold text-primary">{monthlyStats.percentage}%</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">הצלחה החודש</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="glass-card border-info/20 bg-info/5">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-info/20 rounded-xl">
-                    <Target className="w-6 h-6 text-info" />
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-2 sm:p-3 bg-info/20 rounded-lg sm:rounded-xl">
+                    <Target className="w-4 h-4 sm:w-6 sm:h-6 text-info" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-info">
+                    <p className="text-lg sm:text-2xl font-bold text-info">
                       {monthlyStats.successDays}/{monthlyStats.totalDays}
                     </p>
-                    <p className="text-sm text-muted-foreground">ימים החודש</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">ימים החודש</p>
                   </div>
                 </div>
               </CardContent>
