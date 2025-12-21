@@ -4,6 +4,8 @@ import { WakeUpAnalytics } from "./WakeUpAnalytics";
 import { he } from "date-fns/locale";
 import { useWakeUpLogs } from "@/hooks/useWakeUpLogs";
 import { useNotifications } from "@/hooks/useNotifications";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +40,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export const WakeUpTracker = () => {
+  const queryClient = useQueryClient();
   const { 
     logs, 
     isLoading, 
@@ -147,6 +150,29 @@ export const WakeUpTracker = () => {
     setNotes("");
   };
 
+  const handleClearMark = async () => {
+    if (!selectedDate) return;
+    
+    const log = getLogForDate(selectedDate);
+    if (!log) return;
+
+    const { error } = await supabase
+      .from("wake_up_logs")
+      .delete()
+      .eq("id", log.id);
+
+    if (error) {
+      toast.error("שגיאה במחיקת הסימון");
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["wake-up-logs"] });
+    toast.success("הסימון בוטל");
+    setDialogOpen(false);
+    setActualTime("");
+    setNotes("");
+  };
+
   const navigateMonth = (direction: number) => {
     setCurrentMonth(prev => {
       const newDate = new Date(prev);
@@ -220,7 +246,7 @@ export const WakeUpTracker = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 overflow-x-hidden max-w-full">
+    <div className="space-y-4 sm:space-y-6 overflow-x-hidden max-w-full" dir="rtl">
       {/* Settings Card */}
       <Card className="glass-card border-primary/20">
         <CardContent className="p-3 sm:py-4 sm:px-6">
@@ -410,9 +436,9 @@ export const WakeUpTracker = () => {
           <CardDescription className="text-xs sm:text-sm">לחץ על יום כדי לסמן אם קמת בבוקר</CardDescription>
         </CardHeader>
         <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0">
-          {/* Week days header */}
+          {/* Week days header - reversed for RTL */}
           <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-4">
-            {weekDays.map((day) => (
+            {[...weekDays].reverse().map((day) => (
               <div
                 key={day}
                 className="text-center text-xs sm:text-sm font-medium text-muted-foreground py-1 sm:py-2"
@@ -422,10 +448,10 @@ export const WakeUpTracker = () => {
             ))}
           </div>
 
-          {/* Calendar grid */}
+          {/* Calendar grid - reversed for RTL */}
           <TooltipProvider>
-            <div className="grid grid-cols-7 gap-1 sm:gap-2">
-              {paddedDays.map((day, index) => {
+            <div className="grid grid-cols-7 gap-1 sm:gap-2" style={{ direction: 'rtl' }}>
+              {[...paddedDays].reverse().map((day, index) => {
                 if (!day) {
                   return <div key={`empty-${index}`} className="aspect-square" />;
                 }
@@ -604,24 +630,36 @@ export const WakeUpTracker = () => {
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <Button
-              onClick={() => handleSaveWakeUp(true)}
-              className="flex-1 bg-success hover:bg-success/90"
-              disabled={toggleWakeUp.isPending}
-            >
-              <Check className="w-4 h-4 ml-2" />
-              קמתי!
-            </Button>
-            <Button
-              onClick={() => handleSaveWakeUp(false)}
-              variant="outline"
-              className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10"
-              disabled={toggleWakeUp.isPending}
-            >
-              <X className="w-4 h-4 ml-2" />
-              לא קמתי
-            </Button>
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-3">
+              <Button
+                onClick={() => handleSaveWakeUp(true)}
+                className="flex-1 bg-success hover:bg-success/90"
+                disabled={toggleWakeUp.isPending}
+              >
+                <Check className="w-4 h-4 ml-2" />
+                קמתי!
+              </Button>
+              <Button
+                onClick={() => handleSaveWakeUp(false)}
+                variant="outline"
+                className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10"
+                disabled={toggleWakeUp.isPending}
+              >
+                <X className="w-4 h-4 ml-2" />
+                לא קמתי
+              </Button>
+            </div>
+            {selectedDate && getLogForDate(selectedDate) && (
+              <Button
+                onClick={handleClearMark}
+                variant="ghost"
+                className="w-full text-muted-foreground hover:text-foreground"
+                disabled={toggleWakeUp.isPending}
+              >
+                בטל סימון
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
