@@ -142,6 +142,7 @@ export type Database = {
       }
       daily_goal_logs: {
         Row: {
+          actual_value: string | null
           created_at: string
           goal_id: string
           id: string
@@ -150,6 +151,7 @@ export type Database = {
           succeeded: boolean
         }
         Insert: {
+          actual_value?: string | null
           created_at?: string
           goal_id: string
           id?: string
@@ -158,6 +160,7 @@ export type Database = {
           succeeded?: boolean
         }
         Update: {
+          actual_value?: string | null
           created_at?: string
           goal_id?: string
           id?: string
@@ -185,6 +188,8 @@ export type Database = {
           is_active: boolean
           reminder_enabled: boolean
           reminder_time: string | null
+          target_unit: string | null
+          target_value: string | null
           title: string
         }
         Insert: {
@@ -196,6 +201,8 @@ export type Database = {
           is_active?: boolean
           reminder_enabled?: boolean
           reminder_time?: string | null
+          target_unit?: string | null
+          target_value?: string | null
           title: string
         }
         Update: {
@@ -207,6 +214,8 @@ export type Database = {
           is_active?: boolean
           reminder_enabled?: boolean
           reminder_time?: string | null
+          target_unit?: string | null
+          target_value?: string | null
           title?: string
         }
         Relationships: []
