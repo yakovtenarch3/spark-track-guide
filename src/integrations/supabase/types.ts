@@ -65,6 +65,48 @@ export type Database = {
         }
         Relationships: []
       }
+      alarms: {
+        Row: {
+          created_at: string
+          days_of_week: number[] | null
+          id: string
+          is_active: boolean
+          name: string
+          ringtone_name: string | null
+          ringtone_url: string | null
+          snooze_enabled: boolean
+          snooze_minutes: number
+          time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          days_of_week?: number[] | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          ringtone_name?: string | null
+          ringtone_url?: string | null
+          snooze_enabled?: boolean
+          snooze_minutes?: number
+          time?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          days_of_week?: number[] | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          ringtone_name?: string | null
+          ringtone_url?: string | null
+          snooze_enabled?: boolean
+          snooze_minutes?: number
+          time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       custom_quotes: {
         Row: {
           author: string
