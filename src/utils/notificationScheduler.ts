@@ -28,26 +28,32 @@ const checkAndShowReminders = () => {
   const currentHours = now.getHours();
   const currentMinutes = now.getMinutes();
 
-  const reminders = JSON.parse(localStorage.getItem('habitReminders') || '[]');
+  // Check habit reminders
+  const habitReminders = JSON.parse(localStorage.getItem('habitReminders') || '[]');
+  // Check goal reminders
+  const goalReminders = JSON.parse(localStorage.getItem('goalReminders') || '[]');
+  
+  const allReminders = [...habitReminders, ...goalReminders];
 
-  reminders.forEach((reminder: any) => {
+  allReminders.forEach((reminder: any) => {
     if (reminder.hours === currentHours && reminder.minutes === currentMinutes) {
       // Get motivational quote
       const quote = getRandomQuote();
       const motivationalBody = `${reminder.body}\n\n💪 ${quote.text}\n- ${quote.author}`;
+      const icon = reminder.type === 'goal' ? '🎯' : '⏰';
       
       // Show notification
       if (Notification.permission === 'granted') {
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
             type: 'SHOW_NOTIFICATION',
-            title: `⏰ תזכורת: ${reminder.title}`,
+            title: `${icon} תזכורת: ${reminder.title}`,
             body: motivationalBody,
             icon: '/favicon.ico',
           });
         } else {
           // Fallback to regular notification
-          new Notification(`⏰ תזכורת: ${reminder.title}`, {
+          new Notification(`${icon} תזכורת: ${reminder.title}`, {
             body: motivationalBody,
             icon: '/favicon.ico',
             badge: '/favicon.ico',

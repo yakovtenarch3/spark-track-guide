@@ -45,15 +45,16 @@ export const useNotifications = () => {
     title: string,
     body: string,
     time: string,
-    habitId: string
+    habitId: string,
+    type: "habit" | "goal" = "habit"
   ) => {
     if (permission !== "granted") {
       const granted = await requestPermission();
       if (!granted) return;
     }
 
-    // Store reminder in localStorage for the service worker to use
-    const reminders = JSON.parse(localStorage.getItem("habitReminders") || "[]");
+    const storageKey = type === "habit" ? "habitReminders" : "goalReminders";
+    const reminders = JSON.parse(localStorage.getItem(storageKey) || "[]");
     const [hours, minutes] = time.split(":");
     
     const reminder = {
@@ -63,6 +64,7 @@ export const useNotifications = () => {
       time,
       hours: parseInt(hours),
       minutes: parseInt(minutes),
+      type,
     };
     
     const existingIndex = reminders.findIndex((r: any) => r.habitId === habitId);
@@ -72,7 +74,7 @@ export const useNotifications = () => {
       reminders.push(reminder);
     }
     
-    localStorage.setItem("habitReminders", JSON.stringify(reminders));
+    localStorage.setItem(storageKey, JSON.stringify(reminders));
     
     // Show immediate test notification with motivational quote
     if (Notification.permission === "granted") {
@@ -85,10 +87,11 @@ export const useNotifications = () => {
     }
   };
 
-  const cancelNotification = (habitId: string) => {
-    const reminders = JSON.parse(localStorage.getItem("habitReminders") || "[]");
+  const cancelNotification = (habitId: string, type: "habit" | "goal" = "habit") => {
+    const storageKey = type === "habit" ? "habitReminders" : "goalReminders";
+    const reminders = JSON.parse(localStorage.getItem(storageKey) || "[]");
     const filtered = reminders.filter((r: any) => r.habitId !== habitId);
-    localStorage.setItem("habitReminders", JSON.stringify(filtered));
+    localStorage.setItem(storageKey, JSON.stringify(filtered));
     toast.info("התזכורת בוטלה");
   };
 

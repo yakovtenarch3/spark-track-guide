@@ -10,6 +10,8 @@ interface DailyGoal {
   color: string;
   icon: string;
   is_active: boolean;
+  reminder_enabled: boolean;
+  reminder_time: string | null;
   created_at: string;
 }
 
@@ -55,17 +57,21 @@ export const useDailyGoals = () => {
 
   // Create a new goal
   const createGoal = useMutation({
-    mutationFn: async ({ title, description, color, icon }: { 
+    mutationFn: async ({ title, description, color, icon, reminderEnabled, reminderTime }: { 
       title: string; 
       description?: string; 
       color?: string;
       icon?: string;
+      reminderEnabled?: boolean;
+      reminderTime?: string;
     }) => {
       const { error } = await supabase.from("daily_goals").insert({
         title,
         description: description || null,
         color: color || "#8B5CF6",
         icon: icon || "target",
+        reminder_enabled: reminderEnabled || false,
+        reminder_time: reminderTime || null,
       });
       if (error) throw error;
     },

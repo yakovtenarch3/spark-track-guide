@@ -141,6 +141,8 @@ export type Database = {
           icon: string
           id: string
           is_active: boolean
+          reminder_enabled: boolean
+          reminder_time: string | null
           title: string
         }
         Insert: {
@@ -150,6 +152,8 @@ export type Database = {
           icon?: string
           id?: string
           is_active?: boolean
+          reminder_enabled?: boolean
+          reminder_time?: string | null
           title: string
         }
         Update: {
@@ -159,6 +163,8 @@ export type Database = {
           icon?: string
           id?: string
           is_active?: boolean
+          reminder_enabled?: boolean
+          reminder_time?: string | null
           title?: string
         }
         Relationships: []
