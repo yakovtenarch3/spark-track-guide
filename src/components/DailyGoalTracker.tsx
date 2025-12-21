@@ -26,6 +26,7 @@ import {
 import { he } from "date-fns/locale";
 import { useDailyGoals } from "@/hooks/useDailyGoals";
 import { DailyGoalProgressChart } from "./DailyGoalProgressChart";
+import { WeeklyPatternChart } from "./WeeklyPatternChart";
 import { useNotifications } from "@/hooks/useNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -881,6 +882,13 @@ export const DailyGoalTracker = () => {
 
           {/* Progress Chart */}
           <DailyGoalProgressChart goals={activeGoals} logs={logs} />
+
+          {/* Weekly Pattern Chart */}
+          <WeeklyPatternChart 
+            goals={activeGoals} 
+            logs={logs} 
+            selectedGoalId={selectedGoal?.id} 
+          />
 
           {/* Calendar */}
           <Card className="glass-card">
