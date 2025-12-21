@@ -1,5 +1,28 @@
 import { useState, useEffect } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isFuture, parseISO } from "date-fns";
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfWeek, 
+  endOfWeek, 
+  startOfYear, 
+  endOfYear,
+  eachDayOfInterval, 
+  isToday, 
+  isFuture, 
+  parseISO,
+  addDays,
+  subDays,
+  addWeeks,
+  subWeeks,
+  addMonths,
+  subMonths,
+  addYears,
+  subYears,
+  isSameMonth,
+  isSameYear,
+  isSameWeek,
+} from "date-fns";
 import { he } from "date-fns/locale";
 import { useDailyGoals } from "@/hooks/useDailyGoals";
 import { DailyGoalProgressChart } from "./DailyGoalProgressChart";
@@ -37,8 +60,13 @@ import {
   Trash2,
   Bell,
   BellOff,
+  Calendar,
+  CalendarDays,
+  CalendarRange,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+type ViewMode = "day" | "week" | "month" | "year";
 
 const ICON_OPTIONS = [
   { value: "target", label: "יעד", icon: Target },
@@ -56,6 +84,13 @@ const COLOR_OPTIONS = [
   { value: "#3B82F6", label: "כחול" },
   { value: "#EC4899", label: "ורוד" },
   { value: "#EF4444", label: "אדום" },
+];
+
+const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
+  { value: "day", label: "יום" },
+  { value: "week", label: "שבוע" },
+  { value: "month", label: "חודש" },
+  { value: "year", label: "שנה" },
 ];
 
 export const DailyGoalTracker = () => {
@@ -77,7 +112,8 @@ export const DailyGoalTracker = () => {
   const { scheduleNotification, cancelNotification, permission, requestPermission } = useNotifications();
 
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [notes, setNotes] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -93,6 +129,10 @@ export const DailyGoalTracker = () => {
   const [newReminderTime, setNewReminderTime] = useState("20:00");
   
   // Edit form
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editColor, setEditColor] = useState("#8B5CF6");
+  const [editIcon, setEditIcon] = useState("target");
   const [editReminderEnabled, setEditReminderEnabled] = useState(false);
   const [editReminderTime, setEditReminderTime] = useState("20:00");
 
@@ -102,10 +142,14 @@ export const DailyGoalTracker = () => {
   // Sync edit form with selected goal
   useEffect(() => {
     if (selectedGoal) {
+      setEditTitle(selectedGoal.title);
+      setEditDescription(selectedGoal.description || "");
+      setEditColor(selectedGoal.color);
+      setEditIcon(selectedGoal.icon);
       setEditReminderEnabled(selectedGoal.reminder_enabled);
       setEditReminderTime(selectedGoal.reminder_time?.slice(0, 5) || "20:00");
     }
-  }, [selectedGoal?.id, selectedGoal?.reminder_enabled, selectedGoal?.reminder_time]);
+  }, [selectedGoal?.id, selectedGoal?.title, selectedGoal?.description, selectedGoal?.color, selectedGoal?.icon, selectedGoal?.reminder_enabled, selectedGoal?.reminder_time]);
 
   // Sync all goal reminders to localStorage on load
   useEffect(() => {
@@ -129,12 +173,40 @@ export const DailyGoalTracker = () => {
     });
   }, [goals]);
 
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  const startPadding = monthStart.getDay();
-  const paddedDays = [...Array(startPadding).fill(null), ...days];
+  // Calculate days based on view mode
+  const getDaysForView = () => {
+    switch (viewMode) {
+      case "day":
+        return [currentDate];
+      case "week":
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+        const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
+        return eachDayOfInterval({ start: weekStart, end: weekEnd });
+      case "month":
+        const monthStart = startOfMonth(currentDate);
+        const monthEnd = endOfMonth(currentDate);
+        return eachDayOfInterval({ start: monthStart, end: monthEnd });
+      case "year":
+        const yearStart = startOfYear(currentDate);
+        const yearEnd = endOfYear(currentDate);
+        return eachDayOfInterval({ start: yearStart, end: yearEnd });
+    }
+  };
+
+  const days = getDaysForView();
   const weekDays = ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"];
+  
+  // Get padded days for month view
+  const getPaddedDays = () => {
+    if (viewMode === "month") {
+      const monthStart = startOfMonth(currentDate);
+      const startPadding = monthStart.getDay();
+      return [...Array(startPadding).fill(null), ...days];
+    }
+    return days;
+  };
+  
+  const paddedDays = getPaddedDays();
 
   const handleDayClick = (date: Date) => {
     if (isFuture(date) || !selectedGoal) return;
@@ -177,6 +249,33 @@ export const DailyGoalTracker = () => {
     setAddGoalOpen(false);
   };
 
+  const handleUpdateGoal = () => {
+    if (!selectedGoal || !editTitle.trim()) return;
+    updateGoal.mutate({
+      id: selectedGoal.id,
+      title: editTitle,
+      description: editDescription || null,
+      color: editColor,
+      icon: editIcon,
+      reminder_enabled: editReminderEnabled,
+      reminder_time: editReminderEnabled ? editReminderTime : null,
+    });
+    
+    if (editReminderEnabled) {
+      scheduleNotification(
+        editTitle,
+        `הגיע הזמן לעבוד על היעד: ${editTitle}`,
+        editReminderTime,
+        selectedGoal.id,
+        "goal"
+      );
+    } else {
+      cancelNotification(selectedGoal.id, "goal");
+    }
+    
+    setEditGoalOpen(false);
+  };
+
   const handleDeleteGoal = () => {
     if (!selectedGoal) return;
     deleteGoal.mutate(selectedGoal.id);
@@ -184,12 +283,48 @@ export const DailyGoalTracker = () => {
     setSelectedGoalId(null);
   };
 
-  const navigateMonth = (direction: number) => {
-    setCurrentMonth((prev) => {
-      const newDate = new Date(prev);
-      newDate.setMonth(newDate.getMonth() + direction);
-      return newDate;
+  const navigate = (direction: number) => {
+    setCurrentDate((prev) => {
+      switch (viewMode) {
+        case "day":
+          return direction > 0 ? addDays(prev, 1) : subDays(prev, 1);
+        case "week":
+          return direction > 0 ? addWeeks(prev, 1) : subWeeks(prev, 1);
+        case "month":
+          return direction > 0 ? addMonths(prev, 1) : subMonths(prev, 1);
+        case "year":
+          return direction > 0 ? addYears(prev, 1) : subYears(prev, 1);
+      }
     });
+  };
+
+  const getNavigationLabel = () => {
+    switch (viewMode) {
+      case "day":
+        return format(currentDate, "EEEE, d בMMMM yyyy", { locale: he });
+      case "week":
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+        const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
+        return `${format(weekStart, "d", { locale: he })} - ${format(weekEnd, "d בMMMM yyyy", { locale: he })}`;
+      case "month":
+        return format(currentDate, "MMMM yyyy", { locale: he });
+      case "year":
+        return format(currentDate, "yyyy", { locale: he });
+    }
+  };
+
+  const isNavigateForwardDisabled = () => {
+    const now = new Date();
+    switch (viewMode) {
+      case "day":
+        return isToday(currentDate);
+      case "week":
+        return isSameWeek(currentDate, now, { weekStartsOn: 0 });
+      case "month":
+        return isSameMonth(currentDate, now);
+      case "year":
+        return isSameYear(currentDate, now);
+    }
   };
 
   const getDayStatus = (date: Date) => {
@@ -348,12 +483,73 @@ export const DailyGoalTracker = () => {
                 <Pencil className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent dir="rtl">
+            <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>עריכת יעד</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                <p className="text-muted-foreground">יעד: {selectedGoal.title}</p>
+                {/* Edit title */}
+                <div className="space-y-2">
+                  <Label>שם היעד</Label>
+                  <Input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="לדוגמה: ללכת לישון בזמן"
+                  />
+                </div>
+                
+                {/* Edit description */}
+                <div className="space-y-2">
+                  <Label>תיאור (אופציונלי)</Label>
+                  <Textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="פירוט נוסף על היעד"
+                  />
+                </div>
+                
+                {/* Icon and Color */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>אייקון</Label>
+                    <Select value={editIcon} onValueChange={setEditIcon}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ICON_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            <div className="flex items-center gap-2">
+                              <opt.icon className="w-4 h-4" />
+                              {opt.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>צבע</Label>
+                    <Select value={editColor} onValueChange={setEditColor}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COLOR_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-4 h-4 rounded-full"
+                                style={{ backgroundColor: opt.value }}
+                              />
+                              {opt.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 
                 {/* Reminder settings */}
                 <div className="space-y-3 p-3 rounded-lg bg-muted/30 border">
@@ -368,25 +564,7 @@ export const DailyGoalTracker = () => {
                     </div>
                     <Switch
                       checked={editReminderEnabled}
-                      onCheckedChange={(checked) => {
-                        setEditReminderEnabled(checked);
-                        if (checked) {
-                          scheduleNotification(
-                            selectedGoal.title,
-                            `הגיע הזמן לעבוד על היעד: ${selectedGoal.title}`,
-                            editReminderTime,
-                            selectedGoal.id,
-                            "goal"
-                          );
-                        } else {
-                          cancelNotification(selectedGoal.id, "goal");
-                        }
-                        updateGoal.mutate({
-                          id: selectedGoal.id,
-                          reminder_enabled: checked,
-                          reminder_time: checked ? editReminderTime : null,
-                        });
-                      }}
+                      onCheckedChange={setEditReminderEnabled}
                     />
                   </div>
                   {editReminderEnabled && (
@@ -395,24 +573,19 @@ export const DailyGoalTracker = () => {
                       <Input
                         type="time"
                         value={editReminderTime}
-                        onChange={(e) => {
-                          setEditReminderTime(e.target.value);
-                          scheduleNotification(
-                            selectedGoal.title,
-                            `הגיע הזמן לעבוד על היעד: ${selectedGoal.title}`,
-                            e.target.value,
-                            selectedGoal.id,
-                            "goal"
-                          );
-                          updateGoal.mutate({
-                            id: selectedGoal.id,
-                            reminder_time: e.target.value,
-                          });
-                        }}
+                        onChange={(e) => setEditReminderTime(e.target.value)}
                       />
                     </div>
                   )}
                 </div>
+                
+                <Button 
+                  onClick={handleUpdateGoal} 
+                  className="w-full" 
+                  disabled={!editTitle.trim()}
+                >
+                  שמור שינויים
+                </Button>
                 
                 <Button
                   variant="destructive"
@@ -510,119 +683,286 @@ export const DailyGoalTracker = () => {
 
           {/* Calendar */}
           <Card className="glass-card">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            <CardHeader className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
                   {selectedGoal && (() => {
                     const GoalIcon = getIconComponent(selectedGoal.icon);
-                    return <GoalIcon className="w-6 h-6" style={{ color: selectedGoal.color }} />;
+                    return <GoalIcon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: selectedGoal.color }} />;
                   })()}
-                  <CardTitle className="text-2xl">{selectedGoal?.title}</CardTitle>
+                  <CardTitle className="text-lg sm:text-2xl">{selectedGoal?.title}</CardTitle>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => navigateMonth(-1)}>
-                    <ChevronRight className="w-5 h-5" />
-                  </Button>
-                  <span className="font-semibold min-w-[120px] text-center">
-                    {format(currentMonth, "MMMM yyyy", { locale: he })}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigateMonth(1)}
-                    disabled={format(currentMonth, "yyyy-MM") === format(new Date(), "yyyy-MM")}
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </Button>
+                
+                {/* View Mode Selector */}
+                <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1">
+                  {VIEW_OPTIONS.map((opt) => (
+                    <Button
+                      key={opt.value}
+                      variant={viewMode === opt.value ? "default" : "ghost"}
+                      size="sm"
+                      className="text-xs sm:text-sm px-2 sm:px-3"
+                      onClick={() => setViewMode(opt.value)}
+                    >
+                      {opt.label}
+                    </Button>
+                  ))}
                 </div>
               </div>
-              <CardDescription>לחץ על יום כדי לסמן הצלחה או כישלון</CardDescription>
+              
+              {/* Navigation */}
+              <div className="flex items-center justify-between">
+                <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
+                <span className="font-semibold text-sm sm:text-base text-center flex-1">
+                  {getNavigationLabel()}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate(1)}
+                  disabled={isNavigateForwardDisabled()}
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </Button>
+              </div>
+              <CardDescription className="text-center">לחץ על יום כדי לסמן הצלחה או כישלון</CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Week days header */}
-              <div className="grid grid-cols-7 gap-2 mb-4">
-                {weekDays.map((day) => (
-                  <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              {/* Calendar grid */}
-              <TooltipProvider>
-                <div className="grid grid-cols-7 gap-2">
-                  {paddedDays.map((day, index) => {
-                    if (!day) {
-                      return <div key={`empty-${index}`} className="aspect-square" />;
-                    }
-
+              {/* Render based on view mode */}
+              {viewMode === "day" && (
+                <div className="flex justify-center">
+                  {days.map((day) => {
                     const status = getDayStatus(day);
                     const log = selectedGoal ? getLogForDate(selectedGoal.id, day) : null;
-                    const isCurrentDay = isToday(day);
                     const isFutureDay = isFuture(day);
-                    const hasNotes = log?.notes && log.notes.length > 0;
-
-                    const dayButton = (
+                    return (
                       <button
+                        key={day.toISOString()}
                         onClick={() => handleDayClick(day)}
                         disabled={isFutureDay}
                         className={cn(
-                          "aspect-square rounded-xl p-2 flex flex-col items-center justify-center transition-all border relative",
-                          "hover:scale-105 hover:shadow-md",
-                          isCurrentDay && "ring-2 ring-primary shadow-lg",
+                          "w-40 h-40 rounded-2xl p-4 flex flex-col items-center justify-center transition-all border",
+                          "hover:scale-105 hover:shadow-lg",
                           isFutureDay && "opacity-40 cursor-not-allowed",
-                          status === "success" && "bg-success/20 border-success/40 hover:bg-success/30",
-                          status === "failed" && "bg-destructive/20 border-destructive/40 hover:bg-destructive/30",
-                          status === "empty" && !isFutureDay && "bg-muted/30 border-muted/40 hover:bg-muted/50"
+                          status === "success" && "bg-success/20 border-success/40",
+                          status === "failed" && "bg-destructive/20 border-destructive/40",
+                          status === "empty" && !isFutureDay && "bg-muted/30 border-muted/40"
                         )}
                       >
-                        <span
-                          className={cn(
-                            "text-sm font-semibold",
-                            status === "success" && "text-success",
-                            status === "failed" && "text-destructive"
-                          )}
-                        >
-                          {format(day, "d")}
-                        </span>
-                        {status === "success" && <Check className="w-4 h-4 text-success mt-1" />}
-                        {status === "failed" && <X className="w-4 h-4 text-destructive mt-1" />}
-                        {hasNotes && <MessageSquare className="w-3 h-3 text-info absolute top-1 left-1" />}
+                        <span className="text-3xl font-bold">{format(day, "d")}</span>
+                        <span className="text-sm text-muted-foreground">{format(day, "EEEE", { locale: he })}</span>
+                        {status === "success" && <Check className="w-8 h-8 text-success mt-2" />}
+                        {status === "failed" && <X className="w-8 h-8 text-destructive mt-2" />}
+                        {log?.notes && (
+                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{log.notes}</p>
+                        )}
                       </button>
                     );
-
-                    if (hasNotes) {
-                      return (
-                        <Tooltip key={day.toISOString()}>
-                          <TooltipTrigger asChild>{dayButton}</TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-[200px] text-right">
-                            <p className="text-sm">{log?.notes}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    }
-
-                    return <div key={day.toISOString()}>{dayButton}</div>;
                   })}
                 </div>
-              </TooltipProvider>
+              )}
+
+              {viewMode === "week" && (
+                <>
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
+                    {weekDays.map((day) => (
+                      <div key={day} className="text-center text-xs sm:text-sm font-medium text-muted-foreground py-1 sm:py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  <TooltipProvider>
+                    <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                      {days.map((day) => {
+                        const status = getDayStatus(day);
+                        const log = selectedGoal ? getLogForDate(selectedGoal.id, day) : null;
+                        const isCurrentDay = isToday(day);
+                        const isFutureDay = isFuture(day);
+                        const hasNotes = log?.notes && log.notes.length > 0;
+
+                        const dayButton = (
+                          <button
+                            onClick={() => handleDayClick(day)}
+                            disabled={isFutureDay}
+                            className={cn(
+                              "aspect-square rounded-lg sm:rounded-xl p-1 sm:p-2 flex flex-col items-center justify-center transition-all border relative",
+                              "hover:scale-105 hover:shadow-md",
+                              isCurrentDay && "ring-2 ring-primary shadow-lg",
+                              isFutureDay && "opacity-40 cursor-not-allowed",
+                              status === "success" && "bg-success/20 border-success/40",
+                              status === "failed" && "bg-destructive/20 border-destructive/40",
+                              status === "empty" && !isFutureDay && "bg-muted/30 border-muted/40"
+                            )}
+                          >
+                            <span className={cn(
+                              "text-xs sm:text-sm font-semibold",
+                              status === "success" && "text-success",
+                              status === "failed" && "text-destructive"
+                            )}>
+                              {format(day, "d")}
+                            </span>
+                            {status === "success" && <Check className="w-3 h-3 sm:w-4 sm:h-4 text-success mt-0.5" />}
+                            {status === "failed" && <X className="w-3 h-3 sm:w-4 sm:h-4 text-destructive mt-0.5" />}
+                            {hasNotes && <MessageSquare className="w-2 h-2 sm:w-3 sm:h-3 text-info absolute top-0.5 left-0.5" />}
+                          </button>
+                        );
+
+                        if (hasNotes) {
+                          return (
+                            <Tooltip key={day.toISOString()}>
+                              <TooltipTrigger asChild>{dayButton}</TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[200px] text-right">
+                                <p className="text-sm">{log?.notes}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        }
+
+                        return <div key={day.toISOString()}>{dayButton}</div>;
+                      })}
+                    </div>
+                  </TooltipProvider>
+                </>
+              )}
+
+              {viewMode === "month" && (
+                <>
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-4">
+                    {weekDays.map((day) => (
+                      <div key={day} className="text-center text-xs sm:text-sm font-medium text-muted-foreground py-1 sm:py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  <TooltipProvider>
+                    <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                      {paddedDays.map((day, index) => {
+                        if (!day) {
+                          return <div key={`empty-${index}`} className="aspect-square" />;
+                        }
+
+                        const status = getDayStatus(day);
+                        const log = selectedGoal ? getLogForDate(selectedGoal.id, day) : null;
+                        const isCurrentDay = isToday(day);
+                        const isFutureDay = isFuture(day);
+                        const hasNotes = log?.notes && log.notes.length > 0;
+
+                        const dayButton = (
+                          <button
+                            onClick={() => handleDayClick(day)}
+                            disabled={isFutureDay}
+                            className={cn(
+                              "aspect-square rounded-lg sm:rounded-xl p-1 sm:p-2 flex flex-col items-center justify-center transition-all border relative",
+                              "hover:scale-105 hover:shadow-md",
+                              isCurrentDay && "ring-2 ring-primary shadow-lg",
+                              isFutureDay && "opacity-40 cursor-not-allowed",
+                              status === "success" && "bg-success/20 border-success/40 hover:bg-success/30",
+                              status === "failed" && "bg-destructive/20 border-destructive/40 hover:bg-destructive/30",
+                              status === "empty" && !isFutureDay && "bg-muted/30 border-muted/40 hover:bg-muted/50"
+                            )}
+                          >
+                            <span className={cn(
+                              "text-xs sm:text-sm font-semibold",
+                              status === "success" && "text-success",
+                              status === "failed" && "text-destructive"
+                            )}>
+                              {format(day, "d")}
+                            </span>
+                            {status === "success" && <Check className="w-3 h-3 sm:w-4 sm:h-4 text-success mt-0.5 sm:mt-1" />}
+                            {status === "failed" && <X className="w-3 h-3 sm:w-4 sm:h-4 text-destructive mt-0.5 sm:mt-1" />}
+                            {hasNotes && <MessageSquare className="w-2 h-2 sm:w-3 sm:h-3 text-info absolute top-0.5 left-0.5 sm:top-1 sm:left-1" />}
+                          </button>
+                        );
+
+                        if (hasNotes) {
+                          return (
+                            <Tooltip key={day.toISOString()}>
+                              <TooltipTrigger asChild>{dayButton}</TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[200px] text-right">
+                                <p className="text-sm">{log?.notes}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        }
+
+                        return <div key={day.toISOString()}>{dayButton}</div>;
+                      })}
+                    </div>
+                  </TooltipProvider>
+                </>
+              )}
+
+              {viewMode === "year" && (
+                <div className="space-y-4">
+                  {Array.from({ length: 12 }, (_, monthIndex) => {
+                    const monthDate = new Date(currentDate.getFullYear(), monthIndex, 1);
+                    const monthDays = days.filter(d => d.getMonth() === monthIndex);
+                    if (monthDays.length === 0) return null;
+                    
+                    const successCount = monthDays.filter(d => getDayStatus(d) === "success").length;
+                    const failedCount = monthDays.filter(d => getDayStatus(d) === "failed").length;
+                    const totalMarked = successCount + failedCount;
+                    const successRate = totalMarked > 0 ? Math.round((successCount / totalMarked) * 100) : 0;
+                    
+                    return (
+                      <div key={monthIndex} className="p-3 sm:p-4 rounded-xl border bg-muted/20">
+                        <div className="flex items-center justify-between mb-2 sm:mb-3">
+                          <h4 className="font-semibold text-sm sm:text-base">{format(monthDate, "MMMM", { locale: he })}</h4>
+                          <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm">
+                            <span className="text-success">{successCount} הצלחות</span>
+                            <span className="text-destructive">{failedCount} נפילות</span>
+                            {totalMarked > 0 && (
+                              <Badge variant={successRate >= 70 ? "default" : "secondary"} className="text-xs">
+                                {successRate}%
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                          {monthDays.map(day => {
+                            const status = getDayStatus(day);
+                            const isFutureDay = isFuture(day);
+                            return (
+                              <button
+                                key={day.toISOString()}
+                                onClick={() => handleDayClick(day)}
+                                disabled={isFutureDay}
+                                className={cn(
+                                  "w-5 h-5 sm:w-6 sm:h-6 rounded text-[10px] sm:text-xs font-medium transition-all",
+                                  isFutureDay && "opacity-30",
+                                  status === "success" && "bg-success/30 text-success",
+                                  status === "failed" && "bg-destructive/30 text-destructive",
+                                  status === "empty" && !isFutureDay && "bg-muted/50 hover:bg-muted"
+                                )}
+                              >
+                                {format(day, "d")}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }).filter(Boolean)}
+                </div>
+              )}
 
               {/* Legend */}
-              <div className="flex flex-wrap items-center gap-4 pt-6 border-t mt-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-success/20 border border-success/40 rounded-md flex items-center justify-center">
-                    <Check className="w-3 h-3 text-success" />
+              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 pt-4 sm:pt-6 border-t mt-4 sm:mt-6 text-xs sm:text-sm">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-success/20 border border-success/40 rounded-md flex items-center justify-center">
+                    <Check className="w-2 h-2 sm:w-3 sm:h-3 text-success" />
                   </div>
                   <span className="text-muted-foreground">הצלחתי</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-destructive/20 border border-destructive/40 rounded-md flex items-center justify-center">
-                    <X className="w-3 h-3 text-destructive" />
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-destructive/20 border border-destructive/40 rounded-md flex items-center justify-center">
+                    <X className="w-2 h-2 sm:w-3 sm:h-3 text-destructive" />
                   </div>
                   <span className="text-muted-foreground">לא הצלחתי</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-muted/30 border border-muted/40 rounded-md"></div>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-muted/30 border border-muted/40 rounded-md"></div>
                   <span className="text-muted-foreground">לא סומן</span>
                 </div>
               </div>
