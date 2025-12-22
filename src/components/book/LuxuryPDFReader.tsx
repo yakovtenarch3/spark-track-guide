@@ -44,6 +44,12 @@ import {
   CheckCircle2,
   Circle,
   Eye,
+  Grid3X3,
+  LayoutGrid,
+  Rows3,
+  PenTool,
+  FileDown,
+  Settings2,
 } from "lucide-react";
 import { usePDFAnnotations, type PDFAnnotation } from "@/hooks/usePDFAnnotations";
 import { toast } from "sonner";
@@ -59,6 +65,14 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 
 // Set up PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -116,7 +130,7 @@ export const LuxuryPDFReader = ({
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [sidePanel, setSidePanel] = useState<"index" | "progress" | "annotations" | "settings">("index");
   const [searchQuery, setSearchQuery] = useState("");
-  const [indexViewMode, setIndexViewMode] = useState<"all" | "grid">("all");
+  const [indexViewMode, setIndexViewMode] = useState<"grid" | "list" | "compact">("grid");
 
   // Typography states
   const [fontSize, setFontSize] = useState(16);
@@ -126,6 +140,7 @@ export const LuxuryPDFReader = ({
   const [nightMode, setNightMode] = useState(false);
   const [highlightMode, setHighlightMode] = useState(false);
   const [selectedText, setSelectedText] = useState("");
+  const [showFormMode, setShowFormMode] = useState(false);
   
   // Reading progress - pages that have been read
   const [readPages, setReadPages] = useState<Set<number>>(() => {
@@ -140,6 +155,12 @@ export const LuxuryPDFReader = ({
   const [editingAnnotation, setEditingAnnotation] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set([currentPage]));
+  
+  // Form filling - page-specific text inputs
+  const [formInputs, setFormInputs] = useState<Record<string, Record<string, string>>>(() => {
+    const saved = localStorage.getItem(`book-forms-${bookId}`);
+    return saved ? JSON.parse(saved) : {};
+  });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pdfContainerRef = useRef<HTMLDivElement>(null);
@@ -152,6 +173,11 @@ export const LuxuryPDFReader = ({
     getPageAnnotations,
     annotationCountsByPage,
   } = usePDFAnnotations(bookId);
+  
+  // Save form inputs to localStorage
+  useEffect(() => {
+    localStorage.setItem(`book-forms-${bookId}`, JSON.stringify(formInputs));
+  }, [formInputs, bookId]);
 
   // Save read pages to localStorage
   useEffect(() => {
@@ -355,12 +381,72 @@ export const LuxuryPDFReader = ({
     setReadPages(new Set());
     toast.success("התקדמות הקריאה אופסה");
   };
+  
+  // Export notes and progress
+  const exportData = () => {
+    const data = {
+      bookName: fileName,
+      exportDate: new Date().toLocaleDateString('he-IL'),
+      progress: {
+        currentPage,
+        totalPages: numPages,
+        readPages: [...readPages].sort((a, b) => a - b),
+        percentage: progressPercentage
+      },
+      annotations: annotations.map(a => ({
+        page: a.page_number,
+        note: a.note_text,
+        highlight: a.highlight_text,
+        color: a.color,
+        date: new Date(a.created_at).toLocaleDateString('he-IL')
+      })),
+      formInputs: formInputs[bookId] || {}
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileName.replace('.pdf', '')}_notes_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("הקובץ יוצא בהצלחה!");
+  };
+  
+  // Export as text
+  const exportAsText = () => {
+    let text = `📖 ${fileName}\n`;
+    text += `📅 תאריך ייצוא: ${new Date().toLocaleDateString('he-IL')}\n\n`;
+    text += `📊 התקדמות קריאה: ${progressPercentage}% (${readCount}/${numPages} עמודים)\n`;
+    text += `📍 עמוד נוכחי: ${currentPage}\n\n`;
+    
+    if (annotations.length > 0) {
+      text += `📝 הערות והדגשות:\n${'─'.repeat(40)}\n`;
+      annotations.forEach((a, i) => {
+        text += `\n[${i + 1}] עמוד ${a.page_number}\n`;
+        if (a.highlight_text) text += `   💡 "${a.highlight_text}"\n`;
+        text += `   📌 ${a.note_text}\n`;
+      });
+    }
+    
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileName.replace('.pdf', '')}_notes.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("הקובץ יוצא בהצלחה!");
+  };
 
   const scaledWidth = (pageWidth * zoom) / 100;
 
+  // Gold border style
+  const goldBorderStyle = "ring-1 ring-primary/30 shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]";
+
   return (
     <div 
-      className={`flex flex-col h-[calc(100vh-100px)] min-h-[600px] rounded-xl overflow-hidden border-2 border-border shadow-xl transition-colors ${
+      className={`flex flex-col h-[calc(100vh-100px)] min-h-[600px] rounded-xl overflow-hidden shadow-xl transition-colors ring-2 ring-primary/40 ${
         nightMode ? "bg-slate-900" : "bg-background"
       }`} 
       dir="rtl"
@@ -441,11 +527,33 @@ export const LuxuryPDFReader = ({
             <Maximize2 className="w-4 h-4" />
           </Button>
 
-          <Button variant="ghost" size="icon" asChild title="הורד">
-            <a href={fileUrl} download target="_blank" rel="noopener noreferrer">
-              <Download className="w-4 h-4" />
-            </a>
-          </Button>
+          {/* Export Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" title="ייצוא">
+                <FileDown className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>ייצוא נתונים</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={exportAsText} className="gap-2">
+                <FileText className="w-4 h-4" />
+                ייצוא כטקסט (.txt)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportData} className="gap-2">
+                <Download className="w-4 h-4" />
+                ייצוא כ-JSON
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <a href={fileUrl} download target="_blank" rel="noopener noreferrer" className="gap-2">
+                  <Download className="w-4 h-4" />
+                  הורד PDF מקורי
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Button
             variant={showSidePanel ? "default" : "ghost"}
@@ -514,13 +622,13 @@ export const LuxuryPDFReader = ({
                       </div>
                       <div className="flex gap-1 bg-muted rounded-lg p-1">
                         <Button
-                          variant={indexViewMode === "all" ? "default" : "ghost"}
+                          variant={indexViewMode === "list" ? "default" : "ghost"}
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => setIndexViewMode("all")}
+                          onClick={() => setIndexViewMode("list")}
                           title="תצוגת רשימה"
                         >
-                          <List className="w-3.5 h-3.5" />
+                          <Rows3 className="w-3.5 h-3.5" />
                         </Button>
                         <Button
                           variant={indexViewMode === "grid" ? "default" : "ghost"}
@@ -529,9 +637,16 @@ export const LuxuryPDFReader = ({
                           onClick={() => setIndexViewMode("grid")}
                           title="תצוגת רשת"
                         >
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
-                          </svg>
+                          <Grid3X3 className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant={indexViewMode === "compact" ? "default" : "ghost"}
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => setIndexViewMode("compact")}
+                          title="תצוגה קומפקטית"
+                        >
+                          <LayoutGrid className="w-3.5 h-3.5" />
                         </Button>
                       </div>
                     </div>
@@ -549,7 +664,7 @@ export const LuxuryPDFReader = ({
                     </div>
 
                     {/* Grid View */}
-                    {indexViewMode === "grid" ? (
+                    {indexViewMode === "grid" && (
                       <div className="grid grid-cols-5 gap-1.5">
                         {filteredPages.map((page) => {
                           const hasAnnotations = annotationCountsByPage[page] > 0;
@@ -560,11 +675,11 @@ export const LuxuryPDFReader = ({
                             <button
                               key={page}
                               onClick={() => goToPage(page)}
-                              className={`relative aspect-square flex items-center justify-center text-xs font-medium rounded-lg transition-all ${
+                              className={`relative aspect-square flex items-center justify-center text-xs font-medium rounded-lg transition-all ring-1 ring-primary/20 ${
                                 isActive
-                                  ? "bg-primary text-primary-foreground shadow-md scale-110 z-10"
+                                  ? "bg-primary text-primary-foreground shadow-md scale-110 z-10 ring-2 ring-primary"
                                   : isRead
-                                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200"
+                                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 ring-green-400/30"
                                   : "bg-muted hover:bg-muted/80"
                               }`}
                               title={`עמוד ${page}${isRead ? " (נקרא)" : ""}${hasAnnotations ? ` - ${annotationCountsByPage[page]} הערות` : ""}`}
@@ -580,8 +695,10 @@ export const LuxuryPDFReader = ({
                           );
                         })}
                       </div>
-                    ) : (
-                      /* List View */
+                    )}
+
+                    {/* List View */}
+                    {indexViewMode === "list" && (
                       <div className="space-y-1">
                         {filteredPages.map((page) => {
                           const hasAnnotations = annotationCountsByPage[page] > 0;
@@ -591,11 +708,11 @@ export const LuxuryPDFReader = ({
                           return (
                             <div
                               key={page}
-                              className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-all ${
+                              className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-all border border-primary/10 ${
                                 isActive
-                                  ? "bg-primary text-primary-foreground shadow-md"
+                                  ? "bg-primary text-primary-foreground shadow-md border-primary"
                                   : isRead
-                                  ? "bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30"
+                                  ? "bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 border-green-400/30"
                                   : "hover:bg-muted"
                               }`}
                             >
@@ -625,6 +742,37 @@ export const LuxuryPDFReader = ({
                                 </Badge>
                               )}
                             </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Compact View - 10 columns */}
+                    {indexViewMode === "compact" && (
+                      <div className="grid grid-cols-10 gap-0.5">
+                        {filteredPages.map((page) => {
+                          const hasAnnotations = annotationCountsByPage[page] > 0;
+                          const isActive = page === currentPage;
+                          const isRead = readPages.has(page);
+
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => goToPage(page)}
+                              className={`relative aspect-square flex items-center justify-center text-[9px] font-medium rounded transition-all ${
+                                isActive
+                                  ? "bg-primary text-primary-foreground shadow ring-1 ring-primary"
+                                  : isRead
+                                  ? "bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200"
+                                  : "bg-muted/60 hover:bg-muted"
+                              }`}
+                              title={`עמוד ${page}`}
+                            >
+                              {page}
+                              {hasAnnotations && (
+                                <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary rounded-full" />
+                              )}
+                            </button>
                           );
                         })}
                       </div>
@@ -1044,26 +1192,29 @@ export const LuxuryPDFReader = ({
                 </div>
               )}
 
-              <Document
-                file={fileUrl}
-                onLoadSuccess={onDocumentLoadSuccess}
-                onLoadError={onDocumentLoadError}
-                loading={null}
-                className={`shadow-2xl rounded-lg overflow-hidden ${nightMode ? "filter brightness-90 contrast-110" : ""}`}
-              >
-                <Page
-                  pageNumber={currentPage}
-                  width={scaledWidth}
-                  loading={
-                    <div className="flex items-center justify-center p-12">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                    </div>
-                  }
-                  className="bg-white"
-                  renderTextLayer={true}
-                  renderAnnotationLayer={true}
-                />
-              </Document>
+              {/* PDF with gold frame */}
+              <div className="ring-2 ring-primary/30 rounded-lg shadow-[0_0_15px_rgba(var(--primary-rgb),0.15)] overflow-hidden">
+                <Document
+                  file={fileUrl}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={onDocumentLoadError}
+                  loading={null}
+                  className={`${nightMode ? "filter brightness-90 contrast-110" : ""}`}
+                >
+                  <Page
+                    pageNumber={currentPage}
+                    width={scaledWidth}
+                    loading={
+                      <div className="flex items-center justify-center p-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      </div>
+                    }
+                    className="bg-white"
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                  />
+                </Document>
+              </div>
             </div>
           </div>
 
