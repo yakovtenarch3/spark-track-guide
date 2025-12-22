@@ -2,27 +2,36 @@ import { useEffect, useState } from "react";
 
 export type ThemeName = "default" | "ocean" | "sunset" | "forest" | "lavender" | "midnight" | "coral" | "mint" | "warm" | string;
 
+export interface ThemeColors {
+  background: string;
+  foreground: string;
+  card: string;
+  cardForeground: string;
+  primary: string;
+  primaryForeground: string;
+  secondary: string;
+  secondaryForeground: string;
+  muted: string;
+  mutedForeground: string;
+  accent: string;
+  accentForeground: string;
+  border: string;
+  input: string;
+  ring: string;
+  // Extended colors for custom themes
+  fontColor?: string;
+  headingColor?: string;
+  borderColor?: string;
+  buttonBg?: string;
+  buttonText?: string;
+  cardBorder?: string;
+}
+
 export interface Theme {
   name: string;
   label: string;
   isCustom?: boolean;
-  colors: {
-    background: string;
-    foreground: string;
-    card: string;
-    cardForeground: string;
-    primary: string;
-    primaryForeground: string;
-    secondary: string;
-    secondaryForeground: string;
-    muted: string;
-    mutedForeground: string;
-    accent: string;
-    accentForeground: string;
-    border: string;
-    input: string;
-    ring: string;
-  };
+  colors: ThemeColors;
 }
 
 export const themes: Record<ThemeName, Theme> = {
@@ -257,6 +266,60 @@ export const themes: Record<ThemeName, Theme> = {
       ring: "42 70% 50%",
     },
   },
+  elegant: {
+    name: "elegant",
+    label: "אלגנטי זהב",
+    colors: {
+      background: "40 30% 96%",
+      foreground: "215 60% 18%",
+      card: "0 0% 100%",
+      cardForeground: "215 60% 18%",
+      primary: "215 60% 18%",
+      primaryForeground: "0 0% 100%",
+      secondary: "43 80% 55%",
+      secondaryForeground: "215 60% 18%",
+      muted: "40 25% 92%",
+      mutedForeground: "215 40% 35%",
+      accent: "43 85% 50%",
+      accentForeground: "215 60% 15%",
+      border: "43 70% 55%",
+      input: "40 30% 94%",
+      ring: "43 80% 55%",
+      fontColor: "215 60% 18%",
+      headingColor: "215 70% 15%",
+      borderColor: "43 70% 55%",
+      buttonBg: "0 0% 100%",
+      buttonText: "215 60% 18%",
+      cardBorder: "43 70% 55%",
+    },
+  },
+  cream: {
+    name: "cream",
+    label: "קרם קלאסי",
+    colors: {
+      background: "45 35% 95%",
+      foreground: "30 25% 20%",
+      card: "45 40% 98%",
+      cardForeground: "30 25% 20%",
+      primary: "30 45% 25%",
+      primaryForeground: "45 40% 98%",
+      secondary: "40 50% 75%",
+      secondaryForeground: "30 30% 18%",
+      muted: "45 25% 90%",
+      mutedForeground: "30 20% 45%",
+      accent: "35 55% 45%",
+      accentForeground: "45 40% 98%",
+      border: "40 35% 80%",
+      input: "45 30% 92%",
+      ring: "35 55% 45%",
+      fontColor: "30 25% 20%",
+      headingColor: "30 35% 15%",
+      borderColor: "40 35% 80%",
+      buttonBg: "30 45% 25%",
+      buttonText: "45 40% 98%",
+      cardBorder: "40 40% 75%",
+    },
+  },
 };
 
 export const useTheme = () => {
@@ -286,31 +349,49 @@ export const useTheme = () => {
     localStorage.setItem("app-theme", currentTheme);
   }, [currentTheme, allThemes]);
 
-  const addCustomTheme = (name: string, colors: {
+  // Extended custom theme colors interface
+  interface ExtendedThemeColors {
     background: string;
+    foreground: string;
     primary: string;
     secondary: string;
-  }) => {
+    card?: string;
+    cardBorder?: string;
+    fontColor?: string;
+    headingColor?: string;
+    borderColor?: string;
+    buttonBg?: string;
+    buttonText?: string;
+    accent?: string;
+  }
+
+  const addCustomTheme = (name: string, colors: ExtendedThemeColors) => {
     const customTheme: Theme = {
       name,
       label: name,
       isCustom: true,
       colors: {
         background: colors.background,
-        foreground: "0 0% 100%",
-        card: colors.background,
-        cardForeground: "0 0% 100%",
+        foreground: colors.foreground || colors.fontColor || "0 0% 100%",
+        card: colors.card || colors.background,
+        cardForeground: colors.fontColor || colors.foreground || "0 0% 100%",
         primary: colors.primary,
-        primaryForeground: "0 0% 100%",
+        primaryForeground: colors.buttonText || "0 0% 100%",
         secondary: colors.secondary,
-        secondaryForeground: "0 0% 100%",
+        secondaryForeground: colors.foreground || "0 0% 100%",
         muted: colors.background,
-        mutedForeground: "0 0% 100%",
-        accent: colors.primary,
-        accentForeground: "0 0% 100%",
-        border: colors.secondary,
+        mutedForeground: colors.fontColor || colors.foreground || "0 0% 100%",
+        accent: colors.accent || colors.secondary,
+        accentForeground: colors.buttonText || "0 0% 100%",
+        border: colors.borderColor || colors.cardBorder || colors.secondary,
         input: colors.background,
-        ring: colors.primary,
+        ring: colors.accent || colors.secondary,
+        fontColor: colors.fontColor,
+        headingColor: colors.headingColor,
+        borderColor: colors.borderColor,
+        buttonBg: colors.buttonBg,
+        buttonText: colors.buttonText,
+        cardBorder: colors.cardBorder,
       },
     };
 
@@ -320,11 +401,7 @@ export const useTheme = () => {
     setCurrentTheme(name);
   };
 
-  const updateCustomTheme = (oldName: string, newName: string, colors: {
-    background: string;
-    primary: string;
-    secondary: string;
-  }) => {
+  const updateCustomTheme = (oldName: string, newName: string, colors: ExtendedThemeColors) => {
     const newCustomThemes = { ...customThemes };
     
     // Remove old theme
@@ -337,20 +414,26 @@ export const useTheme = () => {
       isCustom: true,
       colors: {
         background: colors.background,
-        foreground: "0 0% 100%",
-        card: colors.background,
-        cardForeground: "0 0% 100%",
+        foreground: colors.foreground || colors.fontColor || "0 0% 100%",
+        card: colors.card || colors.background,
+        cardForeground: colors.fontColor || colors.foreground || "0 0% 100%",
         primary: colors.primary,
-        primaryForeground: "0 0% 100%",
+        primaryForeground: colors.buttonText || "0 0% 100%",
         secondary: colors.secondary,
-        secondaryForeground: "0 0% 100%",
+        secondaryForeground: colors.foreground || "0 0% 100%",
         muted: colors.background,
-        mutedForeground: "0 0% 100%",
-        accent: colors.primary,
-        accentForeground: "0 0% 100%",
-        border: colors.secondary,
+        mutedForeground: colors.fontColor || colors.foreground || "0 0% 100%",
+        accent: colors.accent || colors.secondary,
+        accentForeground: colors.buttonText || "0 0% 100%",
+        border: colors.borderColor || colors.cardBorder || colors.secondary,
         input: colors.background,
-        ring: colors.primary,
+        ring: colors.accent || colors.secondary,
+        fontColor: colors.fontColor,
+        headingColor: colors.headingColor,
+        borderColor: colors.borderColor,
+        buttonBg: colors.buttonBg,
+        buttonText: colors.buttonText,
+        cardBorder: colors.cardBorder,
       },
     };
     
