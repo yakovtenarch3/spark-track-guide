@@ -236,6 +236,27 @@ export const themes: Record<ThemeName, Theme> = {
       ring: "43 75% 55%",
     },
   },
+  royal: {
+    name: "royal",
+    label: "מלכותי",
+    colors: {
+      background: "42 30% 95%",
+      foreground: "215 50% 20%",
+      card: "40 35% 98%",
+      cardForeground: "215 50% 20%",
+      primary: "215 55% 25%",
+      primaryForeground: "42 35% 95%",
+      secondary: "42 55% 65%",
+      secondaryForeground: "215 55% 20%",
+      muted: "42 20% 90%",
+      mutedForeground: "215 30% 40%",
+      accent: "42 70% 50%",
+      accentForeground: "215 55% 18%",
+      border: "42 55% 60%",
+      input: "42 25% 92%",
+      ring: "42 70% 50%",
+    },
+  },
 };
 
 export const useTheme = () => {
