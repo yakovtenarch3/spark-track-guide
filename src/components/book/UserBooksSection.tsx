@@ -12,15 +12,9 @@ import {
   Plus
 } from "lucide-react";
 import { PDFUploader } from "./PDFUploader";
-import { PDFViewer } from "./PDFViewer";
+import { EnhancedPDFReader } from "./EnhancedPDFReader";
 import { useUserBooks, type UserBook } from "@/hooks/useUserBooks";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 export const UserBooksSection = () => {
   const [showUploader, setShowUploader] = useState(false);
@@ -83,24 +77,16 @@ export const UserBooksSection = () => {
 
   if (selectedBook) {
     return (
-      <div className="space-y-4">
-        <Button 
-          variant="outline" 
-          onClick={() => setSelectedBook(null)}
-          className="gap-2"
-        >
-          <BookOpen className="w-4 h-4" />
-          חזרה לרשימת הספרים
-        </Button>
-        <PDFViewer
-          bookId={selectedBook.id}
-          fileUrl={selectedBook.file_url}
-          fileName={selectedBook.title}
-          currentPage={selectedBook.current_page}
-          onPageChange={handlePageChange}
-          onDelete={() => handleDeleteBook(selectedBook)}
-        />
-      </div>
+      <EnhancedPDFReader
+        bookId={selectedBook.id}
+        fileUrl={selectedBook.file_url}
+        fileName={selectedBook.title}
+        currentPage={selectedBook.current_page || 1}
+        totalPages={selectedBook.total_pages || 100}
+        onPageChange={handlePageChange}
+        onDelete={() => handleDeleteBook(selectedBook)}
+        onBack={() => setSelectedBook(null)}
+      />
     );
   }
 
