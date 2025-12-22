@@ -1603,7 +1603,7 @@ export const LuxuryPDFReader = ({
         </div>
       </div>
 
-      {/* Fullscreen Dialog */}
+      {/* Fullscreen Dialog with Highlight Support */}
       <Dialog open={showFullscreen} onOpenChange={setShowFullscreen}>
         <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-2" dir="rtl">
           <DialogHeader className="pb-2">
@@ -1611,25 +1611,81 @@ export const LuxuryPDFReader = ({
               <FileText className="w-4 h-4" />
               {fileName}
               <span className="text-muted-foreground text-xs">עמוד {currentPage} / {numPages}</span>
+              
+              {/* Highlight count badge in fullscreen */}
+              {getPageAnnotations(currentPage).length > 0 && (
+                <Badge variant="secondary" className="gap-1 text-xs">
+                  <Highlighter className="w-3 h-3" />
+                  {getPageAnnotations(currentPage).length}
+                </Badge>
+              )}
+              
               <Button variant="ghost" size="icon" className="mr-auto h-7 w-7" onClick={() => setShowFullscreen(false)}>
                 <X className="w-4 h-4" />
               </Button>
             </DialogTitle>
           </DialogHeader>
 
-          <div className={`flex-1 overflow-auto flex justify-center py-4 rounded-lg ${nightMode ? "bg-slate-900" : "bg-muted/30"}`}>
-            <Document file={fileUrl} loading={null}>
-              <Page 
-                pageNumber={currentPage} 
-                width={Math.min(window.innerWidth * 0.92, 1400)}
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
-              />
-            </Document>
+          <div className={`flex-1 overflow-auto flex justify-center py-4 rounded-lg relative ${nightMode ? "bg-slate-900" : "bg-muted/30"}`}>
+            {/* PDF with highlights overlay in fullscreen */}
+            <div className="relative">
+              <Document file={fileUrl} loading={null}>
+                <Page 
+                  pageNumber={currentPage} 
+                  width={Math.min(window.innerWidth * 0.92, 1400)}
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                  className="pdf-page-with-highlights"
+                />
+              </Document>
+              
+              {/* Render highlights in fullscreen too */}
+              {getPageAnnotations(currentPage).map((annotation) => (
+                annotation.highlight_rects && Array.isArray(annotation.highlight_rects) && annotation.highlight_rects.length > 0 ? (
+                  annotation.highlight_rects.map((rect, rectIndex) => (
+                    <div
+                      key={`fs-${annotation.id}-${rectIndex}`}
+                      className="absolute pointer-events-auto cursor-pointer transition-all hover:opacity-70 hover:ring-2 hover:ring-red-400"
+                      style={{
+                        left: `${rect.x}%`,
+                        top: `${rect.y}%`,
+                        width: `${rect.width}%`,
+                        height: `${rect.height}%`,
+                        backgroundColor: `${annotation.color}60`,
+                        borderRadius: '2px',
+                        mixBlendMode: 'multiply',
+                      }}
+                      title={`${annotation.highlight_text || annotation.note_text}\n\nלחיצה ימנית למחיקה`}
+                      onContextMenu={(e) => handleHighlightContextMenu(e, annotation.id)}
+                    />
+                  ))
+                ) : annotation.highlight_text ? (
+                  <div
+                    key={`fs-${annotation.id}`}
+                    className="absolute top-2 right-2 pointer-events-auto cursor-pointer z-20"
+                    onContextMenu={(e) => handleHighlightContextMenu(e, annotation.id)}
+                  >
+                    <div 
+                      className="px-2 py-1 rounded-lg text-xs font-medium shadow-md hover:scale-105 transition-transform flex items-center gap-1"
+                      style={{ 
+                        backgroundColor: annotation.color || '#FFEB3B',
+                        color: '#000'
+                      }}
+                      title={`"${annotation.highlight_text}"\n\nלחיצה ימנית למחיקה`}
+                    >
+                      <Highlighter className="w-3 h-3" />
+                      {(annotation.highlight_text?.length || 0) > 25 
+                        ? annotation.highlight_text?.substring(0, 25) + '...' 
+                        : annotation.highlight_text}
+                    </div>
+                  </div>
+                ) : null
+              ))}
+            </div>
           </div>
           
-          {/* Fullscreen Navigation */}
-          <div className="flex items-center justify-center gap-4 pt-2">
+          {/* Fullscreen Navigation with highlight info */}
+          <div className="flex items-center justify-between gap-4 pt-2 px-4">
             <Button
               variant="outline"
               onClick={() => goToPage(currentPage - 1)}
@@ -1638,7 +1694,27 @@ export const LuxuryPDFReader = ({
               <ChevronRight className="w-4 h-4" />
               הקודם
             </Button>
-            <span className="text-sm">{currentPage} / {numPages}</span>
+            
+            <div className="flex items-center gap-4">
+              <span className="text-sm">{currentPage} / {numPages}</span>
+              
+              {/* Quick color picker for fullscreen */}
+              {selectedText && (
+                <div className="flex items-center gap-2 bg-card border rounded-lg px-2 py-1">
+                  <span className="text-xs text-muted-foreground">הדגש:</span>
+                  {HIGHLIGHT_COLORS.slice(0, 4).map((color) => (
+                    <button
+                      key={color.value}
+                      onClick={() => handleSaveHighlight(color.value)}
+                      className="w-6 h-6 rounded-full hover:scale-110 transition-transform shadow"
+                      style={{ backgroundColor: color.value }}
+                      title={color.label}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            
             <Button
               variant="outline"
               onClick={() => goToPage(currentPage + 1)}
