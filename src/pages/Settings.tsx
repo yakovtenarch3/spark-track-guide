@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { QuoteManagement } from "@/components/QuoteManagement";
+import { TypographySettings } from "@/components/TypographySettings";
 import { Settings as SettingsIcon } from "lucide-react";
 
 export default function Settings() {
@@ -22,6 +23,8 @@ export default function Settings() {
               <ThemeSelector />
             </CardContent>
           </Card>
+
+          <TypographySettings />
 
           <Card>
             <CardHeader>
