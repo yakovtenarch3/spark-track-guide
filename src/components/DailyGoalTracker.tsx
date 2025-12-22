@@ -27,6 +27,7 @@ import { he } from "date-fns/locale";
 import { useDailyGoals } from "@/hooks/useDailyGoals";
 import { DailyGoalProgressChart } from "./DailyGoalProgressChart";
 import { WeeklyPatternChart } from "./WeeklyPatternChart";
+import { ActualValueAnalysis } from "./ActualValueAnalysis";
 import { useNotifications } from "@/hooks/useNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -912,6 +913,11 @@ export const DailyGoalTracker = () => {
             selectedGoalId={selectedGoal?.id} 
           />
 
+          {/* Actual Value Analysis - Gap Analysis */}
+          {selectedGoal && (
+            <ActualValueAnalysis goal={selectedGoal} logs={logs} />
+          )}
+
           {/* Calendar */}
           <Card className="glass-card">
             <CardHeader className="space-y-4">
@@ -1011,6 +1017,7 @@ export const DailyGoalTracker = () => {
                         const isCurrentDay = isToday(day);
                         const isFutureDay = isFuture(day);
                         const hasNotes = log?.notes && log.notes.length > 0;
+                        const hasActualValue = log?.actual_value && log.actual_value.length > 0;
 
                         const dayButton = (
                           <button
@@ -1033,18 +1040,26 @@ export const DailyGoalTracker = () => {
                             )}>
                               {format(day, "d")}
                             </span>
-                            {status === "success" && <Check className="w-3 h-3 sm:w-4 sm:h-4 text-success mt-0.5" />}
-                            {status === "failed" && <X className="w-3 h-3 sm:w-4 sm:h-4 text-destructive mt-0.5" />}
+                            {hasActualValue && (
+                              <span className="text-[9px] sm:text-[10px] font-medium text-primary truncate max-w-full px-0.5">
+                                {log?.actual_value}
+                              </span>
+                            )}
+                            {!hasActualValue && status === "success" && <Check className="w-3 h-3 sm:w-4 sm:h-4 text-success mt-0.5" />}
+                            {!hasActualValue && status === "failed" && <X className="w-3 h-3 sm:w-4 sm:h-4 text-destructive mt-0.5" />}
                             {hasNotes && <MessageSquare className="w-2 h-2 sm:w-3 sm:h-3 text-info absolute top-0.5 left-0.5" />}
                           </button>
                         );
 
-                        if (hasNotes) {
+                        if (hasNotes || hasActualValue) {
                           return (
                             <Tooltip key={day.toISOString()}>
                               <TooltipTrigger asChild>{dayButton}</TooltipTrigger>
-                              <TooltipContent side="top" className="max-w-[200px] text-right">
-                                <p className="text-sm">{log?.notes}</p>
+                              <TooltipContent side="top" className="max-w-[200px] text-right space-y-1">
+                                {hasActualValue && (
+                                  <p className="text-sm font-medium">בפועל: {log?.actual_value}</p>
+                                )}
+                                {hasNotes && <p className="text-sm text-muted-foreground">{log?.notes}</p>}
                               </TooltipContent>
                             </Tooltip>
                           );
@@ -1078,6 +1093,7 @@ export const DailyGoalTracker = () => {
                         const isCurrentDay = isToday(day);
                         const isFutureDay = isFuture(day);
                         const hasNotes = log?.notes && log.notes.length > 0;
+                        const hasActualValue = log?.actual_value && log.actual_value.length > 0;
 
                         const dayButton = (
                           <button
@@ -1100,18 +1116,26 @@ export const DailyGoalTracker = () => {
                             )}>
                               {format(day, "d")}
                             </span>
-                            {status === "success" && <Check className="w-3 h-3 sm:w-4 sm:h-4 text-success mt-0.5 sm:mt-1" />}
-                            {status === "failed" && <X className="w-3 h-3 sm:w-4 sm:h-4 text-destructive mt-0.5 sm:mt-1" />}
+                            {hasActualValue && (
+                              <span className="text-[9px] sm:text-[10px] font-medium text-primary truncate max-w-full px-0.5">
+                                {log?.actual_value}
+                              </span>
+                            )}
+                            {!hasActualValue && status === "success" && <Check className="w-3 h-3 sm:w-4 sm:h-4 text-success mt-0.5 sm:mt-1" />}
+                            {!hasActualValue && status === "failed" && <X className="w-3 h-3 sm:w-4 sm:h-4 text-destructive mt-0.5 sm:mt-1" />}
                             {hasNotes && <MessageSquare className="w-2 h-2 sm:w-3 sm:h-3 text-info absolute top-0.5 left-0.5 sm:top-1 sm:left-1" />}
                           </button>
                         );
 
-                        if (hasNotes) {
+                        if (hasNotes || hasActualValue) {
                           return (
                             <Tooltip key={day.toISOString()}>
                               <TooltipTrigger asChild>{dayButton}</TooltipTrigger>
-                              <TooltipContent side="top" className="max-w-[200px] text-right">
-                                <p className="text-sm">{log?.notes}</p>
+                              <TooltipContent side="top" className="max-w-[200px] text-right space-y-1">
+                                {hasActualValue && (
+                                  <p className="text-sm font-medium">בפועל: {log?.actual_value}</p>
+                                )}
+                                {hasNotes && <p className="text-sm text-muted-foreground">{log?.notes}</p>}
                               </TooltipContent>
                             </Tooltip>
                           );
@@ -1249,7 +1273,7 @@ export const DailyGoalTracker = () => {
         </>
       )}
 
-      {/* Day Edit Dialog */}
+          {/* Day Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md" dir="rtl">
           <DialogHeader>
@@ -1258,8 +1282,30 @@ export const DailyGoalTracker = () => {
             </DialogTitle>
           </DialogHeader>
 
+          {/* Actual Value Input - Always show */}
+          <div className="space-y-3 py-4">
+            <Label htmlFor="actualValue" className="flex items-center gap-2 text-base font-semibold">
+              <Target className="w-5 h-5 text-primary" />
+              מה עשית בפועל?
+            </Label>
+            <Input
+              id="actualValue"
+              type="text"
+              value={actualValue}
+              onChange={(e) => setActualValue(e.target.value)}
+              placeholder={selectedGoal?.target_value ? `יעד: ${selectedGoal.target_value} ${selectedGoal.target_unit || ""}` : "רשום מה עשית בפועל"}
+              className="text-right text-lg"
+            />
+            {selectedGoal?.target_value && (
+              <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                <span className="text-sm text-muted-foreground">היעד שלך:</span>
+                <span className="text-sm font-medium">{selectedGoal.target_value} {selectedGoal.target_unit || ""}</span>
+              </div>
+            )}
+          </div>
+
           {/* Action Buttons - Three Options */}
-          <div className="grid grid-cols-3 gap-2 py-4">
+          <div className="grid grid-cols-3 gap-2 py-2">
             <Button
               onClick={() => handleSaveLog(true)}
               className="flex-col h-auto py-4 bg-success hover:bg-success/90"
@@ -1288,44 +1334,19 @@ export const DailyGoalTracker = () => {
             </Button>
           </div>
 
-          {/* Actual Value Input - Only show if goal has target */}
-          {selectedGoal?.target_value && (
-            <div className="space-y-2 border-t pt-4">
-              <Label htmlFor="actualValue" className="flex items-center gap-2">
-                <Target className="w-4 h-4" />
-                ערך בפועל {selectedGoal.target_unit && `(${selectedGoal.target_unit})`}
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="actualValue"
-                  type="text"
-                  value={actualValue}
-                  onChange={(e) => setActualValue(e.target.value)}
-                  placeholder={`יעד: ${selectedGoal.target_value}`}
-                  className="text-right"
-                />
-                <span className="text-sm text-muted-foreground whitespace-nowrap">
-                  יעד: {selectedGoal.target_value} {selectedGoal.target_unit || ""}
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* Notes Section */}
-          <div className="space-y-4 border-t pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="notes" className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" />
-                הערות (אופציונלי)
-              </Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="מה קרה? איך הרגשת?"
-                className="text-right min-h-[80px]"
-              />
-            </div>
+          <div className="space-y-3 border-t pt-4">
+            <Label htmlFor="notes" className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              הערות (אופציונלי)
+            </Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="מה קרה? איך הרגשת?"
+              className="text-right min-h-[60px]"
+            />
           </div>
         </DialogContent>
       </Dialog>
