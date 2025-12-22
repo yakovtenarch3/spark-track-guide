@@ -1,21 +1,33 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  List, 
-  Search, 
-  Filter, 
-  MessageSquare, 
-  Bookmark, 
-  Star, 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  List,
+  Search,
+  MessageSquare,
+  Bookmark,
+  Star,
   Sparkles,
   ArrowRight,
-  X
+  X,
 } from "lucide-react";
-import { dailyCoachTips, type DailyTip } from "@/data/dailyCoachTips";
+import { dailyCoachTips } from "@/data/dailyCoachTips";
 import type { BookNote, BookBookmark } from "@/hooks/useBookReader";
 
 interface BookTableOfContentsProps {
@@ -24,6 +36,15 @@ interface BookTableOfContentsProps {
   bookmarks: BookBookmark[];
   lastReadTipId: number | null;
   onGoToTip: (index: number) => void;
+}
+
+type TipStats = { notes: number; favorites: number; ai: number };
+
+function extractChapterNumber(source: string): number | null {
+  const m = source.match(/פרק\s*(\d+)/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
 }
 
 export const BookTableOfContents = ({
@@ -36,54 +57,112 @@ export const BookTableOfContents = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
 
-  // Get unique sources for filtering
-  const sources = useMemo(() => {
-    const sourceSet = new Set(dailyCoachTips.map(tip => tip.source));
-    return Array.from(sourceSet);
+  const idToIndex = useMemo(() => {
+    const map = new Map<number, number>();
+    dailyCoachTips.forEach((t, i) => map.set(t.id, i));
+    return map;
   }, []);
 
-  // Get notes count per tip
+  const bookmarkedTipIds = useMemo(() => new Set(bookmarks.map((b) => b.tip_id)), [bookmarks]);
+
   const notesCountByTip = useMemo(() => {
-    const counts: Record<number, { notes: number; favorites: number; ai: number }> = {};
-    notes.forEach(note => {
-      if (note.tip_id) {
-        if (!counts[note.tip_id]) {
-          counts[note.tip_id] = { notes: 0, favorites: 0, ai: 0 };
-        }
-        counts[note.tip_id].notes++;
-        if (note.is_favorite) counts[note.tip_id].favorites++;
-        if (note.note_type === 'ai_analysis') counts[note.tip_id].ai++;
-      }
-    });
+    const counts: Record<number, TipStats> = {};
+    for (const note of notes) {
+      if (!note.tip_id) continue;
+      if (!counts[note.tip_id]) counts[note.tip_id] = { notes: 0, favorites: 0, ai: 0 };
+      counts[note.tip_id].notes++;
+      if (note.is_favorite) counts[note.tip_id].favorites++;
+      if (note.note_type === "ai_analysis") counts[note.tip_id].ai++;
+    }
     return counts;
   }, [notes]);
 
-  // Get bookmarked tip IDs
-  const bookmarkedTipIds = useMemo(() => {
-    return new Set(bookmarks.map(b => b.tip_id));
-  }, [bookmarks]);
+  const sources = useMemo(() => {
+    // סדר יציב לפי הופעה ראשונה + פרק מספרי אם קיים
+    const firstIndex = new Map<string, number>();
+    dailyCoachTips.forEach((t, i) => {
+      if (!firstIndex.has(t.source)) firstIndex.set(t.source, i);
+    });
 
-  // Filter tips based on search and source
-  const filteredTips = useMemo(() => {
-    return dailyCoachTips.filter(tip => {
-      const matchesSearch = !searchQuery || 
-        tip.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tip.tip.toLowerCase().includes(searchQuery.toLowerCase());
+    const unique = Array.from(firstIndex.keys());
+
+    return unique.sort((a, b) => {
+      const aChap = extractChapterNumber(a);
+      const bChap = extractChapterNumber(b);
+
+      if (aChap !== null && bChap !== null) {
+        if (aChap !== bChap) return aChap - bChap;
+      } else if (aChap !== null) {
+        return -1;
+      } else if (bChap !== null) {
+        return 1;
+      }
+
+      return (firstIndex.get(a) ?? 0) - (firstIndex.get(b) ?? 0);
+    });
+  }, []);
+
+  const matchingTips = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return dailyCoachTips.filter((tip) => {
       const matchesSource = !selectedSource || tip.source === selectedSource;
-      return matchesSearch && matchesSource;
+      if (!matchesSource) return false;
+
+      if (!q) return true;
+      return (
+        tip.title.toLowerCase().includes(q) ||
+        tip.tip.toLowerCase().includes(q) ||
+        tip.source.toLowerCase().includes(q)
+      );
     });
   }, [searchQuery, selectedSource]);
 
-  // Find last read tip index
-  const lastReadTipIndex = lastReadTipId 
-    ? dailyCoachTips.findIndex(t => t.id === lastReadTipId)
-    : -1;
+  const groups = useMemo(() => {
+    const map = new Map<string, typeof dailyCoachTips>();
+    for (const tip of matchingTips) {
+      const arr = map.get(tip.source) ?? [];
+      // @ts-expect-error - we know the item shape matches
+      arr.push(tip);
+      // @ts-expect-error - we know the item shape matches
+      map.set(tip.source, arr);
+    }
+
+    const orderedSources = selectedSource ? [selectedSource] : sources;
+
+    return orderedSources
+      .map((source) => ({
+        source,
+        tips: map.get(source) ?? [],
+      }))
+      .filter((g) => g.tips.length > 0)
+      .map((g) => ({
+        ...g,
+        tips: g.tips
+          .slice()
+          .sort((a, b) => (idToIndex.get(a.id) ?? 0) - (idToIndex.get(b.id) ?? 0)),
+      }));
+  }, [matchingTips, sources, selectedSource, idToIndex]);
+
+  const lastReadTipIndex = lastReadTipId ? (idToIndex.get(lastReadTipId) ?? -1) : -1;
+  const currentSource = dailyCoachTips[currentTipIndex]?.source;
+
+  const accordionDefaultOpen = useMemo(() => {
+    if (selectedSource) return [selectedSource];
+    if (currentSource) return [currentSource];
+    return [];
+  }, [selectedSource, currentSource]);
 
   return (
     <Card className="p-4 royal-card" dir="rtl">
-      <div className="flex items-center gap-2 mb-3">
-        <List className="w-4 h-4" />
-        <h3 className="font-medium">תוכן עניינים</h3>
+      <div className="flex flex-row-reverse items-center justify-between gap-3 mb-3">
+        <div className="flex flex-row-reverse items-center gap-2">
+          <List className="w-4 h-4" />
+          <h3 className="font-medium">תוכן עניינים</h3>
+        </div>
+
+        <Badge variant="outline" className="text-xs">
+          {dailyCoachTips.length} פרקים
+        </Badge>
       </div>
 
       {/* Quick Jump Button */}
@@ -101,7 +180,7 @@ export const BookTableOfContents = ({
 
       {/* Search */}
       <div className="relative mb-3">
-        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           placeholder="חפש בתוכן..."
           value={searchQuery}
@@ -113,46 +192,45 @@ export const BookTableOfContents = ({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute left-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+            className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7"
             onClick={() => setSearchQuery("")}
+            aria-label="נקה חיפוש"
           >
             <X className="w-3 h-3" />
           </Button>
         )}
       </div>
 
-      {/* Source Filter */}
+      {/* Source Filter (Dropdown instead of many badges) */}
       <div className="mb-3">
-        <div className="flex items-center gap-2 mb-2">
-          <Filter className="w-3 h-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">סנן לפי מקור:</span>
+        <div className="flex flex-row-reverse items-center justify-between gap-2 mb-2">
+          <span className="text-xs text-muted-foreground">סינון לפי פרק:</span>
+          <span className="text-xs text-muted-foreground">{matchingTips.length} תוצאות</span>
         </div>
-        <div className="flex flex-wrap gap-1 justify-end">
-          <Badge
-            variant={!selectedSource ? "default" : "outline"}
-            className="cursor-pointer text-xs"
-            onClick={() => setSelectedSource(null)}
-          >
-            הכל
-          </Badge>
-          {sources.map((source) => (
-            <Badge
-              key={source}
-              variant={selectedSource === source ? "default" : "outline"}
-              className="cursor-pointer text-xs"
-              onClick={() => setSelectedSource(source === selectedSource ? null : source)}
-            >
-              {source}
-            </Badge>
-          ))}
-        </div>
+
+        <Select
+          value={selectedSource ?? "all"}
+          onValueChange={(value) => setSelectedSource(value === "all" ? null : value)}
+        >
+          <SelectTrigger className="w-full bg-popover z-10">
+            <SelectValue placeholder="בחר פרק" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover z-50">
+            <SelectItem value="all">הכל</SelectItem>
+            {sources.map((source) => (
+              <SelectItem key={source} value={source}>
+                {source}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Legend */}
       <div className="flex flex-row-reverse flex-wrap gap-3 mb-3 text-xs text-muted-foreground border-t pt-2">
         <div className="flex items-center gap-1">
           <span>הערות</span>
-          <MessageSquare className="w-3 h-3 text-blue-500" />
+          <MessageSquare className="w-3 h-3 text-info" />
         </div>
         <div className="flex items-center gap-1">
           <span>סימנייה</span>
@@ -160,69 +238,111 @@ export const BookTableOfContents = ({
         </div>
         <div className="flex items-center gap-1">
           <span>מועדף</span>
-          <Star className="w-3 h-3 text-amber-500" />
+          <Star className="w-3 h-3 text-warning" />
         </div>
         <div className="flex items-center gap-1">
           <span>AI</span>
-          <Sparkles className="w-3 h-3 text-emerald-500" />
+          <Sparkles className="w-3 h-3 text-success" />
         </div>
       </div>
 
-      {/* Tips List */}
-      <ScrollArea className="h-64">
-        <div className="space-y-1">
-          {filteredTips.map((tip) => {
-            const originalIndex = dailyCoachTips.findIndex(t => t.id === tip.id);
-            const tipStats = notesCountByTip[tip.id];
-            const isBookmarked = bookmarkedTipIds.has(tip.id);
-            const isActive = originalIndex === currentTipIndex;
-
-            return (
-              <button
-                key={tip.id}
-                onClick={() => onGoToTip(originalIndex)}
-                className={`w-full text-right px-3 py-2 rounded-lg transition-colors ${
-                  isActive 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'hover:bg-muted'
-                }`}
-              >
-                <div className="flex flex-row-reverse items-center justify-between gap-2">
-                  <div className="flex flex-row-reverse items-center gap-2 min-w-0">
-                    <span className="text-sm truncate">{tip.title}</span>
-                    {/* Icons for notes/bookmarks */}
-                    <div className="flex items-center gap-0.5 flex-shrink-0">
-                      {tipStats?.notes > 0 && (
-                        <div className={`flex items-center ${isActive ? 'text-primary-foreground/80' : 'text-blue-500'}`}>
-                          <span className="text-[10px]">{tipStats.notes}</span>
-                          <MessageSquare className="w-3 h-3" />
-                        </div>
-                      )}
-                      {isBookmarked && (
-                        <Bookmark className={`w-3 h-3 ${isActive ? 'text-primary-foreground/80' : 'text-primary'}`} />
-                      )}
-                      {tipStats?.favorites > 0 && (
-                        <Star className={`w-3 h-3 ${isActive ? 'text-primary-foreground/80' : 'text-amber-500'}`} />
-                      )}
-                      {tipStats?.ai > 0 && (
-                        <Sparkles className={`w-3 h-3 ${isActive ? 'text-primary-foreground/80' : 'text-emerald-500'}`} />
-                      )}
-                    </div>
-                  </div>
-                  <span className={`text-xs flex-shrink-0 ${isActive ? 'opacity-80' : 'opacity-70'}`}>
-                    {originalIndex + 1}
-                  </span>
+      {/* Grouped List */}
+      <ScrollArea className="h-72">
+        <Accordion
+          key={`${selectedSource ?? "all"}-${currentTipIndex}`}
+          type="multiple"
+          defaultValue={accordionDefaultOpen}
+          className="w-full"
+          dir="rtl"
+        >
+          {groups.map((group) => (
+            <AccordionItem key={group.source} value={group.source} className="border-border/60">
+              <AccordionTrigger className="flex flex-row-reverse items-center justify-between text-right">
+                <div className="flex flex-row-reverse items-center gap-2 min-w-0">
+                  <span className="truncate">{group.source}</span>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {group.tips.length}
+                  </Badge>
                 </div>
-              </button>
-            );
-          })}
-          {filteredTips.length === 0 && (
-            <p className="text-center text-muted-foreground text-sm py-4">
-              לא נמצאו תוצאות
-            </p>
+              </AccordionTrigger>
+              <AccordionContent className="pb-2">
+                <div className="space-y-1">
+                  {group.tips.map((tip) => {
+                    const originalIndex = idToIndex.get(tip.id) ?? 0;
+                    const tipStats = notesCountByTip[tip.id];
+                    const isBookmarked = bookmarkedTipIds.has(tip.id);
+                    const isActive = originalIndex === currentTipIndex;
+
+                    return (
+                      <button
+                        key={tip.id}
+                        onClick={() => onGoToTip(originalIndex)}
+                        className={`w-full text-right px-3 py-2 rounded-lg transition-colors ${
+                          isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                        }`}
+                      >
+                        <div className="flex flex-row-reverse items-start justify-between gap-2">
+                          <div className="flex flex-row-reverse items-center gap-2 min-w-0">
+                            <span className="text-sm truncate">{tip.title}</span>
+
+                            {/* Stats */}
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {tipStats?.notes > 0 && (
+                                <div
+                                  className={`flex items-center gap-0.5 ${
+                                    isActive ? "text-primary-foreground/80" : "text-info"
+                                  }`}
+                                >
+                                  <span className="text-[10px]">{tipStats.notes}</span>
+                                  <MessageSquare className="w-3 h-3" />
+                                </div>
+                              )}
+                              {isBookmarked && (
+                                <Bookmark
+                                  className={`w-3 h-3 ${
+                                    isActive ? "text-primary-foreground/80" : "text-primary"
+                                  }`}
+                                />
+                              )}
+                              {tipStats?.favorites > 0 && (
+                                <Star
+                                  className={`w-3 h-3 ${
+                                    isActive ? "text-primary-foreground/80" : "text-warning"
+                                  }`}
+                                />
+                              )}
+                              {tipStats?.ai > 0 && (
+                                <Sparkles
+                                  className={`w-3 h-3 ${
+                                    isActive ? "text-primary-foreground/80" : "text-success"
+                                  }`}
+                                />
+                              )}
+                            </div>
+                          </div>
+
+                          <span
+                            className={`text-xs flex-shrink-0 ${
+                              isActive ? "opacity-80" : "opacity-70"
+                            }`}
+                          >
+                            {originalIndex + 1}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+
+          {groups.length === 0 && (
+            <p className="text-center text-muted-foreground text-sm py-4">לא נמצאו תוצאות</p>
           )}
-        </div>
+        </Accordion>
       </ScrollArea>
     </Card>
   );
 };
+
