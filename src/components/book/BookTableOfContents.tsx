@@ -12,7 +12,7 @@ import {
   Bookmark, 
   Star, 
   Sparkles,
-  ArrowLeft,
+  ArrowRight,
   X
 } from "lucide-react";
 import { dailyCoachTips, type DailyTip } from "@/data/dailyCoachTips";
@@ -80,7 +80,7 @@ export const BookTableOfContents = ({
     : -1;
 
   return (
-    <Card className="p-4 royal-card">
+    <Card className="p-4 royal-card" dir="rtl">
       <div className="flex items-center gap-2 mb-3">
         <List className="w-4 h-4" />
         <h3 className="font-medium">תוכן עניינים</h3>
@@ -94,7 +94,7 @@ export const BookTableOfContents = ({
           className="w-full mb-3 gap-2 bg-primary/5 border-primary/20 hover:bg-primary/10"
           onClick={() => onGoToTip(lastReadTipIndex)}
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowRight className="w-4 h-4" />
           המשך מאיפה שהפסקת (טיפ {lastReadTipIndex + 1})
         </Button>
       )}
@@ -106,7 +106,8 @@ export const BookTableOfContents = ({
           placeholder="חפש בתוכן..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pr-10"
+          className="pr-10 text-right"
+          dir="rtl"
         />
         {searchQuery && (
           <Button
@@ -126,7 +127,7 @@ export const BookTableOfContents = ({
           <Filter className="w-3 h-3 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">סנן לפי מקור:</span>
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1 justify-end">
           <Badge
             variant={!selectedSource ? "default" : "outline"}
             className="cursor-pointer text-xs"
@@ -141,27 +142,27 @@ export const BookTableOfContents = ({
               className="cursor-pointer text-xs"
               onClick={() => setSelectedSource(source === selectedSource ? null : source)}
             >
-              {source.split(' - ')[0]}
+              {source}
             </Badge>
           ))}
         </div>
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-3 mb-3 text-xs text-muted-foreground border-t pt-2">
-        <div className="flex items-center gap-1">
+      <div className="flex flex-wrap gap-3 mb-3 text-xs text-muted-foreground border-t pt-2 justify-end">
+        <div className="flex items-center gap-1 flex-row-reverse">
           <MessageSquare className="w-3 h-3 text-blue-500" />
           <span>הערות</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-row-reverse">
           <Bookmark className="w-3 h-3 text-primary" />
           <span>סימנייה</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-row-reverse">
           <Star className="w-3 h-3 text-amber-500" />
           <span>מועדף</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-row-reverse">
           <Sparkles className="w-3 h-3 text-emerald-500" />
           <span>AI</span>
         </div>
