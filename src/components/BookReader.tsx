@@ -59,11 +59,36 @@ const FONT_OPTIONS = [
 ];
 
 const FRAME_STYLES = [
-  { value: 'gold' as FrameStyle, label: 'זהב', borderColor: 'hsl(43, 70%, 55%)', shadowColor: 'hsl(43, 70%, 55% / 0.3)' },
-  { value: 'darkGold' as FrameStyle, label: 'זהב כהה', borderColor: 'hsl(38, 60%, 40%)', shadowColor: 'hsl(38, 60%, 40% / 0.3)' },
-  { value: 'silver' as FrameStyle, label: 'כסף', borderColor: 'hsl(210, 15%, 65%)', shadowColor: 'hsl(210, 15%, 65% / 0.3)' },
-  { value: 'bronze' as FrameStyle, label: 'ברונזה', borderColor: 'hsl(25, 50%, 45%)', shadowColor: 'hsl(25, 50%, 45% / 0.3)' },
-  { value: 'minimal' as FrameStyle, label: 'מינימלי', borderColor: 'hsl(var(--border))', shadowColor: 'transparent' },
+  {
+    value: "gold" as FrameStyle,
+    label: "זהב",
+    borderColor: "hsl(var(--frame-gold))",
+    shadowColor: "hsl(var(--frame-gold) / 0.28)",
+  },
+  {
+    value: "darkGold" as FrameStyle,
+    label: "זהב כהה",
+    borderColor: "hsl(var(--frame-gold-dark))",
+    shadowColor: "hsl(var(--frame-gold-dark) / 0.28)",
+  },
+  {
+    value: "silver" as FrameStyle,
+    label: "כסף",
+    borderColor: "hsl(var(--frame-silver))",
+    shadowColor: "hsl(var(--frame-silver) / 0.28)",
+  },
+  {
+    value: "bronze" as FrameStyle,
+    label: "ברונזה",
+    borderColor: "hsl(var(--frame-bronze))",
+    shadowColor: "hsl(var(--frame-bronze) / 0.28)",
+  },
+  {
+    value: "minimal" as FrameStyle,
+    label: "מינימלי",
+    borderColor: "hsl(var(--border))",
+    shadowColor: "transparent",
+  },
 ];
 
 export const BookReader = () => {
@@ -96,36 +121,94 @@ export const BookReader = () => {
   useEffect(() => {
     localStorage.setItem("book-reader-frame-size", frameSize);
   }, [frameSize]);
-  
+
   useEffect(() => {
     localStorage.setItem("book-reader-frame-style", frameStyle);
   }, [frameStyle]);
-  
+
   useEffect(() => {
     localStorage.setItem("book-reader-font", fontFamily);
   }, [fontFamily]);
-  
+
   useEffect(() => {
     localStorage.setItem("book-reader-zoom", zoom.toString());
   }, [zoom]);
 
+  // Debug: verify state changes are happening
+  useEffect(() => {
+    console.log("[BookReader] display prefs changed", {
+      frameSize,
+      frameStyle,
+      fontFamily,
+      zoom,
+    });
+  }, [frameSize, frameStyle, fontFamily, zoom]);
+
+  const frameSizeLabels: Record<FrameSize, string> = {
+    compact: "קומפקטי",
+    normal: "רגיל",
+    wide: "רחב",
+    fullscreen: "מסך מלא",
+  };
+
+  const currentFrameStyle = FRAME_STYLES.find((s) => s.value === frameStyle) ?? FRAME_STYLES[0];
+  const currentFont = FONT_OPTIONS.find((f) => f.value === fontFamily) ?? FONT_OPTIONS[0];
+
+  const debugToast = (title: string, value: string) => {
+    console.log(`[BookReader] ${title}:`, value);
+    toast(`${title}: ${value}`);
+  };
+
+  const handleSetFrameSize = (value: FrameSize) => {
+    setFrameSize(value);
+    debugToast("גודל מסגרת", frameSizeLabels[value]);
+  };
+
+  const handleSetFrameStyle = (value: FrameStyle) => {
+    setFrameStyle(value);
+    const label = (FRAME_STYLES.find((s) => s.value === value)?.label) ?? value;
+    debugToast("סגנון מסגרת", label);
+  };
+
+  const handleSetFontFamily = (value: string) => {
+    setFontFamily(value);
+    const label = (FONT_OPTIONS.find((f) => f.value === value)?.label) ?? value;
+    debugToast("גופן", label);
+  };
+
+  const handleSetZoom = (value: number) => {
+    setZoom(value);
+    debugToast("זום", `${value}%`);
+  };
+
   // Frame size configurations
   const getFrameStyles = () => {
-    const currentStyle = FRAME_STYLES.find(s => s.value === frameStyle) || FRAME_STYLES[0];
-    
-    let maxWidth = '700px';
+    const currentStyle = FRAME_STYLES.find((s) => s.value === frameStyle) || FRAME_STYLES[0];
+
+    let maxWidth = "700px";
     switch (frameSize) {
-      case 'compact': maxWidth = '500px'; break;
-      case 'normal': maxWidth = '700px'; break;
-      case 'wide': maxWidth = '900px'; break;
-      case 'fullscreen': maxWidth = '100%'; break;
+      case "compact":
+        maxWidth = "500px";
+        break;
+      case "normal":
+        maxWidth = "700px";
+        break;
+      case "wide":
+        maxWidth = "900px";
+        break;
+      case "fullscreen":
+        maxWidth = "100%";
+        break;
     }
+
+    const boxShadow =
+      currentStyle.shadowColor === "transparent" ? "none" : `0 0 20px ${currentStyle.shadowColor}`;
 
     return {
       maxWidth,
-      margin: frameSize === 'fullscreen' ? '0' : '0 auto',
+      margin: frameSize === "fullscreen" ? "0" : "0 auto",
       borderColor: currentStyle.borderColor,
-      boxShadow: `0 0 20px ${currentStyle.shadowColor}`,
+      boxShadow,
       fontFamily,
     };
   };
@@ -281,7 +364,7 @@ export const BookReader = () => {
               ]).map(({ value, label, icon: Icon }) => (
                 <DropdownMenuItem
                   key={value}
-                  onClick={() => setFrameSize(value)}
+                  onSelect={() => handleSetFrameSize(value)}
                   className="gap-2 cursor-pointer"
                 >
                   <Icon className="w-4 h-4" />
@@ -298,13 +381,10 @@ export const BookReader = () => {
               {FRAME_STYLES.map(({ value, label, borderColor }) => (
                 <DropdownMenuItem
                   key={value}
-                  onClick={() => setFrameStyle(value)}
+                  onSelect={() => handleSetFrameStyle(value)}
                   className="gap-2 cursor-pointer"
                 >
-                  <div 
-                    className="w-4 h-4 rounded border-2" 
-                    style={{ borderColor }}
-                  />
+                  <div className="w-4 h-4 rounded border-2" style={{ borderColor }} />
                   {label}
                   {frameStyle === value && <Check className="w-4 h-4 mr-auto text-primary" />}
                 </DropdownMenuItem>
@@ -318,7 +398,7 @@ export const BookReader = () => {
               {FONT_OPTIONS.map(({ value, label }) => (
                 <DropdownMenuItem
                   key={value}
-                  onClick={() => setFontFamily(value)}
+                  onSelect={() => handleSetFontFamily(value)}
                   className="gap-2 cursor-pointer"
                   style={{ fontFamily: value }}
                 >
@@ -332,7 +412,7 @@ export const BookReader = () => {
               {[75, 100, 125, 150].map((z) => (
                 <DropdownMenuItem
                   key={z}
-                  onClick={() => setZoom(z)}
+                  onSelect={() => handleSetZoom(z)}
                   className="gap-2 cursor-pointer"
                 >
                   <ZoomIn className="w-4 h-4" />
@@ -345,6 +425,10 @@ export const BookReader = () => {
 
           <Badge variant="outline" className="text-sm">
             {currentTipIndex + 1} / {totalTips}
+          </Badge>
+          
+          <Badge variant="secondary" className="hidden lg:inline-flex text-xs">
+            {frameSizeLabels[frameSize]} · {currentFrameStyle.label} · {currentFont.label}
           </Badge>
         </div>
       </div>

@@ -15,6 +15,11 @@ All colors MUST be HSL.
     --card-foreground: 210 20% 12%;
     --card-border: 43 70% 55%;
 
+    /* Book reader frame styles */
+    --frame-gold: var(--card-border);
+    --frame-gold-dark: 38 60% 40%;
+    --frame-silver: 210 15% 65%;
+    --frame-bronze: 25 50% 45%;
     --popover: 40 40% 99%;
     --popover-foreground: 210 20% 12%;
 
@@ -97,6 +102,11 @@ All colors MUST be HSL.
     --card-foreground: 40 20% 92%;
     --card-border: 43 60% 45%;
 
+    /* Book reader frame styles (dark) */
+    --frame-gold: var(--card-border);
+    --frame-gold-dark: 38 55% 55%;
+    --frame-silver: 210 10% 72%;
+    --frame-bronze: 25 45% 55%;
     --popover: 210 20% 12%;
     --popover-foreground: 40 20% 92%;
 
