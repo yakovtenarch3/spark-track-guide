@@ -149,22 +149,22 @@ export const BookTableOfContents = ({
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-3 mb-3 text-xs text-muted-foreground border-t pt-2 justify-end">
-        <div className="flex items-center gap-1 flex-row-reverse">
-          <MessageSquare className="w-3 h-3 text-blue-500" />
+      <div className="flex flex-row-reverse flex-wrap gap-3 mb-3 text-xs text-muted-foreground border-t pt-2">
+        <div className="flex items-center gap-1">
           <span>הערות</span>
+          <MessageSquare className="w-3 h-3 text-blue-500" />
         </div>
-        <div className="flex items-center gap-1 flex-row-reverse">
-          <Bookmark className="w-3 h-3 text-primary" />
+        <div className="flex items-center gap-1">
           <span>סימנייה</span>
+          <Bookmark className="w-3 h-3 text-primary" />
         </div>
-        <div className="flex items-center gap-1 flex-row-reverse">
-          <Star className="w-3 h-3 text-amber-500" />
+        <div className="flex items-center gap-1">
           <span>מועדף</span>
+          <Star className="w-3 h-3 text-amber-500" />
         </div>
-        <div className="flex items-center gap-1 flex-row-reverse">
-          <Sparkles className="w-3 h-3 text-emerald-500" />
+        <div className="flex items-center gap-1">
           <span>AI</span>
+          <Sparkles className="w-3 h-3 text-emerald-500" />
         </div>
       </div>
 
@@ -187,15 +187,15 @@ export const BookTableOfContents = ({
                     : 'hover:bg-muted'
                 }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
+                <div className="flex flex-row-reverse items-center justify-between gap-2">
+                  <div className="flex flex-row-reverse items-center gap-2 min-w-0">
                     <span className="text-sm truncate">{tip.title}</span>
                     {/* Icons for notes/bookmarks */}
                     <div className="flex items-center gap-0.5 flex-shrink-0">
                       {tipStats?.notes > 0 && (
                         <div className={`flex items-center ${isActive ? 'text-primary-foreground/80' : 'text-blue-500'}`}>
-                          <MessageSquare className="w-3 h-3" />
                           <span className="text-[10px]">{tipStats.notes}</span>
+                          <MessageSquare className="w-3 h-3" />
                         </div>
                       )}
                       {isBookmarked && (

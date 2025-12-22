@@ -93,6 +93,7 @@ export const UserBooksSection = () => {
           חזרה לרשימת הספרים
         </Button>
         <PDFViewer
+          bookId={selectedBook.id}
           fileUrl={selectedBook.file_url}
           fileName={selectedBook.title}
           currentPage={selectedBook.current_page}

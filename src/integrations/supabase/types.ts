@@ -453,6 +453,53 @@ export type Database = {
         }
         Relationships: []
       }
+      pdf_annotations: {
+        Row: {
+          book_id: string
+          color: string | null
+          created_at: string
+          highlight_text: string | null
+          id: string
+          note_text: string
+          page_number: number
+          position_x: number | null
+          position_y: number | null
+          updated_at: string
+        }
+        Insert: {
+          book_id: string
+          color?: string | null
+          created_at?: string
+          highlight_text?: string | null
+          id?: string
+          note_text: string
+          page_number: number
+          position_x?: number | null
+          position_y?: number | null
+          updated_at?: string
+        }
+        Update: {
+          book_id?: string
+          color?: string | null
+          created_at?: string
+          highlight_text?: string | null
+          id?: string
+          note_text?: string
+          page_number?: number
+          position_x?: number | null
+          position_y?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_annotations_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "user_books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_achievements: {
         Row: {
           achievement_id: string
