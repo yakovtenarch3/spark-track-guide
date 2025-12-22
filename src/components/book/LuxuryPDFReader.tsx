@@ -139,6 +139,8 @@ export const LuxuryPDFReader = ({
   const [indexViewMode, setIndexViewMode] = useState<"grid" | "list" | "compact" | "mini">("grid");
   const [sidePanelPinned, setSidePanelPinned] = useState(true);
   const [sidePanelWidth, setSidePanelWidth] = useState<"normal" | "wide" | "narrow">("normal");
+  const [pdfDisplayMode, setPdfDisplayMode] = useState<"single" | "fit" | "wide">("single");
+  const [pdfFrameSize, setPdfFrameSize] = useState<"small" | "medium" | "large" | "full">("medium");
 
   // Typography states
   const [fontSize, setFontSize] = useState(16);
@@ -448,7 +450,22 @@ export const LuxuryPDFReader = ({
     toast.success("הקובץ יוצא בהצלחה!");
   };
 
-  const scaledWidth = (pageWidth * zoom) / 100;
+  // Calculate display width based on frame size and display mode
+  const getDisplayWidth = () => {
+    const baseWidth = pageWidth;
+    const frameSizeMultiplier = 
+      pdfFrameSize === "small" ? 0.6 :
+      pdfFrameSize === "medium" ? 0.8 :
+      pdfFrameSize === "large" ? 1.0 : 1.2;
+    
+    const displayModeMultiplier = 
+      pdfDisplayMode === "fit" ? 1.1 :
+      pdfDisplayMode === "wide" ? 1.3 : 1.0;
+    
+    return (baseWidth * frameSizeMultiplier * displayModeMultiplier * zoom) / 100;
+  };
+
+  const scaledWidth = getDisplayWidth();
 
   // Gold border style
   const goldBorderStyle = "ring-1 ring-primary/30 shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]";
@@ -511,6 +528,77 @@ export const LuxuryPDFReader = ({
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Display Options */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" title="אפשרויות תצוגה" className="relative">
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-popover z-50">
+              <DropdownMenuLabel>גודל מסגרת</DropdownMenuLabel>
+              <div className="grid grid-cols-4 gap-1 p-2">
+                {[
+                  { value: "small", label: "קטן", size: "60%" },
+                  { value: "medium", label: "בינוני", size: "80%" },
+                  { value: "large", label: "גדול", size: "100%" },
+                  { value: "full", label: "מלא", size: "120%" },
+                ].map((size) => (
+                  <button
+                    key={size.value}
+                    onClick={() => setPdfFrameSize(size.value as typeof pdfFrameSize)}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+                      pdfFrameSize === size.value
+                        ? "bg-primary text-primary-foreground ring-2 ring-primary"
+                        : "bg-muted hover:bg-muted/80"
+                    }`}
+                  >
+                    <div 
+                      className={`border-2 rounded ${pdfFrameSize === size.value ? "border-primary-foreground" : "border-muted-foreground"}`}
+                      style={{ 
+                        width: size.value === "small" ? 16 : size.value === "medium" ? 20 : size.value === "large" ? 24 : 28,
+                        height: size.value === "small" ? 20 : size.value === "medium" ? 26 : size.value === "large" ? 32 : 36
+                      }}
+                    />
+                    <span className="text-[10px]">{size.label}</span>
+                  </button>
+                ))}
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>מצב תצוגה</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setPdfDisplayMode("single")} className="gap-2">
+                <FileText className="w-4 h-4" />
+                עמוד בודד
+                {pdfDisplayMode === "single" && <Check className="w-3 h-3 mr-auto" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPdfDisplayMode("fit")} className="gap-2">
+                <Maximize2 className="w-4 h-4" />
+                התאם לרוחב
+                {pdfDisplayMode === "fit" && <Check className="w-3 h-3 mr-auto" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPdfDisplayMode("wide")} className="gap-2">
+                <Columns className="w-4 h-4" />
+                תצוגה רחבה
+                {pdfDisplayMode === "wide" && <Check className="w-3 h-3 mr-auto" />}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>זום מהיר</DropdownMenuLabel>
+              <div className="grid grid-cols-4 gap-1 p-2">
+                {[50, 75, 100, 150].map((z) => (
+                  <Button
+                    key={z}
+                    variant={zoom === z ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setZoom(z)}
+                    className="text-xs h-7"
+                  >
+                    {z}%
+                  </Button>
+                ))}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* Night Mode */}
           <Button
             variant="ghost"
