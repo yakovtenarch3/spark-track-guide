@@ -35,7 +35,8 @@ import {
   ZoomIn,
   Check,
   Type,
-  Palette
+  Palette,
+  RefreshCw
 } from "lucide-react";
 import { dailyCoachTips, type DailyTip } from "@/data/dailyCoachTips";
 import { useBookReader, type BookNote } from "@/hooks/useBookReader";
@@ -43,6 +44,7 @@ import { BookTableOfContents } from "@/components/book/BookTableOfContents";
 import { UserBooksSection } from "@/components/book/UserBooksSection";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { clearCacheAndRefresh } from "@/utils/notificationScheduler";
 
 type FrameSize = 'compact' | 'normal' | 'wide' | 'fullscreen';
 type FrameStyle = 'gold' | 'darkGold' | 'silver' | 'bronze' | 'minimal';
@@ -437,6 +439,20 @@ export const BookReader = () => {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Clear Cache Button */}
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => {
+              toast.info("מנקה מטמון וטוען מחדש...");
+              clearCacheAndRefresh();
+            }}
+            title="נקה מטמון וטען מחדש"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
 
           <Badge variant="outline" className="text-sm">
             {currentTipIndex + 1} / {totalTips}

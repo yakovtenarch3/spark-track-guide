@@ -1,9 +1,9 @@
 import { getRandomQuote } from "@/data/motivationalQuotes";
 
-// Check if we're in production (deployed site)
+// Check if we're in production using Vite's env flag
 const isProduction = () => {
-  return window.location.hostname.includes('.lovableproject.com') || 
-         !window.location.hostname.includes('localhost');
+  // Use Vite's built-in production detection - reliable and accurate
+  return import.meta.env.PROD;
 };
 
 // Clear all Service Worker caches
