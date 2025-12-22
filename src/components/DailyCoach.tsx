@@ -3,6 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   Lightbulb, 
   Target, 
@@ -10,18 +13,26 @@ import {
   ChevronLeft, 
   ChevronRight,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Bell,
+  BellOff
 } from "lucide-react";
 import { getTipForToday, dailyCoachTips, DailyTip } from "@/data/dailyCoachTips";
 import { toast } from "sonner";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const DailyCoach = () => {
   const [currentTip, setCurrentTip] = useState<DailyTip>(getTipForToday());
   const [taskCompleted, setTaskCompleted] = useState(false);
   const [streak, setStreak] = useState(0);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderTime, setReminderTime] = useState("08:00");
+  const [showReminderSettings, setShowReminderSettings] = useState(false);
+  
+  const { scheduleNotification, cancelNotification, permission, requestPermission } = useNotifications();
 
   useEffect(() => {
-    // Load completed tasks and streak from localStorage
+    // Load completed tasks, streak, and reminder settings from localStorage
     const savedData = localStorage.getItem("dailyCoachData");
     if (savedData) {
       const data = JSON.parse(savedData);
@@ -39,6 +50,14 @@ const DailyCoach = () => {
       } else {
         setStreak(0);
       }
+      
+      // Load reminder settings
+      if (data.reminderEnabled !== undefined) {
+        setReminderEnabled(data.reminderEnabled);
+      }
+      if (data.reminderTime) {
+        setReminderTime(data.reminderTime);
+      }
     }
   }, []);
 
@@ -50,7 +69,11 @@ const DailyCoach = () => {
     setStreak(newStreak);
     
     const today = new Date().toDateString();
+    const savedData = localStorage.getItem("dailyCoachData");
+    const existingData = savedData ? JSON.parse(savedData) : {};
+    
     localStorage.setItem("dailyCoachData", JSON.stringify({
+      ...existingData,
       lastCompletedDate: today,
       streak: newStreak
     }));
@@ -58,6 +81,61 @@ const DailyCoach = () => {
     toast.success("מעולה! השלמת את המשימה היומית! 🎉", {
       description: `רצף של ${newStreak} ימים!`
     });
+  };
+
+  const handleReminderToggle = async (enabled: boolean) => {
+    if (enabled && permission !== "granted") {
+      const granted = await requestPermission();
+      if (!granted) return;
+    }
+    
+    setReminderEnabled(enabled);
+    
+    const savedData = localStorage.getItem("dailyCoachData");
+    const existingData = savedData ? JSON.parse(savedData) : {};
+    
+    localStorage.setItem("dailyCoachData", JSON.stringify({
+      ...existingData,
+      reminderEnabled: enabled,
+      reminderTime
+    }));
+    
+    if (enabled) {
+      const todayTip = getTipForToday();
+      await scheduleNotification(
+        "מאמן יומי",
+        `📖 ${todayTip.title}\n\n🎯 משימה: ${todayTip.task}`,
+        reminderTime,
+        "daily-coach",
+        "coach"
+      );
+      toast.success("התזכורת היומית הופעלה! 🔔");
+    } else {
+      cancelNotification("daily-coach", "coach");
+    }
+  };
+
+  const handleReminderTimeChange = (time: string) => {
+    setReminderTime(time);
+    
+    const savedData = localStorage.getItem("dailyCoachData");
+    const existingData = savedData ? JSON.parse(savedData) : {};
+    
+    localStorage.setItem("dailyCoachData", JSON.stringify({
+      ...existingData,
+      reminderTime: time
+    }));
+    
+    if (reminderEnabled) {
+      const todayTip = getTipForToday();
+      scheduleNotification(
+        "מאמן יומי",
+        `📖 ${todayTip.title}\n\n🎯 משימה: ${todayTip.task}`,
+        time,
+        "daily-coach",
+        "coach"
+      );
+    }
   };
 
   const goToPreviousTip = () => {
@@ -86,12 +164,48 @@ const DailyCoach = () => {
             <Sparkles className="h-5 w-5 text-accent" />
             מאמן יומי
           </CardTitle>
-          {streak > 0 && (
-            <Badge variant="secondary" className="bg-accent/20 text-accent-foreground">
-              🔥 {streak} ימים ברצף
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {streak > 0 && (
+              <Badge variant="secondary" className="bg-accent/20 text-accent-foreground">
+                🔥 {streak} ימים ברצף
+              </Badge>
+            )}
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setShowReminderSettings(!showReminderSettings)}
+              className={reminderEnabled ? "text-accent" : "text-muted-foreground"}
+            >
+              {reminderEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
+        
+        {/* Reminder Settings */}
+        {showReminderSettings && (
+          <div className="mt-3 p-3 bg-muted/50 rounded-lg space-y-3 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="coach-reminder" className="text-sm">תזכורת יומית</Label>
+              <Switch
+                id="coach-reminder"
+                checked={reminderEnabled}
+                onCheckedChange={handleReminderToggle}
+              />
+            </div>
+            {reminderEnabled && (
+              <div className="flex items-center gap-2">
+                <Label htmlFor="reminder-time" className="text-sm shrink-0">שעת תזכורת:</Label>
+                <Input
+                  id="reminder-time"
+                  type="time"
+                  value={reminderTime}
+                  onChange={(e) => handleReminderTimeChange(e.target.value)}
+                  className="w-auto"
+                />
+              </div>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Tip Navigation */}
