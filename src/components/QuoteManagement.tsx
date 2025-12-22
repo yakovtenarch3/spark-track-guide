@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useCustomQuotes } from "@/hooks/useCustomQuotes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,9 +30,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Edit, Trash2, Sparkles, Star } from "lucide-react";
+import { Plus, Edit, Trash2, Sparkles, Star, Download, Upload, FileJson } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 const categories = [
   { value: "success", label: "הצלחה" },
@@ -47,12 +48,113 @@ export const QuoteManagement = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingQuote, setEditingQuote] = useState<any>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     text: "",
     author: "",
     category: "success",
   });
+
+  // Export quotes to JSON file
+  const handleExport = () => {
+    if (quotes.length === 0) {
+      toast.error("אין משפטים לייצוא");
+      return;
+    }
+
+    const exportData = quotes.map((q) => ({
+      text: q.text,
+      author: q.author,
+      category: q.category,
+      is_active: q.is_active,
+      is_favorite: q.is_favorite,
+    }));
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `motivational-quotes-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast.success(`יוצאו ${quotes.length} משפטים בהצלחה!`);
+  };
+
+  // Handle file selection for import
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".json")) {
+      toast.error("יש לבחור קובץ JSON");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const data = JSON.parse(content);
+
+        if (!Array.isArray(data)) {
+          toast.error("פורמט קובץ לא תקין");
+          return;
+        }
+
+        // Validate structure
+        const validQuotes = data.filter(
+          (item) =>
+            typeof item.text === "string" &&
+            typeof item.author === "string" &&
+            typeof item.category === "string"
+        );
+
+        if (validQuotes.length === 0) {
+          toast.error("לא נמצאו משפטים תקינים בקובץ");
+          return;
+        }
+
+        setImportPreview(validQuotes);
+        setImportDialogOpen(true);
+      } catch {
+        toast.error("שגיאה בקריאת הקובץ");
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Import quotes
+  const handleImport = async () => {
+    let successCount = 0;
+    
+    for (const quote of importPreview) {
+      try {
+        await addQuote({
+          text: quote.text,
+          author: quote.author,
+          category: quote.category || "success",
+        });
+        successCount++;
+      } catch (error) {
+        console.error("Error importing quote:", error);
+      }
+    }
+
+    setImportDialogOpen(false);
+    setImportPreview([]);
+    toast.success(`יובאו ${successCount} משפטים בהצלחה!`);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,79 +205,101 @@ export const QuoteManagement = () => {
           <Sparkles className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-semibold">משפטי מוטיבציה מותאמים אישית</h3>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-          setIsAddDialogOpen(open);
-          if (!open) {
-            setEditingQuote(null);
-            setFormData({ text: "", author: "", category: "success" });
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={() => {
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Export Button */}
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={quotes.length === 0}>
+            <Download className="w-4 h-4 ml-2" />
+            ייצוא
+          </Button>
+
+          {/* Import Button */}
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="w-4 h-4 ml-2" />
+            ייבוא
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
+          {/* Add Quote Dialog */}
+          <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+            setIsAddDialogOpen(open);
+            if (!open) {
               setEditingQuote(null);
               setFormData({ text: "", author: "", category: "success" });
-            }}>
-              <Plus className="w-4 h-4 ml-2" />
-              הוסף משפט
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]" dir="rtl">
-            <DialogHeader>
-              <DialogTitle>
-                {editingQuote ? "ערוך משפט מוטיבציה" : "הוסף משפט מוטיבציה חדש"}
-              </DialogTitle>
-              <DialogDescription>
-                צור משפט מוטיבציה מותאם אישית שיופיע באפליקציה
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="text">טקסט המשפט</Label>
-                <Textarea
-                  id="text"
-                  value={formData.text}
-                  onChange={(e) => setFormData({ ...formData, text: e.target.value })}
-                  placeholder="הכנס את משפט המוטיבציה..."
-                  required
-                  className="min-h-[100px]"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="author">מחבר</Label>
-                <Input
-                  id="author"
-                  value={formData.author}
-                  onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                  placeholder="שם המחבר"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">קטגוריה</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <DialogFooter>
-                <Button type="submit" disabled={isUpdating}>
-                  {editingQuote ? "עדכן" : "הוסף"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button onClick={() => {
+                setEditingQuote(null);
+                setFormData({ text: "", author: "", category: "success" });
+              }}>
+                <Plus className="w-4 h-4 ml-2" />
+                הוסף משפט
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[525px]" dir="rtl">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingQuote ? "ערוך משפט מוטיבציה" : "הוסף משפט מוטיבציה חדש"}
+                </DialogTitle>
+                <DialogDescription>
+                  צור משפט מוטיבציה מותאם אישית שיופיע באפליקציה
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="text">טקסט המשפט</Label>
+                  <Textarea
+                    id="text"
+                    value={formData.text}
+                    onChange={(e) => setFormData({ ...formData, text: e.target.value })}
+                    placeholder="הכנס את משפט המוטיבציה..."
+                    required
+                    className="min-h-[100px]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="author">מחבר</Label>
+                  <Input
+                    id="author"
+                    value={formData.author}
+                    onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                    placeholder="שם המחבר"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">קטגוריה</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={isUpdating}>
+                    {editingQuote ? "עדכן" : "הוסף"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {quotes.length === 0 ? (
@@ -244,6 +368,7 @@ export const QuoteManagement = () => {
         </div>
       )}
 
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
@@ -260,6 +385,47 @@ export const QuoteManagement = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import Preview Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileJson className="w-5 h-5 text-primary" />
+              תצוגה מקדימה לייבוא
+            </DialogTitle>
+            <DialogDescription>
+              נמצאו {importPreview.length} משפטים לייבוא
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto space-y-2">
+            {importPreview.map((quote, index) => (
+              <Card key={index} className="bg-muted/30">
+                <CardContent className="p-3">
+                  <blockquote className="text-sm font-medium mb-1">
+                    "{quote.text}"
+                  </blockquote>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>— {quote.author}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                      {categories.find((c) => c.value === quote.category)?.label || quote.category}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
+              ביטול
+            </Button>
+            <Button onClick={handleImport}>
+              <Upload className="w-4 h-4 ml-2" />
+              ייבא {importPreview.length} משפטים
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
