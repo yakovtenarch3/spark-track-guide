@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -19,11 +18,13 @@ import {
   Heart,
   Trash2,
   Plus,
-  List,
-  Star
+  Star,
+  FileText
 } from "lucide-react";
 import { dailyCoachTips, type DailyTip } from "@/data/dailyCoachTips";
 import { useBookReader, type BookNote } from "@/hooks/useBookReader";
+import { BookTableOfContents } from "@/components/book/BookTableOfContents";
+import { UserBooksSection } from "@/components/book/UserBooksSection";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -49,6 +50,16 @@ export const BookReader = () => {
 
   const currentTip = dailyCoachTips[currentTipIndex];
   const totalTips = dailyCoachTips.length;
+
+  // Restore last read position on mount
+  useEffect(() => {
+    if (progress?.current_tip) {
+      const tipIndex = dailyCoachTips.findIndex(t => t.id === progress.current_tip);
+      if (tipIndex !== -1) {
+        setCurrentTipIndex(tipIndex);
+      }
+    }
+  }, [progress]);
 
   const goToTip = (index: number) => {
     if (index >= 0 && index < totalTips) {
@@ -165,22 +176,26 @@ export const BookReader = () => {
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="read" className="gap-2">
             <BookOpen className="w-4 h-4" />
-            קריאה
+            <span className="hidden sm:inline">קריאה</span>
           </TabsTrigger>
           <TabsTrigger value="notes" className="gap-2">
             <MessageSquare className="w-4 h-4" />
-            הערות
+            <span className="hidden sm:inline">הערות</span>
           </TabsTrigger>
           <TabsTrigger value="bookmarks" className="gap-2">
             <Bookmark className="w-4 h-4" />
-            סימניות
+            <span className="hidden sm:inline">סימניות</span>
           </TabsTrigger>
           <TabsTrigger value="favorites" className="gap-2">
             <Star className="w-4 h-4" />
-            מועדפים
+            <span className="hidden sm:inline">מועדפים</span>
+          </TabsTrigger>
+          <TabsTrigger value="my-books" className="gap-2">
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">הספרים שלי</span>
           </TabsTrigger>
         </TabsList>
 
@@ -267,7 +282,7 @@ export const BookReader = () => {
           {showNoteInput && (
             <Card className="p-4 royal-card">
               <div className="space-y-4">
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   {(['note', 'question', 'insight'] as const).map((type) => (
                     <Button
                       key={type}
@@ -319,33 +334,14 @@ export const BookReader = () => {
             </Card>
           )}
 
-          {/* Chapters List */}
-          <Card className="p-4 royal-card">
-            <div className="flex items-center gap-2 mb-3">
-              <List className="w-4 h-4" />
-              <h3 className="font-medium">תוכן עניינים</h3>
-            </div>
-            <ScrollArea className="h-48">
-              <div className="space-y-1">
-                {dailyCoachTips.map((tip, index) => (
-                  <button
-                    key={tip.id}
-                    onClick={() => goToTip(index)}
-                    className={`w-full text-right px-3 py-2 rounded-lg transition-colors ${
-                      index === currentTipIndex 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'hover:bg-muted'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">{tip.title}</span>
-                      <span className="text-xs opacity-70">{index + 1}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          </Card>
+          {/* Enhanced Table of Contents */}
+          <BookTableOfContents
+            currentTipIndex={currentTipIndex}
+            notes={notes}
+            bookmarks={bookmarks}
+            lastReadTipId={progress?.current_tip ?? null}
+            onGoToTip={goToTip}
+          />
         </TabsContent>
 
         {/* Notes Tab */}
@@ -358,7 +354,7 @@ export const BookReader = () => {
               </p>
             ) : (
               <ScrollArea className="h-[500px]">
-                <div className="space-y-3 pr-2">
+                <div className="space-y-3 pl-2">
                   {notes.map((note) => {
                     const relatedTip = dailyCoachTips.find(t => t.id === note.tip_id);
                     return (
@@ -442,7 +438,7 @@ export const BookReader = () => {
               </p>
             ) : (
               <ScrollArea className="h-[500px]">
-                <div className="space-y-3 pr-2">
+                <div className="space-y-3 pl-2">
                   {favoriteNotes.map((note) => {
                     const relatedTip = dailyCoachTips.find(t => t.id === note.tip_id);
                     return (
@@ -469,6 +465,11 @@ export const BookReader = () => {
               </ScrollArea>
             )}
           </Card>
+        </TabsContent>
+
+        {/* My Books Tab (PDF Upload & View) */}
+        <TabsContent value="my-books" className="space-y-4">
+          <UserBooksSection />
         </TabsContent>
       </Tabs>
     </div>
@@ -499,7 +500,7 @@ const NoteCard = ({
 }: NoteCardProps) => (
   <div className="p-3 rounded-lg border bg-card">
     <div className="flex items-start justify-between mb-2">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Badge className={noteTypeColors[note.note_type]}>
           {noteTypeIcons[note.note_type]}
           <span className="mr-1">{noteTypeLabels[note.note_type]}</span>

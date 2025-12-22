@@ -479,6 +479,39 @@ export type Database = {
           },
         ]
       }
+      user_books: {
+        Row: {
+          created_at: string
+          current_page: number | null
+          file_name: string
+          file_url: string
+          id: string
+          last_read_at: string | null
+          title: string
+          total_pages: number | null
+        }
+        Insert: {
+          created_at?: string
+          current_page?: number | null
+          file_name: string
+          file_url: string
+          id?: string
+          last_read_at?: string | null
+          title: string
+          total_pages?: number | null
+        }
+        Update: {
+          created_at?: string
+          current_page?: number | null
+          file_name?: string
+          file_url?: string
+          id?: string
+          last_read_at?: string | null
+          title?: string
+          total_pages?: number | null
+        }
+        Relationships: []
+      }
       user_profile: {
         Row: {
           display_name: string
