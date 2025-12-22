@@ -15,7 +15,11 @@ import type {
   GhostHighlight,
   Scaled,
 } from "react-pdf-highlighter-extended";
-import "react-pdf-highlighter-extended/dist/style.css";
+import "react-pdf-highlighter-extended/dist/esm/style/AreaHighlight.css";
+import "react-pdf-highlighter-extended/dist/esm/style/MouseSelection.css";
+import "react-pdf-highlighter-extended/dist/esm/style/PdfHighlighter.css";
+import "react-pdf-highlighter-extended/dist/esm/style/TextHighlight.css";
+import "react-pdf-highlighter-extended/dist/esm/style/pdf_viewer.css";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
