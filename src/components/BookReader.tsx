@@ -42,8 +42,7 @@ import { UserBooksSection } from "@/components/book/UserBooksSection";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-type FrameSize = 'small' | 'medium' | 'large' | 'full';
-type DisplayMode = 'normal' | 'wide' | 'framed';
+type FrameSize = 'compact' | 'normal' | 'wide' | 'fullscreen';
 
 export const BookReader = () => {
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
@@ -52,25 +51,37 @@ export const BookReader = () => {
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState("read");
-  const [frameSize, setFrameSize] = useState<FrameSize>('medium');
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('normal');
+  const [frameSize, setFrameSize] = useState<FrameSize>('normal');
   const [zoom, setZoom] = useState(100);
 
-  const getFrameSizeClass = () => {
+  // Frame size configurations with percentage of screen width
+  const getFrameStyles = () => {
     switch (frameSize) {
-      case 'small': return 'max-w-xl';
-      case 'medium': return 'max-w-2xl';
-      case 'large': return 'max-w-4xl';
-      case 'full': return 'max-w-full';
-      default: return 'max-w-2xl';
-    }
-  };
-
-  const getDisplayModeClass = () => {
-    switch (displayMode) {
-      case 'wide': return 'px-2';
-      case 'framed': return 'px-6 border-2 border-primary/30 rounded-xl shadow-lg';
-      default: return 'px-4';
+      case 'compact': 
+        return { 
+          maxWidth: '500px',
+          margin: '0 auto'
+        };
+      case 'normal': 
+        return { 
+          maxWidth: '700px',
+          margin: '0 auto'
+        };
+      case 'wide': 
+        return { 
+          maxWidth: '900px',
+          margin: '0 auto'
+        };
+      case 'fullscreen': 
+        return { 
+          maxWidth: '100%',
+          margin: '0'
+        };
+      default: 
+        return { 
+          maxWidth: '700px',
+          margin: '0 auto'
+        };
     }
   };
   
@@ -218,11 +229,11 @@ export const BookReader = () => {
             <DropdownMenuContent align="end" className="w-48 bg-popover border border-border z-50">
               <DropdownMenuLabel>גודל מסגרת</DropdownMenuLabel>
               {([
-                { value: 'small', label: 'קטן', icon: Minimize2 },
-                { value: 'medium', label: 'בינוני', icon: Square },
-                { value: 'large', label: 'גדול', icon: Maximize2 },
-                { value: 'full', label: 'מלא', icon: Maximize2 },
-              ] as const).map(({ value, label, icon: Icon }) => (
+                { value: 'compact' as FrameSize, label: 'קומפקטי', icon: Minimize2 },
+                { value: 'normal' as FrameSize, label: 'רגיל', icon: Square },
+                { value: 'wide' as FrameSize, label: 'רחב', icon: Maximize2 },
+                { value: 'fullscreen' as FrameSize, label: 'מסך מלא', icon: Maximize2 },
+              ]).map(({ value, label, icon: Icon }) => (
                 <DropdownMenuItem
                   key={value}
                   onClick={() => setFrameSize(value)}
@@ -231,23 +242,6 @@ export const BookReader = () => {
                   <Icon className="w-4 h-4" />
                   {label}
                   {frameSize === value && <Check className="w-4 h-4 mr-auto" />}
-                </DropdownMenuItem>
-              ))}
-              
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>מצב תצוגה</DropdownMenuLabel>
-              {([
-                { value: 'normal', label: 'רגיל' },
-                { value: 'wide', label: 'רחב' },
-                { value: 'framed', label: 'ממוסגר' },
-              ] as const).map(({ value, label }) => (
-                <DropdownMenuItem
-                  key={value}
-                  onClick={() => setDisplayMode(value)}
-                  className="gap-2"
-                >
-                  {label}
-                  {displayMode === value && <Check className="w-4 h-4 mr-auto" />}
                 </DropdownMenuItem>
               ))}
 
@@ -300,9 +294,12 @@ export const BookReader = () => {
 
         {/* Reading Tab */}
         <TabsContent value="read" className="space-y-4">
-          <div className={`mx-auto transition-all duration-300 ${getFrameSizeClass()}`}>
+          <div 
+            className="mx-auto transition-all duration-300"
+            style={getFrameStyles()}
+          >
             <Card 
-              className={`p-6 royal-card ${getDisplayModeClass()}`}
+              className="p-6 border border-amber-400/40 shadow-[0_0_15px_rgba(212,175,55,0.15)] rounded-xl"
               style={{ fontSize: `${zoom}%` }}
             >
             {/* Chapter Header */}
