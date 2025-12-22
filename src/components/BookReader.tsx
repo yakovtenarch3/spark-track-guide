@@ -33,7 +33,9 @@ import {
   Minimize2,
   Square,
   ZoomIn,
-  Check
+  Check,
+  Type,
+  Palette
 } from "lucide-react";
 import { dailyCoachTips, type DailyTip } from "@/data/dailyCoachTips";
 import { useBookReader, type BookNote } from "@/hooks/useBookReader";
@@ -43,6 +45,26 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 type FrameSize = 'compact' | 'normal' | 'wide' | 'fullscreen';
+type FrameStyle = 'gold' | 'darkGold' | 'silver' | 'bronze' | 'minimal';
+
+const FONT_OPTIONS = [
+  { value: "system-ui, sans-serif", label: "מערכת" },
+  { value: "'David Libre', serif", label: "דוד" },
+  { value: "'Frank Ruhl Libre', serif", label: "פרנק רוהל" },
+  { value: "'Heebo', sans-serif", label: "היבו" },
+  { value: "'Rubik', sans-serif", label: "רוביק" },
+  { value: "'Assistant', sans-serif", label: "אסיסטנט" },
+  { value: "'Alef', sans-serif", label: "אלף" },
+  { value: "'Miriam Libre', sans-serif", label: "מרים" },
+];
+
+const FRAME_STYLES = [
+  { value: 'gold' as FrameStyle, label: 'זהב', borderColor: 'hsl(43, 70%, 55%)', shadowColor: 'hsl(43, 70%, 55% / 0.3)' },
+  { value: 'darkGold' as FrameStyle, label: 'זהב כהה', borderColor: 'hsl(38, 60%, 40%)', shadowColor: 'hsl(38, 60%, 40% / 0.3)' },
+  { value: 'silver' as FrameStyle, label: 'כסף', borderColor: 'hsl(210, 15%, 65%)', shadowColor: 'hsl(210, 15%, 65% / 0.3)' },
+  { value: 'bronze' as FrameStyle, label: 'ברונזה', borderColor: 'hsl(25, 50%, 45%)', shadowColor: 'hsl(25, 50%, 45% / 0.3)' },
+  { value: 'minimal' as FrameStyle, label: 'מינימלי', borderColor: 'hsl(var(--border))', shadowColor: 'transparent' },
+];
 
 export const BookReader = () => {
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
@@ -51,38 +73,61 @@ export const BookReader = () => {
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState("read");
-  const [frameSize, setFrameSize] = useState<FrameSize>('normal');
-  const [zoom, setZoom] = useState(100);
+  
+  // Load saved preferences from localStorage
+  const [frameSize, setFrameSize] = useState<FrameSize>(() => {
+    const saved = localStorage.getItem("book-reader-frame-size");
+    return (saved as FrameSize) || 'normal';
+  });
+  const [frameStyle, setFrameStyle] = useState<FrameStyle>(() => {
+    const saved = localStorage.getItem("book-reader-frame-style");
+    return (saved as FrameStyle) || 'gold';
+  });
+  const [fontFamily, setFontFamily] = useState(() => {
+    const saved = localStorage.getItem("book-reader-font");
+    return saved || "system-ui, sans-serif";
+  });
+  const [zoom, setZoom] = useState(() => {
+    const saved = localStorage.getItem("book-reader-zoom");
+    return saved ? parseInt(saved) : 100;
+  });
 
-  // Frame size configurations with percentage of screen width
+  // Save preferences to localStorage
+  useEffect(() => {
+    localStorage.setItem("book-reader-frame-size", frameSize);
+  }, [frameSize]);
+  
+  useEffect(() => {
+    localStorage.setItem("book-reader-frame-style", frameStyle);
+  }, [frameStyle]);
+  
+  useEffect(() => {
+    localStorage.setItem("book-reader-font", fontFamily);
+  }, [fontFamily]);
+  
+  useEffect(() => {
+    localStorage.setItem("book-reader-zoom", zoom.toString());
+  }, [zoom]);
+
+  // Frame size configurations
   const getFrameStyles = () => {
+    const currentStyle = FRAME_STYLES.find(s => s.value === frameStyle) || FRAME_STYLES[0];
+    
+    let maxWidth = '700px';
     switch (frameSize) {
-      case 'compact': 
-        return { 
-          maxWidth: '500px',
-          margin: '0 auto'
-        };
-      case 'normal': 
-        return { 
-          maxWidth: '700px',
-          margin: '0 auto'
-        };
-      case 'wide': 
-        return { 
-          maxWidth: '900px',
-          margin: '0 auto'
-        };
-      case 'fullscreen': 
-        return { 
-          maxWidth: '100%',
-          margin: '0'
-        };
-      default: 
-        return { 
-          maxWidth: '700px',
-          margin: '0 auto'
-        };
+      case 'compact': maxWidth = '500px'; break;
+      case 'normal': maxWidth = '700px'; break;
+      case 'wide': maxWidth = '900px'; break;
+      case 'fullscreen': maxWidth = '100%'; break;
     }
+
+    return {
+      maxWidth,
+      margin: frameSize === 'fullscreen' ? '0' : '0 auto',
+      borderColor: currentStyle.borderColor,
+      boxShadow: `0 0 20px ${currentStyle.shadowColor}`,
+      fontFamily,
+    };
   };
   
   const { 
@@ -226,7 +271,7 @@ export const BookReader = () => {
                 <LayoutGrid className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-popover border border-border z-50">
+            <DropdownMenuContent align="end" className="w-56 bg-popover border border-border z-50">
               <DropdownMenuLabel>גודל מסגרת</DropdownMenuLabel>
               {([
                 { value: 'compact' as FrameSize, label: 'קומפקטי', icon: Minimize2 },
@@ -237,25 +282,62 @@ export const BookReader = () => {
                 <DropdownMenuItem
                   key={value}
                   onClick={() => setFrameSize(value)}
-                  className="gap-2"
+                  className="gap-2 cursor-pointer"
                 >
                   <Icon className="w-4 h-4" />
                   {label}
-                  {frameSize === value && <Check className="w-4 h-4 mr-auto" />}
+                  {frameSize === value && <Check className="w-4 h-4 mr-auto text-primary" />}
                 </DropdownMenuItem>
               ))}
 
               <DropdownMenuSeparator />
-              <DropdownMenuLabel>זום מהיר</DropdownMenuLabel>
+              <DropdownMenuLabel className="flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                סגנון מסגרת
+              </DropdownMenuLabel>
+              {FRAME_STYLES.map(({ value, label, borderColor }) => (
+                <DropdownMenuItem
+                  key={value}
+                  onClick={() => setFrameStyle(value)}
+                  className="gap-2 cursor-pointer"
+                >
+                  <div 
+                    className="w-4 h-4 rounded border-2" 
+                    style={{ borderColor }}
+                  />
+                  {label}
+                  {frameStyle === value && <Check className="w-4 h-4 mr-auto text-primary" />}
+                </DropdownMenuItem>
+              ))}
+
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="flex items-center gap-2">
+                <Type className="w-4 h-4" />
+                גופן
+              </DropdownMenuLabel>
+              {FONT_OPTIONS.map(({ value, label }) => (
+                <DropdownMenuItem
+                  key={value}
+                  onClick={() => setFontFamily(value)}
+                  className="gap-2 cursor-pointer"
+                  style={{ fontFamily: value }}
+                >
+                  {label}
+                  {fontFamily === value && <Check className="w-4 h-4 mr-auto text-primary" />}
+                </DropdownMenuItem>
+              ))}
+
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>זום</DropdownMenuLabel>
               {[75, 100, 125, 150].map((z) => (
                 <DropdownMenuItem
                   key={z}
                   onClick={() => setZoom(z)}
-                  className="gap-2"
+                  className="gap-2 cursor-pointer"
                 >
                   <ZoomIn className="w-4 h-4" />
                   {z}%
-                  {zoom === z && <Check className="w-4 h-4 mr-auto" />}
+                  {zoom === z && <Check className="w-4 h-4 mr-auto text-primary" />}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -296,11 +378,16 @@ export const BookReader = () => {
         <TabsContent value="read" className="space-y-4">
           <div 
             className="mx-auto transition-all duration-300"
-            style={getFrameStyles()}
+            style={{ maxWidth: getFrameStyles().maxWidth, margin: getFrameStyles().margin }}
           >
             <Card 
-              className="p-6 border border-amber-400/40 shadow-[0_0_15px_rgba(212,175,55,0.15)] rounded-xl"
-              style={{ fontSize: `${zoom}%` }}
+              className="p-6 rounded-xl transition-all duration-300"
+              style={{ 
+                fontSize: `${zoom}%`,
+                fontFamily: getFrameStyles().fontFamily,
+                border: `2px solid ${getFrameStyles().borderColor}`,
+                boxShadow: getFrameStyles().boxShadow,
+              }}
             >
             {/* Chapter Header */}
             <div className="flex items-center justify-between mb-4">
