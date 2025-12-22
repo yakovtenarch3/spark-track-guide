@@ -60,9 +60,9 @@ export const CompletionTrendChart = () => {
             <Line
               type="monotone"
               dataKey="count"
-              stroke="hsl(var(--success))"
+              stroke="#2C3E50"
               strokeWidth={3}
-              dot={{ fill: "hsl(var(--success))", r: 4 }}
+              dot={{ fill: "#2C3E50", r: 4 }}
               activeDot={{ r: 6 }}
             />
           </LineChart>
