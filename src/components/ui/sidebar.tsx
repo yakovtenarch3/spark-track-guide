@@ -215,10 +215,20 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-            className="relative flex h-full w-full flex-col rounded-2xl shadow-lg border overflow-hidden"
-            style={{ borderColor: "hsl(var(--sidebar-border, 43 70% 55%))" }}
+            className="relative flex h-full w-full flex-col shadow-lg overflow-hidden"
+            style={{ 
+              borderColor: "hsl(var(--sidebar-border, 43 70% 55%))",
+              borderWidth: "var(--sidebar-border-width, 1px)",
+              borderStyle: "solid",
+              borderRadius: "var(--sidebar-border-radius, 1rem)"
+            }}
           >
-            <div className="relative flex-1 rounded-xl overflow-hidden bg-sidebar m-px">{children}</div>
+            <div 
+              className="relative flex-1 overflow-hidden bg-sidebar m-px"
+              style={{
+                borderRadius: "calc(var(--sidebar-border-radius, 1rem) - 2px)"
+              }}
+            >{children}</div>
           </div>
         </SheetContent>
       </Sheet>
@@ -267,10 +277,20 @@ const Sidebar = React.forwardRef<
       >
         <div
           data-sidebar="sidebar"
-          className="relative flex h-full w-full flex-col rounded-2xl shadow-lg border overflow-hidden"
-          style={{ borderColor: "hsl(var(--sidebar-border, 43 70% 55%))" }}
+          className="relative flex h-full w-full flex-col shadow-lg overflow-hidden"
+          style={{ 
+            borderColor: "hsl(var(--sidebar-border, 43 70% 55%))",
+            borderWidth: "var(--sidebar-border-width, 1px)",
+            borderStyle: "solid",
+            borderRadius: "var(--sidebar-border-radius, 1rem)"
+          }}
         >
-          <div className="relative flex-1 rounded-xl overflow-hidden bg-sidebar m-px">{children}</div>
+          <div 
+            className="relative flex-1 overflow-hidden bg-sidebar m-px"
+            style={{
+              borderRadius: "calc(var(--sidebar-border-radius, 1rem) - 2px)"
+            }}
+          >{children}</div>
 
           {/* Resize Handle (inside the gold border; never overflows it) */}
           <div

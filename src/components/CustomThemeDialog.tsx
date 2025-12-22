@@ -71,6 +71,10 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
   // Sidebar font settings
   const [sidebarFontBold, setSidebarFontBold] = useState(false);
   const [sidebarFontFamily, setSidebarFontFamily] = useState("inherit");
+  
+  // Sidebar border & radius settings
+  const [sidebarBorderWidth, setSidebarBorderWidth] = useState<"thin" | "medium" | "thick">("thin");
+  const [sidebarBorderRadius, setSidebarBorderRadius] = useState<"small" | "medium" | "large">("medium");
 
   // Auto-fix contrast when background changes
   useEffect(() => {
@@ -308,6 +312,55 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
                   <ColorInputPopover label="צבע גבול סיידבר" value={sidebarBorderColor} onChange={setSidebarBorderColor} />
                   
                   <Separator className="my-2" />
+                  <p className="text-xs text-muted-foreground font-medium">מסגרת סיידבר</p>
+                  
+                  <div className="space-y-1">
+                    <Label className="text-sm">עובי קו מסגרת</Label>
+                    <div className="flex gap-2">
+                      {[
+                        { value: "thin", label: "דק", width: "1px" },
+                        { value: "medium", label: "בינוני", width: "2px" },
+                        { value: "thick", label: "עבה", width: "4px" },
+                      ].map((option) => (
+                        <Button
+                          key={option.value}
+                          type="button"
+                          variant={sidebarBorderWidth === option.value ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setSidebarBorderWidth(option.value as "thin" | "medium" | "thick")}
+                          className="flex-1"
+                        >
+                          <span className="inline-block w-6 h-3 rounded" style={{ border: `${option.width} solid currentColor` }} />
+                          <span className="mr-1 text-xs">{option.label}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label className="text-sm">רדיוס פינות</Label>
+                    <div className="flex gap-2">
+                      {[
+                        { value: "small", label: "קטן", radius: "8px" },
+                        { value: "medium", label: "בינוני", radius: "16px" },
+                        { value: "large", label: "גדול", radius: "24px" },
+                      ].map((option) => (
+                        <Button
+                          key={option.value}
+                          type="button"
+                          variant={sidebarBorderRadius === option.value ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setSidebarBorderRadius(option.value as "small" | "medium" | "large")}
+                          className="flex-1"
+                        >
+                          <span className="inline-block w-4 h-4 bg-current" style={{ borderRadius: option.radius }} />
+                          <span className="mr-1 text-xs">{option.label}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <Separator className="my-2" />
                   <p className="text-xs text-muted-foreground font-medium">גופן סיידבר</p>
                   
                   <div className="flex items-center justify-between">
@@ -355,10 +408,11 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
               <div className="flex h-[350px]">
                 {/* Sidebar Preview */}
                 <div 
-                  className="w-20 flex flex-col items-center py-3 gap-2 rounded-l-2xl m-1"
+                  className="w-20 flex flex-col items-center py-3 gap-2 m-1 overflow-hidden"
                   style={{ 
                     backgroundColor: sidebarBgColor,
-                    borderLeft: `2px solid ${sidebarBorderColor}`,
+                    border: `${sidebarBorderWidth === "thin" ? "1px" : sidebarBorderWidth === "medium" ? "2px" : "4px"} solid ${sidebarBorderColor}`,
+                    borderRadius: sidebarBorderRadius === "small" ? "8px" : sidebarBorderRadius === "medium" ? "16px" : "24px",
                     fontFamily: sidebarFontFamily,
                     fontWeight: sidebarFontBold ? 'bold' : 'normal'
                   }}

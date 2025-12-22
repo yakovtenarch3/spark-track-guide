@@ -83,6 +83,10 @@ All colors MUST be HSL.
     --sidebar-border: 43 70% 55%;
 
     --sidebar-ring: 43 70% 55%;
+    
+    --sidebar-border-width: 1px;
+    
+    --sidebar-border-radius: 1rem;
   }
 
   .dark {
