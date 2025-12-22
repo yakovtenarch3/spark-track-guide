@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   List,
   Search,
   MessageSquare,
@@ -26,6 +32,10 @@ import {
   Sparkles,
   ArrowRight,
   X,
+  Pin,
+  PinOff,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { dailyCoachTips } from "@/data/dailyCoachTips";
 import type { BookNote, BookBookmark } from "@/hooks/useBookReader";
@@ -56,6 +66,45 @@ export const BookTableOfContents = ({
 }: BookTableOfContentsProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
+  const [isPinned, setIsPinned] = useState(() => {
+    const saved = localStorage.getItem("book-toc-pinned");
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Save pin state to localStorage
+  useEffect(() => {
+    localStorage.setItem("book-toc-pinned", JSON.stringify(isPinned));
+  }, [isPinned]);
+
+  // Auto-hide logic when not pinned
+  useEffect(() => {
+    if (isPinned) {
+      setIsCollapsed(false);
+      return;
+    }
+
+    // When not pinned, collapse after a delay when mouse leaves
+    if (!isHovered) {
+      timeoutRef.current = setTimeout(() => {
+        setIsCollapsed(true);
+      }, 2000); // 2 second delay before collapsing
+    } else {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      setIsCollapsed(false);
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [isPinned, isHovered]);
 
   const idToIndex = useMemo(() => {
     const map = new Map<number, number>();
@@ -153,16 +202,65 @@ export const BookTableOfContents = ({
   }, [selectedSource, currentSource]);
 
   return (
-    <Card className="p-4 royal-card" dir="rtl">
+    <Card 
+      ref={containerRef}
+      className={`p-4 royal-card transition-all duration-300 ${
+        !isPinned && isCollapsed ? 'max-h-14 overflow-hidden' : ''
+      }`} 
+      dir="rtl"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div className="flex flex-row-reverse items-center justify-between gap-3 mb-3">
         <div className="flex flex-row-reverse items-center gap-2">
           <List className="w-4 h-4" />
           <h3 className="font-medium">תוכן עניינים</h3>
         </div>
 
-        <Badge variant="outline" className="text-xs">
-          {dailyCoachTips.length} פרקים
-        </Badge>
+        <div className="flex items-center gap-2">
+          {/* Collapse/Expand Button (visible when not pinned) */}
+          {!isPinned && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+            >
+              {isCollapsed ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronUp className="w-4 h-4" />
+              )}
+            </Button>
+          )}
+          
+          {/* Pin/Unpin Button */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={isPinned ? "default" : "ghost"}
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setIsPinned(!isPinned)}
+                >
+                  {isPinned ? (
+                    <Pin className="w-4 h-4" />
+                  ) : (
+                    <PinOff className="w-4 h-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isPinned ? "בטל נעיצה (אוטו-הייד)" : "נעץ (תמיד פתוח)"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <Badge variant="outline" className="text-xs">
+            {dailyCoachTips.length} פרקים
+          </Badge>
+        </div>
       </div>
 
       {/* Quick Jump Button */}
