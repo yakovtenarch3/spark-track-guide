@@ -67,6 +67,10 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
   const [sidebarBgColor, setSidebarBgColor] = useState("#f5f0e8");
   const [sidebarTextColor, setSidebarTextColor] = useState("#1a3a5c");
   const [sidebarBorderColor, setSidebarBorderColor] = useState("#d4a84b");
+  
+  // Sidebar font settings
+  const [sidebarFontBold, setSidebarFontBold] = useState(false);
+  const [sidebarFontFamily, setSidebarFontFamily] = useState("inherit");
 
   // Auto-fix contrast when background changes
   useEffect(() => {
@@ -302,6 +306,39 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
                   <ColorInputPopover label="צבע רקע סיידבר" value={sidebarBgColor} onChange={setSidebarBgColor} />
                   <ColorInputPopover label="צבע טקסט סיידבר" value={sidebarTextColor} onChange={setSidebarTextColor} contrastWith={sidebarBgColor} />
                   <ColorInputPopover label="צבע גבול סיידבר" value={sidebarBorderColor} onChange={setSidebarBorderColor} />
+                  
+                  <Separator className="my-2" />
+                  <p className="text-xs text-muted-foreground font-medium">גופן סיידבר</p>
+                  
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">טקסט מודגש (Bold)</Label>
+                    <Button
+                      type="button"
+                      variant={sidebarFontBold ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSidebarFontBold(!sidebarFontBold)}
+                      className="font-bold"
+                    >
+                      B
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label className="text-sm">סוג גופן</Label>
+                    <select
+                      value={sidebarFontFamily}
+                      onChange={(e) => setSidebarFontFamily(e.target.value)}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="inherit">ברירת מחדל</option>
+                      <option value="'Heebo', sans-serif">Heebo</option>
+                      <option value="'Assistant', sans-serif">Assistant</option>
+                      <option value="'Rubik', sans-serif">Rubik</option>
+                      <option value="'Open Sans', sans-serif">Open Sans</option>
+                      <option value="'Frank Ruhl Libre', serif">Frank Ruhl Libre</option>
+                      <option value="'David Libre', serif">David Libre</option>
+                    </select>
+                  </div>
                 </TabsContent>
               </Tabs>
             </div>
@@ -318,22 +355,25 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
               <div className="flex h-[350px]">
                 {/* Sidebar Preview */}
                 <div 
-                  className="w-16 flex flex-col items-center py-3 gap-2"
+                  className="w-20 flex flex-col items-center py-3 gap-2 rounded-l-2xl m-1"
                   style={{ 
                     backgroundColor: sidebarBgColor,
-                    borderLeft: `2px solid ${sidebarBorderColor}`
+                    borderLeft: `2px solid ${sidebarBorderColor}`,
+                    fontFamily: sidebarFontFamily,
+                    fontWeight: sidebarFontBold ? 'bold' : 'normal'
                   }}
                 >
                   {sidebarItems.map((item, index) => (
                     <div
                       key={index}
-                      className={`p-2 rounded-lg transition-all ${index === 0 ? 'shadow-sm' : ''}`}
+                      className={`p-2 rounded-xl transition-all flex flex-col items-center gap-1 ${index === 0 ? 'shadow-sm' : ''}`}
                       style={{ 
                         backgroundColor: index === 0 ? primaryColor : 'transparent',
                         color: index === 0 ? '#ffffff' : sidebarTextColor
                       }}
                     >
                       <item.icon className="w-4 h-4" />
+                      <span className="text-[8px]">{item.label}</span>
                     </div>
                   ))}
                 </div>
