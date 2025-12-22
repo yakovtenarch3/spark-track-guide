@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
 import {
   ChevronRight,
   ChevronLeft,
@@ -28,11 +29,9 @@ import {
   Download,
   List,
   Maximize2,
-  Type,
   Highlighter,
   BookOpen,
   ChevronDown,
-  Palette,
   Loader2,
   Search,
   X,
@@ -41,6 +40,10 @@ import {
   PanelRightOpen,
   PanelRightClose,
   Check,
+  BookMarked,
+  CheckCircle2,
+  Circle,
+  Eye,
 } from "lucide-react";
 import { usePDFAnnotations, type PDFAnnotation } from "@/hooks/usePDFAnnotations";
 import { toast } from "sonner";
@@ -111,8 +114,9 @@ export const LuxuryPDFReader = ({
   const [zoom, setZoom] = useState(100);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [showSidePanel, setShowSidePanel] = useState(false);
-  const [sidePanel, setSidePanel] = useState<"index" | "annotations" | "settings">("index");
+  const [sidePanel, setSidePanel] = useState<"index" | "progress" | "annotations" | "settings">("index");
   const [searchQuery, setSearchQuery] = useState("");
+  const [indexViewMode, setIndexViewMode] = useState<"all" | "grid">("all");
 
   // Typography states
   const [fontSize, setFontSize] = useState(16);
@@ -122,6 +126,12 @@ export const LuxuryPDFReader = ({
   const [nightMode, setNightMode] = useState(false);
   const [highlightMode, setHighlightMode] = useState(false);
   const [selectedText, setSelectedText] = useState("");
+  
+  // Reading progress - pages that have been read
+  const [readPages, setReadPages] = useState<Set<number>>(() => {
+    const saved = localStorage.getItem(`book-progress-${bookId}`);
+    return saved ? new Set(JSON.parse(saved)) : new Set<number>();
+  });
 
   // Annotation states
   const [newNote, setNewNote] = useState("");
@@ -142,6 +152,18 @@ export const LuxuryPDFReader = ({
     getPageAnnotations,
     annotationCountsByPage,
   } = usePDFAnnotations(bookId);
+
+  // Save read pages to localStorage
+  useEffect(() => {
+    localStorage.setItem(`book-progress-${bookId}`, JSON.stringify([...readPages]));
+  }, [readPages, bookId]);
+
+  // Mark current page as read when viewing
+  useEffect(() => {
+    if (currentPage > 0) {
+      setReadPages(prev => new Set(prev).add(currentPage));
+    }
+  }, [currentPage]);
 
   // Resize handler - wider default width
   useEffect(() => {
@@ -289,7 +311,7 @@ export const LuxuryPDFReader = ({
     }
   };
 
-  // Generate page index
+  // Generate page index - ALL pages, no skipping
   const allPages = Array.from({ length: numPages }, (_, i) => i + 1);
   const filteredPages = searchQuery
     ? allPages.filter(
@@ -297,7 +319,42 @@ export const LuxuryPDFReader = ({
           p.toString().includes(searchQuery) ||
           (annotationCountsByPage[p] > 0 && `עמוד ${p}`.includes(searchQuery))
       )
-    : allPages.filter((p) => p % 5 === 0 || p === 1 || annotationCountsByPage[p] > 0);
+    : allPages; // Show ALL pages, not just every 5th
+  
+  // Reading progress calculation
+  const readCount = readPages.size;
+  const progressPercentage = numPages > 0 ? Math.round((readCount / numPages) * 100) : 0;
+  
+  // Toggle page as read/unread
+  const togglePageRead = (page: number) => {
+    setReadPages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(page)) {
+        newSet.delete(page);
+      } else {
+        newSet.add(page);
+      }
+      return newSet;
+    });
+  };
+  
+  // Mark all pages up to current as read
+  const markAllUpToCurrentAsRead = () => {
+    setReadPages(prev => {
+      const newSet = new Set(prev);
+      for (let i = 1; i <= currentPage; i++) {
+        newSet.add(i);
+      }
+      return newSet;
+    });
+    toast.success(`סומנו ${currentPage} עמודים כנקראו`);
+  };
+  
+  // Clear all read progress
+  const clearReadProgress = () => {
+    setReadPages(new Set());
+    toast.success("התקדמות הקריאה אופסה");
+  };
 
   const scaledWidth = (pageWidth * zoom) / 100;
 
@@ -415,18 +472,19 @@ export const LuxuryPDFReader = ({
       <div className="flex flex-1 overflow-hidden">
         {/* Side Panel */}
         {showSidePanel && (
-          <div className="w-72 lg:w-80 border-l-2 border-primary/20 bg-card flex flex-col">
+          <div className={`w-80 lg:w-96 border-l-2 border-primary/20 flex flex-col ${nightMode ? "bg-slate-800" : "bg-card"}`}>
             {/* Panel Tabs */}
             <div className="flex border-b border-border">
               {[
-                { id: "index", icon: List, label: "עמודים" },
+                { id: "index", icon: List, label: "אינדקס" },
+                { id: "progress", icon: BookMarked, label: "מעקב" },
                 { id: "annotations", icon: MessageSquare, label: "הערות" },
-                { id: "settings", icon: Type, label: "תצוגה" },
+                { id: "settings", icon: Eye, label: "תצוגה" },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setSidePanel(tab.id as typeof sidePanel)}
-                  className={`flex-1 px-2 py-3 text-xs font-medium transition-all flex flex-col items-center gap-1 ${
+                  className={`flex-1 px-1.5 py-2.5 text-[10px] font-medium transition-all flex flex-col items-center gap-0.5 ${
                     sidePanel === tab.id
                       ? "bg-primary/10 text-primary border-b-2 border-primary"
                       : "text-muted-foreground hover:bg-muted"
@@ -440,44 +498,238 @@ export const LuxuryPDFReader = ({
 
             <ScrollArea className="flex-1">
               <div className="p-3">
-                {/* Page Index */}
+                {/* Page Index - ALL pages */}
                 {sidePanel === "index" && (
                   <div className="space-y-3">
-                    <div className="relative">
-                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="חפש עמוד..."
-                        className="pr-9 text-sm"
-                      />
+                    {/* Search and view toggle */}
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="חפש עמוד..."
+                          className="pr-9 text-sm"
+                        />
+                      </div>
+                      <div className="flex gap-1 bg-muted rounded-lg p-1">
+                        <Button
+                          variant={indexViewMode === "all" ? "default" : "ghost"}
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => setIndexViewMode("all")}
+                          title="תצוגת רשימה"
+                        >
+                          <List className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant={indexViewMode === "grid" ? "default" : "ghost"}
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => setIndexViewMode("grid")}
+                          title="תצוגת רשת"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
+                          </svg>
+                        </Button>
+                      </div>
                     </div>
 
-                    <div className="space-y-1">
-                      {filteredPages.map((page) => {
-                        const hasAnnotations = annotationCountsByPage[page] > 0;
-                        const isActive = page === currentPage;
+                    {/* Progress bar */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">התקדמות קריאה</span>
+                        <span className="font-medium text-primary">{progressPercentage}%</span>
+                      </div>
+                      <Progress value={progressPercentage} className="h-2" />
+                      <p className="text-[10px] text-muted-foreground">
+                        {readCount} מתוך {numPages} עמודים נקראו
+                      </p>
+                    </div>
 
-                        return (
+                    {/* Grid View */}
+                    {indexViewMode === "grid" ? (
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {filteredPages.map((page) => {
+                          const hasAnnotations = annotationCountsByPage[page] > 0;
+                          const isActive = page === currentPage;
+                          const isRead = readPages.has(page);
+
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => goToPage(page)}
+                              className={`relative aspect-square flex items-center justify-center text-xs font-medium rounded-lg transition-all ${
+                                isActive
+                                  ? "bg-primary text-primary-foreground shadow-md scale-110 z-10"
+                                  : isRead
+                                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200"
+                                  : "bg-muted hover:bg-muted/80"
+                              }`}
+                              title={`עמוד ${page}${isRead ? " (נקרא)" : ""}${hasAnnotations ? ` - ${annotationCountsByPage[page]} הערות` : ""}`}
+                            >
+                              {page}
+                              {hasAnnotations && (
+                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full" />
+                              )}
+                              {isRead && !isActive && (
+                                <CheckCircle2 className="absolute -bottom-0.5 -left-0.5 w-3 h-3 text-green-600" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      /* List View */
+                      <div className="space-y-1">
+                        {filteredPages.map((page) => {
+                          const hasAnnotations = annotationCountsByPage[page] > 0;
+                          const isActive = page === currentPage;
+                          const isRead = readPages.has(page);
+
+                          return (
+                            <div
+                              key={page}
+                              className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-all ${
+                                isActive
+                                  ? "bg-primary text-primary-foreground shadow-md"
+                                  : isRead
+                                  ? "bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30"
+                                  : "hover:bg-muted"
+                              }`}
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  togglePageRead(page);
+                                }}
+                                className={`shrink-0 ${isActive ? "text-primary-foreground" : ""}`}
+                              >
+                                {isRead ? (
+                                  <CheckCircle2 className={`w-4 h-4 ${isActive ? "" : "text-green-600"}`} />
+                                ) : (
+                                  <Circle className="w-4 h-4 text-muted-foreground" />
+                                )}
+                              </button>
+                              <button
+                                onClick={() => goToPage(page)}
+                                className="flex-1 text-right font-medium"
+                              >
+                                עמוד {page}
+                              </button>
+                              {hasAnnotations && (
+                                <Badge variant={isActive ? "outline" : "secondary"} className="text-[10px] gap-0.5 h-5">
+                                  <MessageSquare className="w-2.5 h-2.5" />
+                                  {annotationCountsByPage[page]}
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Reading Progress Panel */}
+                {sidePanel === "progress" && (
+                  <div className="space-y-4">
+                    {/* Progress Overview */}
+                    <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                      <div className="text-center space-y-3">
+                        <div className="relative w-24 h-24 mx-auto">
+                          <svg className="w-24 h-24 -rotate-90">
+                            <circle
+                              cx="48"
+                              cy="48"
+                              r="40"
+                              strokeWidth="8"
+                              fill="none"
+                              className="stroke-muted"
+                            />
+                            <circle
+                              cx="48"
+                              cy="48"
+                              r="40"
+                              strokeWidth="8"
+                              fill="none"
+                              strokeDasharray={251.2}
+                              strokeDashoffset={251.2 - (251.2 * progressPercentage) / 100}
+                              className="stroke-primary transition-all duration-500"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-2xl font-bold text-primary">{progressPercentage}%</span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold">{readCount} עמודים נקראו</p>
+                          <p className="text-sm text-muted-foreground">מתוך {numPages} עמודים</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Quick Actions */}
+                    <div className="space-y-2">
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 justify-start"
+                        onClick={markAllUpToCurrentAsRead}
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        סמן הכל עד עמוד {currentPage} כנקרא
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 justify-start text-destructive hover:bg-destructive/10"
+                        onClick={clearReadProgress}
+                      >
+                        <X className="w-4 h-4" />
+                        אפס התקדמות קריאה
+                      </Button>
+                    </div>
+
+                    {/* Current Position */}
+                    <Card className="p-3">
+                      <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-primary" />
+                        המיקום הנוכחי
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="secondary" className="text-lg px-3 py-1">
+                          עמוד {currentPage}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {numPages - currentPage} עמודים נותרו
+                        </span>
+                      </div>
+                    </Card>
+
+                    {/* Unread Pages */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">עמודים שלא נקראו</p>
+                      <div className="grid grid-cols-6 gap-1">
+                        {allPages.filter(p => !readPages.has(p)).slice(0, 30).map((page) => (
                           <button
                             key={page}
                             onClick={() => goToPage(page)}
-                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all ${
-                              isActive
-                                ? "bg-primary text-primary-foreground shadow-md"
-                                : "hover:bg-muted"
+                            className={`aspect-square flex items-center justify-center text-[10px] font-medium rounded transition-all ${
+                              page === currentPage
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted hover:bg-muted/80"
                             }`}
                           >
-                            <span className="font-medium">עמוד {page}</span>
-                            {hasAnnotations && (
-                              <Badge variant={isActive ? "outline" : "secondary"} className="text-xs gap-1">
-                                <MessageSquare className="w-3 h-3" />
-                                {annotationCountsByPage[page]}
-                              </Badge>
-                            )}
+                            {page}
                           </button>
-                        );
-                      })}
+                        ))}
+                        {allPages.filter(p => !readPages.has(p)).length > 30 && (
+                          <div className="col-span-6 text-center text-xs text-muted-foreground py-1">
+                            ועוד {allPages.filter(p => !readPages.has(p)).length - 30} עמודים...
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
