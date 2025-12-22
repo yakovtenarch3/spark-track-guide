@@ -99,40 +99,44 @@ export const BookReader = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState("read");
   
-  // Load saved preferences from localStorage
-  const [frameSize, setFrameSize] = useState<FrameSize>(() => {
-    const saved = localStorage.getItem("book-reader-frame-size");
-    return (saved as FrameSize) || 'normal';
-  });
-  const [frameStyle, setFrameStyle] = useState<FrameStyle>(() => {
-    const saved = localStorage.getItem("book-reader-frame-style");
-    return (saved as FrameStyle) || 'gold';
-  });
-  const [fontFamily, setFontFamily] = useState(() => {
-    const saved = localStorage.getItem("book-reader-font");
-    return saved || "system-ui, sans-serif";
-  });
-  const [zoom, setZoom] = useState(() => {
-    const saved = localStorage.getItem("book-reader-zoom");
-    return saved ? parseInt(saved) : 100;
-  });
+  // Display preferences - initialize with defaults, load from localStorage in useEffect
+  const [frameSize, setFrameSize] = useState<FrameSize>('normal');
+  const [frameStyle, setFrameStyle] = useState<FrameStyle>('gold');
+  const [fontFamily, setFontFamily] = useState("system-ui, sans-serif");
+  const [zoom, setZoom] = useState(100);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
 
-  // Save preferences to localStorage
+  // Load saved preferences from localStorage on mount (client-side only)
   useEffect(() => {
-    localStorage.setItem("book-reader-frame-size", frameSize);
-  }, [frameSize]);
+    const savedFrameSize = localStorage.getItem("book-reader-frame-size");
+    const savedFrameStyle = localStorage.getItem("book-reader-frame-style");
+    const savedFont = localStorage.getItem("book-reader-font");
+    const savedZoom = localStorage.getItem("book-reader-zoom");
 
-  useEffect(() => {
-    localStorage.setItem("book-reader-frame-style", frameStyle);
-  }, [frameStyle]);
+    if (savedFrameSize) setFrameSize(savedFrameSize as FrameSize);
+    if (savedFrameStyle) setFrameStyle(savedFrameStyle as FrameStyle);
+    if (savedFont) setFontFamily(savedFont);
+    if (savedZoom) setZoom(parseInt(savedZoom));
+    
+    setPrefsLoaded(true);
+  }, []);
 
+  // Save preferences to localStorage (only after initial load)
   useEffect(() => {
-    localStorage.setItem("book-reader-font", fontFamily);
-  }, [fontFamily]);
+    if (prefsLoaded) localStorage.setItem("book-reader-frame-size", frameSize);
+  }, [frameSize, prefsLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("book-reader-zoom", zoom.toString());
-  }, [zoom]);
+    if (prefsLoaded) localStorage.setItem("book-reader-frame-style", frameStyle);
+  }, [frameStyle, prefsLoaded]);
+
+  useEffect(() => {
+    if (prefsLoaded) localStorage.setItem("book-reader-font", fontFamily);
+  }, [fontFamily, prefsLoaded]);
+
+  useEffect(() => {
+    if (prefsLoaded) localStorage.setItem("book-reader-zoom", zoom.toString());
+  }, [zoom, prefsLoaded]);
 
   // Debug: verify state changes are happening
   useEffect(() => {
