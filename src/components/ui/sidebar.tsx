@@ -205,7 +205,7 @@ const Sidebar = React.forwardRef<
         <SheetContent
           data-sidebar="sidebar"
           data-mobile="true"
-          className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden rounded-l-3xl"
+          className="w-[--sidebar-width] bg-transparent p-0 text-sidebar-foreground [&>button]:hidden"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -213,7 +213,13 @@ const Sidebar = React.forwardRef<
           }
           side={side}
         >
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div
+            data-sidebar="sidebar"
+            className="relative flex h-full w-full flex-col rounded-2xl shadow-lg border overflow-hidden"
+            style={{ borderColor: "hsl(var(--sidebar-border, 43 70% 55%))" }}
+          >
+            <div className="relative flex-1 rounded-xl overflow-hidden bg-sidebar m-px">{children}</div>
+          </div>
         </SheetContent>
       </Sheet>
     );
@@ -247,49 +253,43 @@ const Sidebar = React.forwardRef<
       <div
         ref={sidebarRef}
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex",
+          "fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex !bg-transparent !border-transparent",
           side === "left"
             ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
             : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-            : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
           className,
         )}
         {...props}
       >
         <div
           data-sidebar="sidebar"
-          className="flex h-full w-full flex-col rounded-2xl m-2 shadow-lg border-2 overflow-hidden"
-          style={{
-            borderColor: 'hsl(var(--sidebar-border, 43 70% 55%))'
-          }}
+          className="relative flex h-full w-full flex-col rounded-2xl shadow-lg border overflow-hidden"
+          style={{ borderColor: "hsl(var(--sidebar-border, 43 70% 55%))" }}
         >
-          <div 
-            className="flex-1 rounded-xl overflow-hidden bg-sidebar m-[2px]"
-          >
-            {children}
-          </div>
-        </div>
-        
-        {/* Resize Handle */}
-        <div
-          onMouseDown={handleMouseDown}
-          className={cn(
-            "absolute top-0 bottom-0 w-2 cursor-col-resize z-50 group/resize",
-            "hover:bg-primary/20 active:bg-primary/30 transition-colors",
-            side === "left" ? "-right-1" : "-left-1",
-            isResizing && "bg-primary/30"
-          )}
-        >
-          <div 
+          <div className="relative flex-1 rounded-xl overflow-hidden bg-sidebar m-px">{children}</div>
+
+          {/* Resize Handle (inside the gold border; never overflows it) */}
+          <div
+            onMouseDown={handleMouseDown}
             className={cn(
-              "absolute top-1/2 -translate-y-1/2 w-1 h-12 rounded-full bg-border opacity-0 group-hover/resize:opacity-100 transition-opacity",
-              side === "left" ? "right-0.5" : "left-0.5",
-              isResizing && "opacity-100 bg-primary"
+              "absolute top-0 bottom-0 w-2 cursor-col-resize z-50 group/resize",
+              "hover:bg-primary/20 active:bg-primary/30 transition-colors",
+              side === "left" ? "right-0" : "left-0",
+              isResizing && "bg-primary/30",
             )}
-          />
+          >
+            <div
+              className={cn(
+                "absolute top-1/2 -translate-y-1/2 w-1 h-12 rounded-full bg-border opacity-0 group-hover/resize:opacity-100 transition-opacity",
+                side === "left" ? "right-0.5" : "left-0.5",
+                isResizing && "opacity-100 bg-primary",
+              )}
+            />
+          </div>
         </div>
       </div>
     </div>
