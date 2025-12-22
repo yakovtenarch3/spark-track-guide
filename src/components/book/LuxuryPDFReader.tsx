@@ -50,8 +50,10 @@ import {
   PenTool,
   FileDown,
   Settings2,
+  Edit3,
 } from "lucide-react";
 import { usePDFAnnotations, type PDFAnnotation } from "@/hooks/usePDFAnnotations";
+import { PDFFormOverlay } from "./PDFFormOverlay";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -141,6 +143,7 @@ export const LuxuryPDFReader = ({
   const [highlightMode, setHighlightMode] = useState(false);
   const [selectedText, setSelectedText] = useState("");
   const [showFormMode, setShowFormMode] = useState(false);
+  const [pdfPageHeight, setPdfPageHeight] = useState(800);
   
   // Reading progress - pages that have been read
   const [readPages, setReadPages] = useState<Set<number>>(() => {
@@ -527,7 +530,16 @@ export const LuxuryPDFReader = ({
             <Maximize2 className="w-4 h-4" />
           </Button>
 
-          {/* Export Menu */}
+          {/* Form Fill Mode Toggle */}
+          <Button
+            variant={showFormMode ? "default" : "ghost"}
+            size="icon"
+            onClick={() => setShowFormMode(!showFormMode)}
+            title="מצב מילוי טפסים"
+            className={showFormMode ? "bg-primary text-primary-foreground" : ""}
+          >
+            <Edit3 className="w-4 h-4" />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" title="ייצוא">
@@ -1193,7 +1205,7 @@ export const LuxuryPDFReader = ({
               )}
 
               {/* PDF with gold frame */}
-              <div className="ring-2 ring-primary/30 rounded-lg shadow-[0_0_15px_rgba(var(--primary-rgb),0.15)] overflow-hidden">
+              <div className="relative ring-2 ring-primary/30 rounded-lg shadow-[0_0_15px_rgba(var(--primary-rgb),0.15)] overflow-hidden">
                 <Document
                   file={fileUrl}
                   onLoadSuccess={onDocumentLoadSuccess}
@@ -1212,8 +1224,22 @@ export const LuxuryPDFReader = ({
                     className="bg-white"
                     renderTextLayer={true}
                     renderAnnotationLayer={true}
+                    onRenderSuccess={(page) => {
+                      setPdfPageHeight(page.height * (scaledWidth / page.width));
+                    }}
                   />
                 </Document>
+
+                {/* Form Overlay */}
+                {showFormMode && (
+                  <PDFFormOverlay
+                    pageNumber={currentPage}
+                    bookId={bookId}
+                    width={scaledWidth}
+                    height={pdfPageHeight}
+                    onClose={() => setShowFormMode(false)}
+                  />
+                )}
               </div>
             </div>
           </div>
