@@ -56,7 +56,7 @@ export const StreakChart = () => {
                 return null;
               }}
             />
-            <Bar dataKey="streak" radius={[0, 8, 8, 0]} />
+            <Bar dataKey="streak" radius={[0, 8, 8, 0]} fill="#2C3E50" />
           </BarChart>
         </ResponsiveContainer>
       </div>
