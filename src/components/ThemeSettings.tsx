@@ -22,6 +22,21 @@ import { useTheme } from "@/hooks/useTheme";
 import { CustomThemeDialog } from "./CustomThemeDialog";
 import { useState } from "react";
 
+interface ExtendedThemeColors {
+  background: string;
+  foreground: string;
+  primary: string;
+  secondary: string;
+  card?: string;
+  cardBorder?: string;
+  fontColor?: string;
+  headingColor?: string;
+  borderColor?: string;
+  buttonBg?: string;
+  buttonText?: string;
+  accent?: string;
+}
+
 export const ThemeSettings = () => {
   const { currentTheme, setTheme, themes, addCustomTheme, deleteCustomTheme } = useTheme();
   const [themeToDelete, setThemeToDelete] = useState<string | null>(null);
@@ -33,6 +48,10 @@ export const ThemeSettings = () => {
   const handleDeleteTheme = (themeName: string) => {
     deleteCustomTheme(themeName);
     setThemeToDelete(null);
+  };
+
+  const handleAddTheme = (name: string, colors: ExtendedThemeColors) => {
+    addCustomTheme(name, colors);
   };
 
   return (
@@ -54,7 +73,7 @@ export const ThemeSettings = () => {
           <DropdownMenuSeparator />
           
           <div className="px-2 py-1">
-            <CustomThemeDialog onSaveTheme={addCustomTheme} />
+            <CustomThemeDialog onSaveTheme={handleAddTheme} />
           </div>
           
           <DropdownMenuSeparator />

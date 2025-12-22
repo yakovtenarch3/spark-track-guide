@@ -11,17 +11,30 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Edit2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { Theme } from "@/hooks/useTheme";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+interface ExtendedThemeColors {
+  background: string;
+  foreground: string;
+  primary: string;
+  secondary: string;
+  card?: string;
+  cardBorder?: string;
+  fontColor?: string;
+  headingColor?: string;
+  borderColor?: string;
+  buttonBg?: string;
+  buttonText?: string;
+  accent?: string;
+}
 
 interface CustomThemeDialogProps {
-  onSaveTheme: (name: string, colors: {
-    background: string;
-    primary: string;
-    secondary: string;
-  }) => void;
-  editTheme?: Theme;
+  onSaveTheme: (name: string, colors: ExtendedThemeColors) => void;
+  editTheme?: Theme | null;
   onEditComplete?: () => void;
   trigger?: React.ReactNode;
 }
@@ -29,13 +42,32 @@ interface CustomThemeDialogProps {
 export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trigger }: CustomThemeDialogProps) => {
   const [open, setOpen] = useState(false);
   const [themeName, setThemeName] = useState("");
+  
+  // Basic colors
   const [backgroundColor, setBackgroundColor] = useState("#f5f0e8");
-  const [primaryColor, setPrimaryColor] = useState("#0d2a4b");
-  const [secondaryColor, setSecondaryColor] = useState("#1a4d7a");
+  const [primaryColor, setPrimaryColor] = useState("#1a3a5c");
+  const [secondaryColor, setSecondaryColor] = useState("#d4a84b");
+  
+  // Extended colors
+  const [fontColor, setFontColor] = useState("#1a3a5c");
+  const [headingColor, setHeadingColor] = useState("#0d2a4b");
+  const [cardColor, setCardColor] = useState("#ffffff");
+  const [cardBorderColor, setCardBorderColor] = useState("#d4a84b");
+  const [borderColor, setBorderColor] = useState("#d4a84b");
+  const [buttonBgColor, setButtonBgColor] = useState("#ffffff");
+  const [buttonTextColor, setButtonTextColor] = useState("#1a3a5c");
+  const [accentColor, setAccentColor] = useState("#d4a84b");
 
   // Convert HSL to Hex
   const hslToHex = (hsl: string): string => {
-    const [h, s, l] = hsl.split(/\s+/).map((v, i) => i === 0 ? parseInt(v) : parseFloat(v));
+    if (!hsl) return "#000000";
+    const parts = hsl.split(/\s+/);
+    if (parts.length < 3) return "#000000";
+    
+    const h = parseInt(parts[0]) || 0;
+    const s = parseFloat(parts[1]) || 0;
+    const l = parseFloat(parts[2]) || 0;
+    
     const sDecimal = s / 100;
     const lDecimal = l / 100;
     const c = (1 - Math.abs(2 * lDecimal - 1)) * sDecimal;
@@ -65,6 +97,14 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
       setBackgroundColor(hslToHex(editTheme.colors.background));
       setPrimaryColor(hslToHex(editTheme.colors.primary));
       setSecondaryColor(hslToHex(editTheme.colors.secondary));
+      setFontColor(hslToHex(editTheme.colors.fontColor || editTheme.colors.foreground));
+      setHeadingColor(hslToHex(editTheme.colors.headingColor || editTheme.colors.foreground));
+      setCardColor(hslToHex(editTheme.colors.card));
+      setCardBorderColor(hslToHex(editTheme.colors.cardBorder || editTheme.colors.border));
+      setBorderColor(hslToHex(editTheme.colors.borderColor || editTheme.colors.border));
+      setButtonBgColor(hslToHex(editTheme.colors.buttonBg || editTheme.colors.primary));
+      setButtonTextColor(hslToHex(editTheme.colors.buttonText || editTheme.colors.primaryForeground));
+      setAccentColor(hslToHex(editTheme.colors.accent));
     }
   }, [editTheme, open]);
 
@@ -113,23 +153,72 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
       return;
     }
 
-    const colors = {
+    const colors: ExtendedThemeColors = {
       background: hexToHSL(backgroundColor),
+      foreground: hexToHSL(fontColor),
       primary: hexToHSL(primaryColor),
       secondary: hexToHSL(secondaryColor),
+      card: hexToHSL(cardColor),
+      cardBorder: hexToHSL(cardBorderColor),
+      fontColor: hexToHSL(fontColor),
+      headingColor: hexToHSL(headingColor),
+      borderColor: hexToHSL(borderColor),
+      buttonBg: hexToHSL(buttonBgColor),
+      buttonText: hexToHSL(buttonTextColor),
+      accent: hexToHSL(accentColor),
     };
 
     onSaveTheme(themeName, colors);
     toast.success(`ערכת נושא "${themeName}" ${editTheme ? 'עודכנה' : 'נשמרה'} בהצלחה!`);
     
     // Reset and close
-    setThemeName("");
-    setBackgroundColor("#f5f0e8");
-    setPrimaryColor("#0d2a4b");
-    setSecondaryColor("#1a4d7a");
+    resetForm();
     setOpen(false);
     onEditComplete?.();
   };
+
+  const resetForm = () => {
+    setThemeName("");
+    setBackgroundColor("#f5f0e8");
+    setPrimaryColor("#1a3a5c");
+    setSecondaryColor("#d4a84b");
+    setFontColor("#1a3a5c");
+    setHeadingColor("#0d2a4b");
+    setCardColor("#ffffff");
+    setCardBorderColor("#d4a84b");
+    setBorderColor("#d4a84b");
+    setButtonBgColor("#ffffff");
+    setButtonTextColor("#1a3a5c");
+    setAccentColor("#d4a84b");
+  };
+
+  const ColorInput = ({ 
+    label, 
+    value, 
+    onChange 
+  }: { 
+    label: string; 
+    value: string; 
+    onChange: (value: string) => void 
+  }) => (
+    <div className="grid gap-2">
+      <Label className="text-sm">{label}</Label>
+      <div className="flex gap-2 items-center">
+        <Input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-14 h-10 p-1 cursor-pointer border-2"
+        />
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="#000000"
+          className="flex-1 font-mono text-sm"
+        />
+      </div>
+    </div>
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -141,100 +230,171 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]" dir="rtl">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh]" dir="rtl">
         <DialogHeader>
           <DialogTitle>{editTheme ? 'ערוך ערכת נושא' : 'צור ערכת נושא חדשה'}</DialogTitle>
           <DialogDescription>
-            בחר צבעים ליצירת ערכת נושא מותאמת אישית
+            התאם אישית את כל הצבעים ליצירת ערכת נושא ייחודית
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="name">שם ערכת הנושא</Label>
-            <Input
-              id="name"
-              value={themeName}
-              onChange={(e) => setThemeName(e.target.value)}
-              placeholder="לדוגמה: הערכה שלי"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="bg">צבע רקע</Label>
-            <div className="flex gap-2 items-center">
+        
+        <ScrollArea className="max-h-[60vh] pr-4">
+          <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">שם ערכת הנושא</Label>
               <Input
-                id="bg"
-                type="color"
-                value={backgroundColor}
-                onChange={(e) => setBackgroundColor(e.target.value)}
-                className="w-20 h-10 p-1 cursor-pointer"
-              />
-              <Input
-                value={backgroundColor}
-                onChange={(e) => setBackgroundColor(e.target.value)}
-                placeholder="#f5f0e8"
-                className="flex-1"
+                id="name"
+                value={themeName}
+                onChange={(e) => setThemeName(e.target.value)}
+                placeholder="לדוגמה: הערכה שלי"
               />
             </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="primary">צבע ראשי</Label>
-            <div className="flex gap-2 items-center">
-              <Input
-                id="primary"
-                type="color"
-                value={primaryColor}
-                onChange={(e) => setPrimaryColor(e.target.value)}
-                className="w-20 h-10 p-1 cursor-pointer"
-              />
-              <Input
-                value={primaryColor}
-                onChange={(e) => setPrimaryColor(e.target.value)}
-                placeholder="#0d2a4b"
-                className="flex-1"
-              />
+
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="basic">בסיסי</TabsTrigger>
+                <TabsTrigger value="typography">טיפוגרפיה</TabsTrigger>
+                <TabsTrigger value="advanced">מתקדם</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="basic" className="space-y-4 mt-4">
+                <ColorInput
+                  label="צבע רקע ראשי"
+                  value={backgroundColor}
+                  onChange={setBackgroundColor}
+                />
+                <ColorInput
+                  label="צבע ראשי (Primary)"
+                  value={primaryColor}
+                  onChange={setPrimaryColor}
+                />
+                <ColorInput
+                  label="צבע משני (Secondary)"
+                  value={secondaryColor}
+                  onChange={setSecondaryColor}
+                />
+                <ColorInput
+                  label="צבע הדגשה (Accent)"
+                  value={accentColor}
+                  onChange={setAccentColor}
+                />
+              </TabsContent>
+
+              <TabsContent value="typography" className="space-y-4 mt-4">
+                <ColorInput
+                  label="צבע גופן ראשי"
+                  value={fontColor}
+                  onChange={setFontColor}
+                />
+                <ColorInput
+                  label="צבע כותרות"
+                  value={headingColor}
+                  onChange={setHeadingColor}
+                />
+              </TabsContent>
+
+              <TabsContent value="advanced" className="space-y-4 mt-4">
+                <ColorInput
+                  label="צבע רקע כרטיסים/מסגרות"
+                  value={cardColor}
+                  onChange={setCardColor}
+                />
+                <ColorInput
+                  label="צבע גבול כרטיסים/מסגרות"
+                  value={cardBorderColor}
+                  onChange={setCardBorderColor}
+                />
+                <ColorInput
+                  label="צבע גבולות כללי"
+                  value={borderColor}
+                  onChange={setBorderColor}
+                />
+                <ColorInput
+                  label="צבע רקע כפתורים"
+                  value={buttonBgColor}
+                  onChange={setButtonBgColor}
+                />
+                <ColorInput
+                  label="צבע טקסט כפתורים"
+                  value={buttonTextColor}
+                  onChange={setButtonTextColor}
+                />
+              </TabsContent>
+            </Tabs>
+
+            {/* Live Preview */}
+            <div className="mt-6 space-y-3">
+              <Label className="font-medium">תצוגה מקדימה</Label>
+              <div 
+                className="rounded-xl p-6 space-y-4 transition-all"
+                style={{ backgroundColor }}
+              >
+                <h3 
+                  className="text-xl font-bold"
+                  style={{ color: headingColor }}
+                >
+                  כותרת לדוגמה
+                </h3>
+                <p 
+                  className="text-sm"
+                  style={{ color: fontColor }}
+                >
+                  זהו טקסט לדוגמה שמציג את צבע הגופן הראשי שבחרת.
+                </p>
+                
+                <div 
+                  className="rounded-lg p-4"
+                  style={{ 
+                    backgroundColor: cardColor,
+                    border: `2px solid ${cardBorderColor}`
+                  }}
+                >
+                  <p 
+                    className="text-sm font-medium"
+                    style={{ color: fontColor }}
+                  >
+                    דוגמה לכרטיס/מסגרת
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
+                    style={{ 
+                      backgroundColor: buttonBgColor,
+                      color: buttonTextColor,
+                      border: `2px solid ${borderColor}`
+                    }}
+                  >
+                    כפתור ראשי
+                  </button>
+                  <button
+                    className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
+                    style={{ 
+                      backgroundColor: primaryColor,
+                      color: "#ffffff"
+                    }}
+                  >
+                    כפתור משני
+                  </button>
+                </div>
+
+                <div 
+                  className="h-2 rounded-full"
+                  style={{ backgroundColor: accentColor }}
+                />
+              </div>
             </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="secondary">צבע משני</Label>
-            <div className="flex gap-2 items-center">
-              <Input
-                id="secondary"
-                type="color"
-                value={secondaryColor}
-                onChange={(e) => setSecondaryColor(e.target.value)}
-                className="w-20 h-10 p-1 cursor-pointer"
-              />
-              <Input
-                value={secondaryColor}
-                onChange={(e) => setSecondaryColor(e.target.value)}
-                placeholder="#1a4d7a"
-                className="flex-1"
-              />
-            </div>
-          </div>
-          <div className="border rounded-lg p-4" style={{ backgroundColor }}>
-            <div
-              className="rounded-lg p-3 text-center font-medium"
-              style={{ 
-                backgroundColor: primaryColor,
-                color: '#ffffff'
-              }}
-            >
-              תצוגה מקדימה - צבע ראשי
-            </div>
-            <div
-              className="rounded-lg p-2 mt-2 text-center text-sm"
-              style={{ 
-                backgroundColor: secondaryColor,
-                color: '#ffffff'
-              }}
-            >
-              תצוגה מקדימה - צבע משני
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button onClick={handleSave}>שמור ערכת נושא</Button>
+        </ScrollArea>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            ביטול
+          </Button>
+          <Button onClick={handleSave}>
+            שמור ערכת נושא
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
