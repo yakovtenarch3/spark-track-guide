@@ -150,8 +150,10 @@ export const LuxuryPDFReader = ({
   const [nightMode, setNightMode] = useState(false);
   const [highlightMode, setHighlightMode] = useState(false);
   const [selectedText, setSelectedText] = useState("");
+  const [selectedRects, setSelectedRects] = useState<DOMRect[]>([]);
   const [showFormMode, setShowFormMode] = useState(false);
   const [pdfPageHeight, setPdfPageHeight] = useState(800);
+  const [pdfPageWidth, setPdfPageWidth] = useState(800);
   
   // Reading progress - pages that have been read
   const [readPages, setReadPages] = useState<Set<number>>(() => {
@@ -218,12 +220,33 @@ export const LuxuryPDFReader = ({
     return () => window.removeEventListener("resize", updateWidth);
   }, [showSidePanel]);
 
-  // Text selection handler for highlighting
+  // Text selection handler for highlighting - capture rects from PDF text layer
   useEffect(() => {
     const handleTextSelection = () => {
       const selection = window.getSelection();
       if (selection && selection.toString().trim()) {
-        setSelectedText(selection.toString().trim());
+        const text = selection.toString().trim();
+        setSelectedText(text);
+        
+        // Get the bounding rects of the selection relative to the PDF container
+        const range = selection.getRangeAt(0);
+        const rects = Array.from(range.getClientRects());
+        
+        // Find the PDF page container to get relative positions
+        const pdfContainer = pdfContainerRef.current?.querySelector('.react-pdf__Page');
+        if (pdfContainer && rects.length > 0) {
+          const containerRect = pdfContainer.getBoundingClientRect();
+          
+          // Convert to relative coordinates (percentage-based for scaling)
+          const relativeRects = rects.map(rect => ({
+            x: ((rect.left - containerRect.left) / containerRect.width) * 100,
+            y: ((rect.top - containerRect.top) / containerRect.height) * 100,
+            width: (rect.width / containerRect.width) * 100,
+            height: (rect.height / containerRect.height) * 100,
+          }));
+          
+          setSelectedRects(relativeRects as unknown as DOMRect[]);
+        }
       }
     };
 
@@ -231,7 +254,7 @@ export const LuxuryPDFReader = ({
     return () => document.removeEventListener("mouseup", handleTextSelection);
   }, []);
 
-  // Save highlight from selected text
+  // Save highlight from selected text with position data
   const handleSaveHighlight = () => {
     if (!selectedText) return;
     
@@ -242,11 +265,13 @@ export const LuxuryPDFReader = ({
         noteText: `הדגשה: ${selectedText}`,
         highlightText: selectedText,
         color: selectedColor,
+        highlightRects: selectedRects.length > 0 ? selectedRects : undefined,
       },
       {
         onSuccess: () => {
           toast.success("ההדגשה נשמרה!");
           setSelectedText("");
+          setSelectedRects([]);
           window.getSelection()?.removeAllRanges();
         },
       }
@@ -1443,75 +1468,56 @@ export const LuxuryPDFReader = ({
                   />
                 </Document>
 
-                {/* Highlights Overlay - visual annotations displayed on the page */}
-                {getPageAnnotations(currentPage).filter(a => a.highlight_text).length > 0 && (
-                  <div className="absolute inset-0 pointer-events-none z-10 p-4">
-                    <div className="space-y-2">
-                      {getPageAnnotations(currentPage)
-                        .filter(a => a.highlight_text)
-                        .map((annotation, index) => (
-                          <div
-                            key={annotation.id}
-                            className="pointer-events-auto cursor-pointer group animate-in fade-in duration-300"
-                            style={{ 
-                              animationDelay: `${index * 50}ms`,
-                              marginTop: index === 0 ? '0' : '8px'
-                            }}
-                            onClick={() => {
-                              setSidePanel("annotations");
-                              setShowSidePanel(true);
-                            }}
-                          >
-                            {/* Highlight card on page */}
-                            <div 
-                              className="relative rounded-lg shadow-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-xl border-r-4"
-                              style={{ 
-                                backgroundColor: `${annotation.color}20`,
-                                borderRightColor: annotation.color || '#FFEB3B',
-                                backdropFilter: 'blur(4px)'
-                              }}
-                            >
-                              <div className="p-3">
-                                {/* Highlighted text */}
-                                <p 
-                                  className="text-sm font-medium mb-1 leading-relaxed"
-                                  style={{ color: '#000' }}
-                                >
-                                  <Highlighter 
-                                    className="w-4 h-4 inline-block ml-1.5 -mt-0.5" 
-                                    style={{ color: annotation.color }}
-                                  />
-                                  <span 
-                                    className="px-1 rounded"
-                                    style={{ backgroundColor: `${annotation.color}40` }}
-                                  >
-                                    "{annotation.highlight_text}"
-                                  </span>
-                                </p>
-                                
-                                {/* Note text if different from highlight */}
-                                {annotation.note_text && !annotation.note_text.startsWith('הדגשה:') && (
-                                  <p className="text-xs text-gray-600 mt-2 pr-5 border-t pt-2" style={{ borderColor: `${annotation.color}40` }}>
-                                    💬 {annotation.note_text}
-                                  </p>
-                                )}
-                                
-                                {/* Date indicator */}
-                                <p className="text-[10px] text-gray-400 mt-1 pr-5">
-                                  {new Date(annotation.created_at).toLocaleDateString('he-IL')}
-                                </p>
-                              </div>
-                              
-                              {/* Hover indicator */}
-                              <div className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <MessageSquare className="w-4 h-4 text-gray-400" />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                {/* Highlights Overlay - render actual highlights on the PDF text */}
+                {getPageAnnotations(currentPage).map((annotation) => (
+                  annotation.highlight_rects && Array.isArray(annotation.highlight_rects) && annotation.highlight_rects.length > 0 ? (
+                    // Render highlight rectangles at exact positions
+                    annotation.highlight_rects.map((rect, rectIndex) => (
+                      <div
+                        key={`${annotation.id}-${rectIndex}`}
+                        className="absolute pointer-events-auto cursor-pointer transition-opacity hover:opacity-80"
+                        style={{
+                          left: `${rect.x}%`,
+                          top: `${rect.y}%`,
+                          width: `${rect.width}%`,
+                          height: `${rect.height}%`,
+                          backgroundColor: `${annotation.color}50`,
+                          borderRadius: '2px',
+                          mixBlendMode: 'multiply',
+                        }}
+                        title={annotation.highlight_text || annotation.note_text}
+                        onClick={() => {
+                          setSidePanel("annotations");
+                          setShowSidePanel(true);
+                        }}
+                      />
+                    ))
+                  ) : annotation.highlight_text ? (
+                    // Fallback: show highlight indicator badge for annotations without rects
+                    <div
+                      key={annotation.id}
+                      className="absolute top-2 right-2 pointer-events-auto cursor-pointer z-20"
+                      onClick={() => {
+                        setSidePanel("annotations");
+                        setShowSidePanel(true);
+                      }}
+                    >
+                      <div 
+                        className="px-2 py-1 rounded-lg text-xs font-medium shadow-md hover:scale-105 transition-transform flex items-center gap-1"
+                        style={{ 
+                          backgroundColor: annotation.color || '#FFEB3B',
+                          color: '#000'
+                        }}
+                        title={`"${annotation.highlight_text}" - ${annotation.note_text}`}
+                      >
+                        <Highlighter className="w-3 h-3" />
+                        {(annotation.highlight_text?.length || 0) > 20 
+                          ? annotation.highlight_text?.substring(0, 20) + '...' 
+                          : annotation.highlight_text}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  ) : null
+                ))}
 
                 {/* Form Overlay */}
                 {showFormMode && (

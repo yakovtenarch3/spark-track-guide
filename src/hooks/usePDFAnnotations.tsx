@@ -1,12 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface HighlightRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface PDFAnnotation {
   id: string;
   book_id: string;
   page_number: number;
   note_text: string;
   highlight_text: string | null;
+  highlight_rects: HighlightRect[] | null;
   position_x: number | null;
   position_y: number | null;
   color: string;
@@ -30,7 +38,21 @@ export const usePDFAnnotations = (bookId: string | null) => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as PDFAnnotation[];
+      
+      // Map the data to our interface
+      return (data || []).map(item => ({
+        id: item.id,
+        book_id: item.book_id,
+        page_number: item.page_number,
+        note_text: item.note_text,
+        highlight_text: item.highlight_text,
+        highlight_rects: item.highlight_rects as unknown as HighlightRect[] | null,
+        position_x: item.position_x,
+        position_y: item.position_y,
+        color: item.color || '#FFEB3B',
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      })) as PDFAnnotation[];
     },
     enabled: !!bookId,
   });
@@ -42,23 +64,26 @@ export const usePDFAnnotations = (bookId: string | null) => {
       pageNumber, 
       noteText, 
       highlightText,
-      color 
+      color,
+      highlightRects
     }: { 
       bookId: string; 
       pageNumber: number; 
       noteText: string; 
       highlightText?: string;
       color?: string;
+      highlightRects?: HighlightRect[];
     }) => {
       const { error } = await supabase
         .from('pdf_annotations')
-        .insert({
+        .insert([{
           book_id: bookId,
           page_number: pageNumber,
           note_text: noteText,
           highlight_text: highlightText,
           color: color || '#FFEB3B',
-        });
+          highlight_rects: highlightRects ? JSON.parse(JSON.stringify(highlightRects)) : null,
+        }]);
       if (error) throw error;
     },
     onSuccess: () => {
