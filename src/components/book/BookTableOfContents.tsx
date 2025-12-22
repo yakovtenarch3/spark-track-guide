@@ -118,12 +118,12 @@ export const BookTableOfContents = ({
   }, [searchQuery, selectedSource]);
 
   const groups = useMemo(() => {
-    const map = new Map<string, typeof dailyCoachTips>();
+    type Tip = (typeof dailyCoachTips)[number];
+    const map = new Map<string, Tip[]>();
+
     for (const tip of matchingTips) {
       const arr = map.get(tip.source) ?? [];
-      // @ts-expect-error - we know the item shape matches
       arr.push(tip);
-      // @ts-expect-error - we know the item shape matches
       map.set(tip.source, arr);
     }
 
