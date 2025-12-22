@@ -113,6 +113,89 @@ const FONT_OPTIONS = [
   { value: "'Assistant', sans-serif", label: "אסיסטנט" },
 ];
 
+// Fullscreen PDF with highlights component
+const FullscreenPDFWithHighlights = ({ 
+  fileUrl, 
+  currentPage, 
+  nightMode, 
+  annotations,
+  onHighlightContextMenu 
+}: { 
+  fileUrl: string;
+  currentPage: number;
+  nightMode: boolean;
+  annotations: PDFAnnotation[];
+  onHighlightContextMenu: (e: React.MouseEvent, annotationId: string) => void;
+}) => {
+  const [pageHeight, setPageHeight] = useState(800);
+  const pageWidth = Math.min(window.innerWidth * 0.92, 1400);
+  
+  return (
+    <div className="relative" style={{ width: pageWidth, height: pageHeight }}>
+      <Document file={fileUrl} loading={null}>
+        <Page 
+          pageNumber={currentPage} 
+          width={pageWidth}
+          renderTextLayer={true}
+          renderAnnotationLayer={true}
+          className="pdf-page-with-highlights"
+          onRenderSuccess={(page) => {
+            setPageHeight(page.height * (pageWidth / page.width));
+          }}
+        />
+      </Document>
+      
+      {/* Highlights overlay for fullscreen */}
+      <div 
+        className="absolute inset-0 pointer-events-none z-10"
+        style={{ width: pageWidth, height: pageHeight }}
+      >
+        {annotations.map((annotation) => (
+          annotation.highlight_rects && Array.isArray(annotation.highlight_rects) && annotation.highlight_rects.length > 0 ? (
+            annotation.highlight_rects.map((rect, rectIndex) => (
+              <div
+                key={`fs-${annotation.id}-${rectIndex}`}
+                className="absolute pointer-events-auto cursor-pointer transition-all hover:opacity-70 hover:ring-2 hover:ring-red-400"
+                style={{
+                  left: `${rect.x}%`,
+                  top: `${rect.y}%`,
+                  width: `${rect.width}%`,
+                  height: `${rect.height}%`,
+                  backgroundColor: `${annotation.color}60`,
+                  borderRadius: '2px',
+                  mixBlendMode: 'multiply',
+                }}
+                title={`${annotation.highlight_text || annotation.note_text}\n\nלחיצה ימנית למחיקה`}
+                onContextMenu={(e) => onHighlightContextMenu(e, annotation.id)}
+              />
+            ))
+          ) : annotation.highlight_text ? (
+            <div
+              key={`fs-${annotation.id}`}
+              className="absolute top-2 right-2 pointer-events-auto cursor-pointer z-20"
+              onContextMenu={(e) => onHighlightContextMenu(e, annotation.id)}
+            >
+              <div 
+                className="px-2 py-1 rounded-lg text-xs font-medium shadow-md hover:scale-105 transition-transform flex items-center gap-1"
+                style={{ 
+                  backgroundColor: annotation.color || '#FFEB3B',
+                  color: '#000'
+                }}
+                title={`"${annotation.highlight_text}"\n\nלחיצה ימנית למחיקה`}
+              >
+                <Highlighter className="w-3 h-3" />
+                {(annotation.highlight_text?.length || 0) > 25 
+                  ? annotation.highlight_text?.substring(0, 25) + '...' 
+                  : annotation.highlight_text}
+              </div>
+            </div>
+          ) : null
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const LuxuryPDFReader = ({
   bookId,
   fileUrl,
@@ -1452,82 +1535,94 @@ export const LuxuryPDFReader = ({
 
               {/* PDF with gold frame */}
               <div className="relative ring-2 ring-primary/30 rounded-lg shadow-[0_0_15px_rgba(var(--primary-rgb),0.15)] overflow-hidden">
-                <Document
-                  file={fileUrl}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  onLoadError={onDocumentLoadError}
-                  loading={null}
-                  className={`${nightMode ? "filter brightness-90 contrast-110" : ""}`}
+                {/* Container that matches PDF page size exactly */}
+                <div 
+                  className="relative" 
+                  style={{ width: scaledWidth, height: pdfPageHeight }}
                 >
-                  <Page
-                    pageNumber={currentPage}
-                    width={scaledWidth}
-                    loading={
-                      <div className="flex items-center justify-center p-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                      </div>
-                    }
-                    className="bg-white pdf-page-with-highlights"
-                    renderTextLayer={true}
-                    renderAnnotationLayer={true}
-                    onRenderSuccess={(page) => {
-                      setPdfPageHeight(page.height * (scaledWidth / page.width));
-                    }}
-                  />
-                </Document>
-
-                {/* Highlights Overlay - render actual highlights on the PDF text */}
-                {getPageAnnotations(currentPage).map((annotation) => (
-                  annotation.highlight_rects && Array.isArray(annotation.highlight_rects) && annotation.highlight_rects.length > 0 ? (
-                    // Render highlight rectangles at exact positions
-                    annotation.highlight_rects.map((rect, rectIndex) => (
-                      <div
-                        key={`${annotation.id}-${rectIndex}`}
-                        className="absolute pointer-events-auto cursor-pointer transition-all hover:opacity-70 hover:ring-2 hover:ring-red-400"
-                        style={{
-                          left: `${rect.x}%`,
-                          top: `${rect.y}%`,
-                          width: `${rect.width}%`,
-                          height: `${rect.height}%`,
-                          backgroundColor: `${annotation.color}60`,
-                          borderRadius: '2px',
-                          mixBlendMode: 'multiply',
-                        }}
-                        title={`${annotation.highlight_text || annotation.note_text}\n\nלחיצה ימנית למחיקה`}
-                        onClick={() => {
-                          setSidePanel("annotations");
-                          setShowSidePanel(true);
-                        }}
-                        onContextMenu={(e) => handleHighlightContextMenu(e, annotation.id)}
-                      />
-                    ))
-                  ) : annotation.highlight_text ? (
-                    // Fallback: show highlight indicator badge for annotations without rects
-                    <div
-                      key={annotation.id}
-                      className="absolute top-2 right-2 pointer-events-auto cursor-pointer z-20"
-                      onClick={() => {
-                        setSidePanel("annotations");
-                        setShowSidePanel(true);
+                  <Document
+                    file={fileUrl}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    onLoadError={onDocumentLoadError}
+                    loading={null}
+                    className={`${nightMode ? "filter brightness-90 contrast-110" : ""}`}
+                  >
+                    <Page
+                      pageNumber={currentPage}
+                      width={scaledWidth}
+                      loading={
+                        <div className="flex items-center justify-center p-12">
+                          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        </div>
+                      }
+                      className="bg-white pdf-page-with-highlights"
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                      onRenderSuccess={(page) => {
+                        setPdfPageHeight(page.height * (scaledWidth / page.width));
+                        setPdfPageWidth(scaledWidth);
                       }}
-                      onContextMenu={(e) => handleHighlightContextMenu(e, annotation.id)}
-                    >
-                      <div 
-                        className="px-2 py-1 rounded-lg text-xs font-medium shadow-md hover:scale-105 transition-transform flex items-center gap-1"
-                        style={{ 
-                          backgroundColor: annotation.color || '#FFEB3B',
-                          color: '#000'
-                        }}
-                        title={`"${annotation.highlight_text}" - ${annotation.note_text}\n\nלחיצה ימנית למחיקה`}
-                      >
-                        <Highlighter className="w-3 h-3" />
-                        {(annotation.highlight_text?.length || 0) > 20 
-                          ? annotation.highlight_text?.substring(0, 20) + '...' 
-                          : annotation.highlight_text}
-                      </div>
-                    </div>
-                  ) : null
-                ))}
+                    />
+                  </Document>
+
+                  {/* Highlights Overlay - positioned exactly over the PDF page */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none z-10"
+                    style={{ width: scaledWidth, height: pdfPageHeight }}
+                  >
+                    {getPageAnnotations(currentPage).map((annotation) => (
+                      annotation.highlight_rects && Array.isArray(annotation.highlight_rects) && annotation.highlight_rects.length > 0 ? (
+                        // Render highlight rectangles at exact positions
+                        annotation.highlight_rects.map((rect, rectIndex) => (
+                          <div
+                            key={`${annotation.id}-${rectIndex}`}
+                            className="absolute pointer-events-auto cursor-pointer transition-all hover:opacity-70 hover:ring-2 hover:ring-red-400"
+                            style={{
+                              left: `${rect.x}%`,
+                              top: `${rect.y}%`,
+                              width: `${rect.width}%`,
+                              height: `${rect.height}%`,
+                              backgroundColor: `${annotation.color}60`,
+                              borderRadius: '2px',
+                              mixBlendMode: 'multiply',
+                            }}
+                            title={`${annotation.highlight_text || annotation.note_text}\n\nלחיצה ימנית למחיקה`}
+                            onClick={() => {
+                              setSidePanel("annotations");
+                              setShowSidePanel(true);
+                            }}
+                            onContextMenu={(e) => handleHighlightContextMenu(e, annotation.id)}
+                          />
+                        ))
+                      ) : annotation.highlight_text ? (
+                        // Fallback: show highlight indicator badge for annotations without rects
+                        <div
+                          key={annotation.id}
+                          className="absolute top-2 right-2 pointer-events-auto cursor-pointer z-20"
+                          onClick={() => {
+                            setSidePanel("annotations");
+                            setShowSidePanel(true);
+                          }}
+                          onContextMenu={(e) => handleHighlightContextMenu(e, annotation.id)}
+                        >
+                          <div 
+                            className="px-2 py-1 rounded-lg text-xs font-medium shadow-md hover:scale-105 transition-transform flex items-center gap-1"
+                            style={{ 
+                              backgroundColor: annotation.color || '#FFEB3B',
+                              color: '#000'
+                            }}
+                            title={`"${annotation.highlight_text}" - ${annotation.note_text}\n\nלחיצה ימנית למחיקה`}
+                          >
+                            <Highlighter className="w-3 h-3" />
+                            {(annotation.highlight_text?.length || 0) > 20 
+                              ? annotation.highlight_text?.substring(0, 20) + '...' 
+                              : annotation.highlight_text}
+                          </div>
+                        </div>
+                      ) : null
+                    ))}
+                  </div>
+                </div>
 
                 {/* Form Overlay */}
                 {showFormMode && (
@@ -1627,61 +1722,14 @@ export const LuxuryPDFReader = ({
           </DialogHeader>
 
           <div className={`flex-1 overflow-auto flex justify-center py-4 rounded-lg relative ${nightMode ? "bg-slate-900" : "bg-muted/30"}`}>
-            {/* PDF with highlights overlay in fullscreen */}
-            <div className="relative">
-              <Document file={fileUrl} loading={null}>
-                <Page 
-                  pageNumber={currentPage} 
-                  width={Math.min(window.innerWidth * 0.92, 1400)}
-                  renderTextLayer={true}
-                  renderAnnotationLayer={true}
-                  className="pdf-page-with-highlights"
-                />
-              </Document>
-              
-              {/* Render highlights in fullscreen too */}
-              {getPageAnnotations(currentPage).map((annotation) => (
-                annotation.highlight_rects && Array.isArray(annotation.highlight_rects) && annotation.highlight_rects.length > 0 ? (
-                  annotation.highlight_rects.map((rect, rectIndex) => (
-                    <div
-                      key={`fs-${annotation.id}-${rectIndex}`}
-                      className="absolute pointer-events-auto cursor-pointer transition-all hover:opacity-70 hover:ring-2 hover:ring-red-400"
-                      style={{
-                        left: `${rect.x}%`,
-                        top: `${rect.y}%`,
-                        width: `${rect.width}%`,
-                        height: `${rect.height}%`,
-                        backgroundColor: `${annotation.color}60`,
-                        borderRadius: '2px',
-                        mixBlendMode: 'multiply',
-                      }}
-                      title={`${annotation.highlight_text || annotation.note_text}\n\nלחיצה ימנית למחיקה`}
-                      onContextMenu={(e) => handleHighlightContextMenu(e, annotation.id)}
-                    />
-                  ))
-                ) : annotation.highlight_text ? (
-                  <div
-                    key={`fs-${annotation.id}`}
-                    className="absolute top-2 right-2 pointer-events-auto cursor-pointer z-20"
-                    onContextMenu={(e) => handleHighlightContextMenu(e, annotation.id)}
-                  >
-                    <div 
-                      className="px-2 py-1 rounded-lg text-xs font-medium shadow-md hover:scale-105 transition-transform flex items-center gap-1"
-                      style={{ 
-                        backgroundColor: annotation.color || '#FFEB3B',
-                        color: '#000'
-                      }}
-                      title={`"${annotation.highlight_text}"\n\nלחיצה ימנית למחיקה`}
-                    >
-                      <Highlighter className="w-3 h-3" />
-                      {(annotation.highlight_text?.length || 0) > 25 
-                        ? annotation.highlight_text?.substring(0, 25) + '...' 
-                        : annotation.highlight_text}
-                    </div>
-                  </div>
-                ) : null
-              ))}
-            </div>
+            {/* PDF with highlights overlay in fullscreen - using state for page dimensions */}
+            <FullscreenPDFWithHighlights
+              fileUrl={fileUrl}
+              currentPage={currentPage}
+              nightMode={nightMode}
+              annotations={getPageAnnotations(currentPage)}
+              onHighlightContextMenu={handleHighlightContextMenu}
+            />
           </div>
           
           {/* Fullscreen Navigation with highlight info */}
