@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { GlobalWorkerOptions } from "pdfjs-dist";
+import * as pdfjs from "pdfjs-dist";
 import {
   PdfLoader,
   PdfHighlighter,
@@ -19,8 +19,11 @@ import "react-pdf-highlighter-extended/dist/esm/style/AreaHighlight.css";
 import "react-pdf-highlighter-extended/dist/esm/style/MouseSelection.css";
 import "react-pdf-highlighter-extended/dist/esm/style/pdf_viewer.css";
 
-// Set the worker to match the pdfjs-dist version used by react-pdf-highlighter-extended
-GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs`;
+// Set the worker using local pdfjs-dist package to ensure version match
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
