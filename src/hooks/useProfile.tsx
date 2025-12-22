@@ -18,9 +18,22 @@ export const useProfile = () => {
       const { data, error } = await supabase
         .from("user_profile")
         .select("*")
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      
+      // If no profile exists, create a default one
+      if (!data) {
+        const { data: newProfile, error: insertError } = await supabase
+          .from("user_profile")
+          .insert({ display_name: "משתמש", total_points: 0, level: 1 })
+          .select()
+          .single();
+        
+        if (insertError) throw insertError;
+        return newProfile as Profile;
+      }
+      
       return data as Profile;
     },
   });
