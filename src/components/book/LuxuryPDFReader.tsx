@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   ChevronRight,
   ChevronLeft,
@@ -27,7 +28,6 @@ import {
   Download,
   List,
   Maximize2,
-  Minimize2,
   Type,
   Highlighter,
   BookOpen,
@@ -36,6 +36,11 @@ import {
   Loader2,
   Search,
   X,
+  Moon,
+  Sun,
+  PanelRightOpen,
+  PanelRightClose,
+  Check,
 } from "lucide-react";
 import { usePDFAnnotations, type PDFAnnotation } from "@/hooks/usePDFAnnotations";
 import { toast } from "sonner";
@@ -98,20 +103,25 @@ export const LuxuryPDFReader = ({
 }: LuxuryPDFReaderProps) => {
   // PDF states
   const [numPages, setNumPages] = useState<number>(initialTotalPages);
-  const [pageWidth, setPageWidth] = useState<number>(800);
+  const [pageWidth, setPageWidth] = useState<number>(1000);
   const [isLoading, setIsLoading] = useState(true);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
   // View states
   const [zoom, setZoom] = useState(100);
   const [showFullscreen, setShowFullscreen] = useState(false);
-  const [showSidePanel, setShowSidePanel] = useState(true);
+  const [showSidePanel, setShowSidePanel] = useState(false);
   const [sidePanel, setSidePanel] = useState<"index" | "annotations" | "settings">("index");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Typography states
   const [fontSize, setFontSize] = useState(16);
   const [fontFamily, setFontFamily] = useState("system-ui");
+  
+  // Reading mode states
+  const [nightMode, setNightMode] = useState(false);
+  const [highlightMode, setHighlightMode] = useState(false);
+  const [selectedText, setSelectedText] = useState("");
 
   // Annotation states
   const [newNote, setNewNote] = useState("");
@@ -122,6 +132,7 @@ export const LuxuryPDFReader = ({
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set([currentPage]));
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
 
   const {
     annotations,
@@ -132,12 +143,14 @@ export const LuxuryPDFReader = ({
     annotationCountsByPage,
   } = usePDFAnnotations(bookId);
 
-  // Resize handler
+  // Resize handler - wider default width
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
-        const width = containerRef.current.clientWidth - 48;
-        setPageWidth(Math.min(width, 900));
+        const containerWidth = containerRef.current.clientWidth;
+        // Use more of the available width
+        const width = showSidePanel ? containerWidth - 320 - 32 : containerWidth - 32;
+        setPageWidth(Math.min(Math.max(width, 600), 1400));
       }
     };
 
@@ -145,6 +158,41 @@ export const LuxuryPDFReader = ({
     window.addEventListener("resize", updateWidth);
     return () => window.removeEventListener("resize", updateWidth);
   }, [showSidePanel]);
+
+  // Text selection handler for highlighting
+  useEffect(() => {
+    const handleTextSelection = () => {
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim()) {
+        setSelectedText(selection.toString().trim());
+      }
+    };
+
+    document.addEventListener("mouseup", handleTextSelection);
+    return () => document.removeEventListener("mouseup", handleTextSelection);
+  }, []);
+
+  // Save highlight from selected text
+  const handleSaveHighlight = () => {
+    if (!selectedText) return;
+    
+    addAnnotation.mutate(
+      {
+        bookId,
+        pageNumber: currentPage,
+        noteText: `הדגשה: ${selectedText}`,
+        highlightText: selectedText,
+        color: selectedColor,
+      },
+      {
+        onSuccess: () => {
+          toast.success("ההדגשה נשמרה!");
+          setSelectedText("");
+          window.getSelection()?.removeAllRanges();
+        },
+      }
+    );
+  };
 
   // PDF handlers
   const onDocumentLoadSuccess = useCallback(
@@ -254,13 +302,47 @@ export const LuxuryPDFReader = ({
   const scaledWidth = (pageWidth * zoom) / 100;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] min-h-[600px] bg-background rounded-xl overflow-hidden border-2 border-border shadow-xl" dir="rtl">
+    <div 
+      className={`flex flex-col h-[calc(100vh-100px)] min-h-[600px] rounded-xl overflow-hidden border-2 border-border shadow-xl transition-colors ${
+        nightMode ? "bg-slate-900" : "bg-background"
+      }`} 
+      dir="rtl"
+    >
+      {/* Floating Highlight Bar */}
+      {selectedText && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-card border-2 border-primary shadow-2xl rounded-2xl p-3 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+          <span className="text-sm font-medium text-muted-foreground">הדגש טקסט:</span>
+          <div className="flex gap-1.5">
+            {HIGHLIGHT_COLORS.map((color) => (
+              <button
+                key={color.value}
+                onClick={() => setSelectedColor(color.value)}
+                className={`w-7 h-7 rounded-full border-2 transition-all ${
+                  selectedColor === color.value
+                    ? "border-foreground scale-110 ring-2 ring-offset-1 ring-primary"
+                    : "border-transparent hover:scale-105"
+                }`}
+                style={{ backgroundColor: color.value }}
+                title={color.label}
+              />
+            ))}
+          </div>
+          <Button size="sm" onClick={handleSaveHighlight} className="gap-1">
+            <Check className="w-4 h-4" />
+            שמור
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedText("")}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Top Header */}
-      <div className="flex items-center justify-between p-4 bg-card border-b-2 border-primary/20">
+      <div className={`flex items-center justify-between p-3 border-b-2 border-primary/20 ${nightMode ? "bg-slate-800" : "bg-card"}`}>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={onBack} className="gap-2 hover:bg-primary/10">
             <BookOpen className="w-4 h-4" />
-            <span className="hidden sm:inline">חזרה לספרייה</span>
+            <span className="hidden sm:inline">חזרה</span>
           </Button>
           <div className="h-6 w-px bg-border" />
           <div className="flex items-center gap-2">
@@ -268,30 +350,32 @@ export const LuxuryPDFReader = ({
               <FileText className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold truncate max-w-[200px]">{fileName}</h3>
+              <h3 className="font-semibold truncate max-w-[200px] text-sm">{fileName}</h3>
               <p className="text-xs text-muted-foreground">
-                עמוד {currentPage} מתוך {numPages}
+                עמוד {currentPage} / {numPages}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-1">
+          {/* Night Mode */}
           <Button
-            variant={showSidePanel ? "default" : "ghost"}
+            variant="ghost"
             size="icon"
-            onClick={() => setShowSidePanel(!showSidePanel)}
-            title="פאנל צדדי"
+            onClick={() => setNightMode(!nightMode)}
+            title={nightMode ? "מצב יום" : "מצב לילה"}
           >
-            <List className="w-4 h-4" />
+            {nightMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
 
-          <div className="hidden sm:flex items-center gap-1 bg-muted rounded-lg p-1">
-            <Button variant="ghost" size="icon" onClick={handleZoomOut} disabled={zoom <= 50}>
+          {/* Zoom Controls */}
+          <div className="hidden md:flex items-center gap-1 bg-muted rounded-lg p-1">
+            <Button variant="ghost" size="icon" onClick={handleZoomOut} disabled={zoom <= 50} className="h-7 w-7">
               <ZoomOut className="w-4 h-4" />
             </Button>
             <span className="text-xs text-muted-foreground w-10 text-center">{zoom}%</span>
-            <Button variant="ghost" size="icon" onClick={handleZoomIn} disabled={zoom >= 200}>
+            <Button variant="ghost" size="icon" onClick={handleZoomIn} disabled={zoom >= 200} className="h-7 w-7">
               <ZoomIn className="w-4 h-4" />
             </Button>
           </div>
@@ -304,6 +388,15 @@ export const LuxuryPDFReader = ({
             <a href={fileUrl} download target="_blank" rel="noopener noreferrer">
               <Download className="w-4 h-4" />
             </a>
+          </Button>
+
+          <Button
+            variant={showSidePanel ? "default" : "ghost"}
+            size="icon"
+            onClick={() => setShowSidePanel(!showSidePanel)}
+            title="פאנל צדדי"
+          >
+            {showSidePanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
           </Button>
 
           <Button
@@ -570,45 +663,13 @@ export const LuxuryPDFReader = ({
                 {/* Settings Panel */}
                 {sidePanel === "settings" && (
                   <div className="space-y-6">
-                    <div className="space-y-3">
+                    {/* Night Mode Toggle */}
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
                       <label className="text-sm font-medium flex items-center gap-2">
-                        <Type className="w-4 h-4" />
-                        גודל טקסט
+                        {nightMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                        מצב לילה
                       </label>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground w-6">12</span>
-                        <Slider
-                          value={[fontSize]}
-                          onValueChange={([val]) => setFontSize(val)}
-                          min={12}
-                          max={28}
-                          step={1}
-                          className="flex-1"
-                        />
-                        <span className="text-xs text-muted-foreground w-6">28</span>
-                      </div>
-                      <div className="text-center">
-                        <Badge variant="outline">{fontSize}px</Badge>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium flex items-center gap-2">
-                        <Palette className="w-4 h-4" />
-                        סוג גופן
-                      </label>
-                      <Select value={fontFamily} onValueChange={setFontFamily}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FONT_OPTIONS.map((font) => (
-                            <SelectItem key={font.value} value={font.value} style={{ fontFamily: font.value }}>
-                              {font.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Switch checked={nightMode} onCheckedChange={setNightMode} />
                     </div>
 
                     <div className="space-y-3">
@@ -625,7 +686,7 @@ export const LuxuryPDFReader = ({
                           onValueChange={([val]) => setZoom(val)}
                           min={50}
                           max={200}
-                          step={25}
+                          step={10}
                           className="flex-1"
                         />
                         <Button variant="outline" size="icon" onClick={handleZoomIn} disabled={zoom >= 200}>
@@ -637,9 +698,55 @@ export const LuxuryPDFReader = ({
                       </div>
                     </div>
 
-                    {/* Preview */}
-                    <Card className="p-4 bg-muted/30" style={{ fontFamily, fontSize: `${fontSize}px` }}>
-                      <p>תצוגה מקדימה של הגופן והגודל הנבחרים.</p>
+                    {/* Quick Zoom Presets */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">זום מהיר</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[75, 100, 125, 150].map((z) => (
+                          <Button
+                            key={z}
+                            variant={zoom === z ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setZoom(z)}
+                            className="text-xs"
+                          >
+                            {z}%
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        <Highlighter className="w-4 h-4" />
+                        צבע הדגשה ברירת מחדל
+                      </label>
+                      <div className="flex gap-2 justify-center">
+                        {HIGHLIGHT_COLORS.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => setSelectedColor(color.value)}
+                            className={`w-8 h-8 rounded-full border-2 transition-all ${
+                              selectedColor === color.value
+                                ? "border-foreground scale-110 ring-2 ring-offset-2 ring-primary"
+                                : "border-transparent hover:scale-105"
+                            }`}
+                            style={{ backgroundColor: color.value }}
+                            title={color.label}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tip Card */}
+                    <Card className="p-4 bg-primary/5 border-primary/20">
+                      <p className="text-sm font-medium flex items-center gap-2 mb-2">
+                        <Highlighter className="w-4 h-4 text-primary" />
+                        טיפ להדגשה
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        סמנו טקסט על ה-PDF ותופיע אפשרות להדגשה ושמירה אוטומטית.
+                      </p>
                     </Card>
                   </div>
                 )}
@@ -649,50 +756,67 @@ export const LuxuryPDFReader = ({
         )}
 
         {/* PDF Viewer */}
-        <div ref={containerRef} className="flex-1 flex flex-col bg-gradient-to-b from-muted/20 to-muted/40 overflow-hidden">
-          {/* PDF Content */}
-          <div className="flex-1 overflow-auto flex justify-center py-6 px-4">
-            {isLoading && (
-              <div className="flex flex-col items-center justify-center h-full gap-4">
-                <Loader2 className="w-12 h-12 animate-spin text-primary" />
-                <p className="text-muted-foreground">טוען את הספר...</p>
-              </div>
-            )}
+        <div 
+          ref={containerRef} 
+          className={`flex-1 flex flex-col overflow-hidden transition-colors ${
+            nightMode 
+              ? "bg-gradient-to-b from-slate-800 to-slate-900" 
+              : "bg-gradient-to-b from-muted/20 to-muted/40"
+          }`}
+        >
+          {/* PDF Content - with proper scrolling */}
+          <div 
+            ref={pdfContainerRef}
+            className="flex-1 overflow-y-auto overflow-x-auto"
+            style={{ 
+              minHeight: 0, // Important for flex scroll
+            }}
+          >
+            <div className="flex justify-center py-6 px-4 min-h-full">
+              {isLoading && (
+                <div className="flex flex-col items-center justify-center h-full gap-4">
+                  <Loader2 className="w-12 h-12 animate-spin text-primary" />
+                  <p className={nightMode ? "text-slate-300" : "text-muted-foreground"}>טוען את הספר...</p>
+                </div>
+              )}
 
-            {pdfError && (
-              <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
-                <FileText className="w-16 h-16 text-muted-foreground" />
-                <p className="text-destructive font-medium">{pdfError}</p>
-                <Button asChild>
-                  <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-                    פתח בחלון חדש
-                  </a>
-                </Button>
-              </div>
-            )}
+              {pdfError && (
+                <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+                  <FileText className="w-16 h-16 text-muted-foreground" />
+                  <p className="text-destructive font-medium">{pdfError}</p>
+                  <Button asChild>
+                    <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                      פתח בחלון חדש
+                    </a>
+                  </Button>
+                </div>
+              )}
 
-            <Document
-              file={fileUrl}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={onDocumentLoadError}
-              loading={null}
-              className="shadow-2xl rounded-lg overflow-hidden"
-            >
-              <Page
-                pageNumber={currentPage}
-                width={scaledWidth}
-                loading={
-                  <div className="flex items-center justify-center p-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  </div>
-                }
-                className="bg-white"
-              />
-            </Document>
+              <Document
+                file={fileUrl}
+                onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={onDocumentLoadError}
+                loading={null}
+                className={`shadow-2xl rounded-lg overflow-hidden ${nightMode ? "filter brightness-90 contrast-110" : ""}`}
+              >
+                <Page
+                  pageNumber={currentPage}
+                  width={scaledWidth}
+                  loading={
+                    <div className="flex items-center justify-center p-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    </div>
+                  }
+                  className="bg-white"
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                />
+              </Document>
+            </div>
           </div>
 
           {/* Bottom Navigation */}
-          <div className="flex items-center justify-between p-4 bg-card border-t-2 border-primary/20">
+          <div className={`flex items-center justify-between p-3 border-t-2 border-primary/20 ${nightMode ? "bg-slate-800" : "bg-card"}`}>
             <Button
               variant="outline"
               onClick={() => goToPage(currentPage - 1)}
@@ -703,7 +827,17 @@ export const LuxuryPDFReader = ({
               <span className="hidden sm:inline">הקודם</span>
             </Button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => goToPage(Math.max(1, currentPage - 10))}
+                disabled={currentPage <= 1}
+                className="hidden sm:flex"
+              >
+                -10
+              </Button>
+              
               <Input
                 type="number"
                 value={currentPage}
@@ -713,7 +847,19 @@ export const LuxuryPDFReader = ({
                 max={numPages}
                 dir="ltr"
               />
-              <span className="text-sm text-muted-foreground hidden sm:inline">מתוך {numPages}</span>
+              <span className={`text-sm hidden sm:inline ${nightMode ? "text-slate-400" : "text-muted-foreground"}`}>
+                / {numPages}
+              </span>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => goToPage(Math.min(numPages, currentPage + 10))}
+                disabled={currentPage >= numPages}
+                className="hidden sm:flex"
+              >
+                +10
+              </Button>
             </div>
 
             <Button
@@ -731,21 +877,48 @@ export const LuxuryPDFReader = ({
 
       {/* Fullscreen Dialog */}
       <Dialog open={showFullscreen} onOpenChange={setShowFullscreen}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-4" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
+        <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-2" dir="rtl">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2 text-sm">
+              <FileText className="w-4 h-4" />
               {fileName}
-              <Button variant="ghost" size="icon" className="mr-auto" onClick={() => setShowFullscreen(false)}>
+              <span className="text-muted-foreground text-xs">עמוד {currentPage} / {numPages}</span>
+              <Button variant="ghost" size="icon" className="mr-auto h-7 w-7" onClick={() => setShowFullscreen(false)}>
                 <X className="w-4 h-4" />
               </Button>
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 h-[calc(95vh-100px)] overflow-auto flex justify-center py-4 bg-muted/30 rounded-lg">
+          <div className={`flex-1 overflow-auto flex justify-center py-4 rounded-lg ${nightMode ? "bg-slate-900" : "bg-muted/30"}`}>
             <Document file={fileUrl} loading={null}>
-              <Page pageNumber={currentPage} width={Math.min(window.innerWidth * 0.85, 1200)} />
+              <Page 
+                pageNumber={currentPage} 
+                width={Math.min(window.innerWidth * 0.92, 1400)}
+                renderTextLayer={true}
+                renderAnnotationLayer={true}
+              />
             </Document>
+          </div>
+          
+          {/* Fullscreen Navigation */}
+          <div className="flex items-center justify-center gap-4 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+            >
+              <ChevronRight className="w-4 h-4" />
+              הקודם
+            </Button>
+            <span className="text-sm">{currentPage} / {numPages}</span>
+            <Button
+              variant="outline"
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage >= numPages}
+            >
+              הבא
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
