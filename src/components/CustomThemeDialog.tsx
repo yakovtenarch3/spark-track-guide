@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import type { Theme } from "@/hooks/useTheme";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { ColorInputPopover, needsContrastFix, getContrastingColor } from "@/components/theme/ColorInputPopover";
 
 interface ExtendedThemeColors {
   background: string;
@@ -65,6 +67,34 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
   const [sidebarBgColor, setSidebarBgColor] = useState("#f5f0e8");
   const [sidebarTextColor, setSidebarTextColor] = useState("#1a3a5c");
   const [sidebarBorderColor, setSidebarBorderColor] = useState("#d4a84b");
+
+  // Auto-fix contrast when background changes
+  useEffect(() => {
+    if (needsContrastFix(backgroundColor, fontColor)) {
+      setFontColor(getContrastingColor(backgroundColor));
+    }
+    if (needsContrastFix(backgroundColor, headingColor)) {
+      setHeadingColor(getContrastingColor(backgroundColor));
+    }
+  }, [backgroundColor]);
+
+  useEffect(() => {
+    if (needsContrastFix(cardColor, fontColor)) {
+      // Only auto-fix if font color wasn't manually set
+    }
+  }, [cardColor]);
+
+  useEffect(() => {
+    if (needsContrastFix(buttonBgColor, buttonTextColor)) {
+      setButtonTextColor(getContrastingColor(buttonBgColor));
+    }
+  }, [buttonBgColor]);
+
+  useEffect(() => {
+    if (needsContrastFix(sidebarBgColor, sidebarTextColor)) {
+      setSidebarTextColor(getContrastingColor(sidebarBgColor));
+    }
+  }, [sidebarBgColor]);
 
   // Convert HSL to Hex
   const hslToHex = (hsl: string): string => {
@@ -197,34 +227,6 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
     setSidebarBorderColor("#d4a84b");
   };
 
-  const ColorInput = ({ 
-    label, 
-    value, 
-    onChange 
-  }: { 
-    label: string; 
-    value: string; 
-    onChange: (value: string) => void 
-  }) => (
-    <div className="grid gap-1.5">
-      <Label className="text-xs font-medium">{label}</Label>
-      <div className="flex gap-2 items-center">
-        <Input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-12 h-9 p-1 cursor-pointer border-2 rounded-lg"
-        />
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="#000000"
-          className="flex-1 font-mono text-xs h-9"
-        />
-      </div>
-    </div>
-  );
-
   const sidebarItems = [
     { icon: Home, label: "בית" },
     { icon: Target, label: "הרגלים" },
@@ -273,29 +275,33 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
                 </TabsList>
                 
                 <TabsContent value="basic" className="space-y-3 mt-3">
-                  <ColorInput label="צבע רקע ראשי" value={backgroundColor} onChange={setBackgroundColor} />
-                  <ColorInput label="צבע ראשי (Primary)" value={primaryColor} onChange={setPrimaryColor} />
-                  <ColorInput label="צבע משני (Secondary)" value={secondaryColor} onChange={setSecondaryColor} />
-                  <ColorInput label="צבע הדגשה (Accent)" value={accentColor} onChange={setAccentColor} />
+                  <ColorInputPopover label="צבע רקע ראשי" value={backgroundColor} onChange={setBackgroundColor} />
+                  <ColorInputPopover label="צבע ראשי (Primary)" value={primaryColor} onChange={setPrimaryColor} />
+                  <ColorInputPopover label="צבע משני (Secondary)" value={secondaryColor} onChange={setSecondaryColor} />
+                  <ColorInputPopover label="צבע הדגשה (Accent)" value={accentColor} onChange={setAccentColor} />
                 </TabsContent>
 
                 <TabsContent value="typography" className="space-y-3 mt-3">
-                  <ColorInput label="צבע גופן ראשי" value={fontColor} onChange={setFontColor} />
-                  <ColorInput label="צבע כותרות" value={headingColor} onChange={setHeadingColor} />
-                  <ColorInput label="צבע טקסט כפתורים" value={buttonTextColor} onChange={setButtonTextColor} />
+                  <Separator className="my-2" />
+                  <p className="text-xs text-muted-foreground font-medium">צבעי טקסט</p>
+                  <ColorInputPopover label="צבע גופן ראשי" value={fontColor} onChange={setFontColor} contrastWith={backgroundColor} />
+                  <ColorInputPopover label="צבע כותרות" value={headingColor} onChange={setHeadingColor} contrastWith={backgroundColor} />
+                  <Separator className="my-2" />
+                  <p className="text-xs text-muted-foreground font-medium">כפתורים</p>
+                  <ColorInputPopover label="צבע טקסט כפתורים" value={buttonTextColor} onChange={setButtonTextColor} contrastWith={buttonBgColor} />
                 </TabsContent>
 
                 <TabsContent value="cards" className="space-y-3 mt-3">
-                  <ColorInput label="צבע רקע כרטיסים" value={cardColor} onChange={setCardColor} />
-                  <ColorInput label="צבע גבול כרטיסים" value={cardBorderColor} onChange={setCardBorderColor} />
-                  <ColorInput label="צבע גבולות כללי" value={borderColor} onChange={setBorderColor} />
-                  <ColorInput label="צבע רקע כפתורים" value={buttonBgColor} onChange={setButtonBgColor} />
+                  <ColorInputPopover label="צבע רקע כרטיסים" value={cardColor} onChange={setCardColor} />
+                  <ColorInputPopover label="צבע גבול כרטיסים" value={cardBorderColor} onChange={setCardBorderColor} />
+                  <ColorInputPopover label="צבע גבולות כללי" value={borderColor} onChange={setBorderColor} />
+                  <ColorInputPopover label="צבע רקע כפתורים" value={buttonBgColor} onChange={setButtonBgColor} />
                 </TabsContent>
 
                 <TabsContent value="sidebar" className="space-y-3 mt-3">
-                  <ColorInput label="צבע רקע סיידבר" value={sidebarBgColor} onChange={setSidebarBgColor} />
-                  <ColorInput label="צבע טקסט סיידבר" value={sidebarTextColor} onChange={setSidebarTextColor} />
-                  <ColorInput label="צבע גבול סיידבר" value={sidebarBorderColor} onChange={setSidebarBorderColor} />
+                  <ColorInputPopover label="צבע רקע סיידבר" value={sidebarBgColor} onChange={setSidebarBgColor} />
+                  <ColorInputPopover label="צבע טקסט סיידבר" value={sidebarTextColor} onChange={setSidebarTextColor} contrastWith={sidebarBgColor} />
+                  <ColorInputPopover label="צבע גבול סיידבר" value={sidebarBorderColor} onChange={setSidebarBorderColor} />
                 </TabsContent>
               </Tabs>
             </div>
