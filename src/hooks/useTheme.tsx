@@ -25,6 +25,11 @@ export interface ThemeColors {
   buttonBg?: string;
   buttonText?: string;
   cardBorder?: string;
+  // Sidebar colors
+  sidebarBackground?: string;
+  sidebarForeground?: string;
+  sidebarBorder?: string;
+  sidebarAccent?: string;
 }
 
 export interface Theme {
@@ -363,6 +368,9 @@ export const useTheme = () => {
     buttonBg?: string;
     buttonText?: string;
     accent?: string;
+    sidebarBackground?: string;
+    sidebarForeground?: string;
+    sidebarBorder?: string;
   }
 
   const addCustomTheme = (name: string, colors: ExtendedThemeColors) => {
@@ -372,15 +380,15 @@ export const useTheme = () => {
       isCustom: true,
       colors: {
         background: colors.background,
-        foreground: colors.foreground || colors.fontColor || "0 0% 100%",
-        card: colors.card || colors.background,
-        cardForeground: colors.fontColor || colors.foreground || "0 0% 100%",
+        foreground: colors.foreground || colors.fontColor || "0 0% 20%",
+        card: colors.card || "0 0% 100%",
+        cardForeground: colors.fontColor || colors.foreground || "0 0% 20%",
         primary: colors.primary,
         primaryForeground: colors.buttonText || "0 0% 100%",
         secondary: colors.secondary,
-        secondaryForeground: colors.foreground || "0 0% 100%",
+        secondaryForeground: colors.foreground || "0 0% 20%",
         muted: colors.background,
-        mutedForeground: colors.fontColor || colors.foreground || "0 0% 100%",
+        mutedForeground: colors.fontColor || colors.foreground || "0 0% 40%",
         accent: colors.accent || colors.secondary,
         accentForeground: colors.buttonText || "0 0% 100%",
         border: colors.borderColor || colors.cardBorder || colors.secondary,
@@ -392,6 +400,9 @@ export const useTheme = () => {
         buttonBg: colors.buttonBg,
         buttonText: colors.buttonText,
         cardBorder: colors.cardBorder,
+        sidebarBackground: colors.sidebarBackground || colors.background,
+        sidebarForeground: colors.sidebarForeground || colors.foreground,
+        sidebarBorder: colors.sidebarBorder || colors.borderColor,
       },
     };
 
@@ -414,15 +425,15 @@ export const useTheme = () => {
       isCustom: true,
       colors: {
         background: colors.background,
-        foreground: colors.foreground || colors.fontColor || "0 0% 100%",
-        card: colors.card || colors.background,
-        cardForeground: colors.fontColor || colors.foreground || "0 0% 100%",
+        foreground: colors.foreground || colors.fontColor || "0 0% 20%",
+        card: colors.card || "0 0% 100%",
+        cardForeground: colors.fontColor || colors.foreground || "0 0% 20%",
         primary: colors.primary,
         primaryForeground: colors.buttonText || "0 0% 100%",
         secondary: colors.secondary,
-        secondaryForeground: colors.foreground || "0 0% 100%",
+        secondaryForeground: colors.foreground || "0 0% 20%",
         muted: colors.background,
-        mutedForeground: colors.fontColor || colors.foreground || "0 0% 100%",
+        mutedForeground: colors.fontColor || colors.foreground || "0 0% 40%",
         accent: colors.accent || colors.secondary,
         accentForeground: colors.buttonText || "0 0% 100%",
         border: colors.borderColor || colors.cardBorder || colors.secondary,
@@ -434,6 +445,9 @@ export const useTheme = () => {
         buttonBg: colors.buttonBg,
         buttonText: colors.buttonText,
         cardBorder: colors.cardBorder,
+        sidebarBackground: colors.sidebarBackground || colors.background,
+        sidebarForeground: colors.sidebarForeground || colors.foreground,
+        sidebarBorder: colors.sidebarBorder || colors.borderColor,
       },
     };
     

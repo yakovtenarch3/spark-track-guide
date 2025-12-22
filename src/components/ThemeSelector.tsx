@@ -19,6 +19,9 @@ interface ExtendedThemeColors {
   buttonBg?: string;
   buttonText?: string;
   accent?: string;
+  sidebarBackground?: string;
+  sidebarForeground?: string;
+  sidebarBorder?: string;
 }
 
 export const ThemeSelector = () => {
@@ -72,10 +75,16 @@ export const ThemeSelector = () => {
           onClick={() => handleThemeChange(theme.name)}
         >
           <div className="flex items-center gap-3">
-            <div 
-              className="w-10 h-10 rounded-full border-2 border-border flex-shrink-0" 
-              style={{ background: `hsl(${theme.colors.primary})` }} 
-            />
+            <div className="flex gap-1">
+              <div 
+                className="w-6 h-6 rounded-full border border-border flex-shrink-0" 
+                style={{ background: `hsl(${theme.colors.primary})` }} 
+              />
+              <div 
+                className="w-6 h-6 rounded-full border border-border flex-shrink-0" 
+                style={{ background: `hsl(${theme.colors.secondary})` }} 
+              />
+            </div>
             <div className="flex-1 min-w-0">
               <p className="truncate font-medium text-foreground">{theme.label}</p>
               {currentTheme === theme.name && <p className="text-xs text-muted-foreground">פעיל</p>}
