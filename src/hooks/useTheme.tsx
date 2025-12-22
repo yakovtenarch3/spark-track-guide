@@ -215,6 +215,27 @@ export const themes: Record<ThemeName, Theme> = {
       ring: "265 60% 50%",
     },
   },
+  luxury: {
+    name: "luxury",
+    label: "יוקרה",
+    colors: {
+      background: "40 35% 94%",
+      foreground: "220 45% 18%",
+      card: "40 40% 97%",
+      cardForeground: "220 45% 18%",
+      primary: "220 55% 22%",
+      primaryForeground: "40 45% 92%",
+      secondary: "43 75% 55%",
+      secondaryForeground: "220 45% 18%",
+      muted: "40 25% 88%",
+      mutedForeground: "220 25% 40%",
+      accent: "43 80% 48%",
+      accentForeground: "220 55% 15%",
+      border: "43 50% 70%",
+      input: "40 30% 90%",
+      ring: "43 75% 55%",
+    },
+  },
 };
 
 export const useTheme = () => {
