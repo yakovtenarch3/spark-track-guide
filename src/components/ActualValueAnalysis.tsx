@@ -1,9 +1,25 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Target, TrendingUp, TrendingDown, Minus, ArrowLeftRight, Clock } from "lucide-react";
-import { format, parseISO, subDays } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Target, TrendingUp, TrendingDown, Minus, ArrowLeftRight, Clock, LineChart as LineChartIcon, BarChart3, AreaChart } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { he } from "date-fns/locale";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  AreaChart as RechartsAreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  Cell,
+} from "recharts";
 
 interface DailyGoal {
   id: string;
@@ -25,6 +41,14 @@ interface ActualValueAnalysisProps {
   logs: DailyGoalLog[];
 }
 
+type ChartType = "line" | "bar" | "area";
+
+const CHART_OPTIONS: { value: ChartType; label: string; icon: typeof LineChartIcon }[] = [
+  { value: "line", label: "קו", icon: LineChartIcon },
+  { value: "bar", label: "עמודות", icon: BarChart3 },
+  { value: "area", label: "אזור", icon: AreaChart },
+];
+
 // Parse time string (HH:MM) to minutes
 const parseTimeToMinutes = (timeStr: string): number | null => {
   const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
@@ -44,12 +68,39 @@ const parseNumericValue = (str: string): number | null => {
 
 // Format minutes back to time
 const formatMinutesToTime = (minutes: number): string => {
+  const sign = minutes < 0 ? "-" : "";
   const h = Math.floor(Math.abs(minutes) / 60);
   const m = Math.abs(minutes) % 60;
-  return `${h}:${m.toString().padStart(2, "0")}`;
+  return `${sign}${h}:${m.toString().padStart(2, "0")}`;
+};
+
+const CustomTooltip = ({ active, payload, label, isTimeFormat, unit }: any) => {
+  if (active && payload && payload.length) {
+    const gap = payload[0].value;
+    return (
+      <div className="bg-popover/95 backdrop-blur-sm border rounded-lg p-3 shadow-lg">
+        <p className="text-sm font-medium text-foreground mb-1">{label}</p>
+        <div className="space-y-1">
+          <p className="text-sm text-muted-foreground">
+            בפועל: <span className="font-medium text-foreground">{payload[0].payload.actual}</span>
+          </p>
+          <p className="text-sm">
+            פער:{" "}
+            <span className={`font-bold ${gap <= 0 ? "text-success" : gap <= 30 ? "text-warning" : "text-destructive"}`}>
+              {gap >= 0 ? "+" : ""}
+              {isTimeFormat ? formatMinutesToTime(gap) : gap.toFixed(0)} {unit || ""}
+            </span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return null;
 };
 
 export const ActualValueAnalysis = ({ goal, logs }: ActualValueAnalysisProps) => {
+  const [chartType, setChartType] = useState<ChartType>("line");
+
   const analysis = useMemo(() => {
     const goalLogs = logs.filter(
       (l) => l.goal_id === goal.id && l.actual_value && l.actual_value.trim() !== ""
@@ -69,7 +120,7 @@ export const ActualValueAnalysis = ({ goal, logs }: ActualValueAnalysisProps) =>
     let gaps: number[] = [];
     let avgGap = 0;
     let trend: "improving" | "declining" | "stable" = "stable";
-    let recentGaps: { date: string; actual: string; gap: number }[] = [];
+    let chartData: { date: string; gap: number; actual: string; label: string }[] = [];
 
     if (targetValue) {
       const targetMinutes = isTimeFormat ? parseTimeToMinutes(targetValue) : parseNumericValue(targetValue);
@@ -83,10 +134,11 @@ export const ActualValueAnalysis = ({ goal, logs }: ActualValueAnalysisProps) =>
           if (actualMinutes !== null) {
             const gap = actualMinutes - targetMinutes;
             gaps.push(gap);
-            recentGaps.push({
+            chartData.push({
               date: log.log_date,
-              actual: log.actual_value!,
               gap,
+              actual: log.actual_value!,
+              label: format(parseISO(log.log_date), "d/M", { locale: he }),
             });
           }
         });
@@ -94,7 +146,7 @@ export const ActualValueAnalysis = ({ goal, logs }: ActualValueAnalysisProps) =>
         if (gaps.length > 0) {
           avgGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
 
-          // Calculate trend based on recent 7 vs previous 7
+          // Calculate trend based on halves
           if (gaps.length >= 3) {
             const half = Math.floor(gaps.length / 2);
             const firstHalf = gaps.slice(0, half);
@@ -102,8 +154,6 @@ export const ActualValueAnalysis = ({ goal, logs }: ActualValueAnalysisProps) =>
             const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
             const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
             
-            // For time goals (like sleep), lower is usually better
-            // For other goals, depends on context
             const improvement = Math.abs(secondAvg) < Math.abs(firstAvg);
             const decline = Math.abs(secondAvg) > Math.abs(firstAvg);
             
@@ -117,15 +167,15 @@ export const ActualValueAnalysis = ({ goal, logs }: ActualValueAnalysisProps) =>
       }
     }
 
-    // Get last 5 entries
-    const recentEntries = recentGaps.slice(-5).reverse();
+    // Get last 14 entries for chart
+    const recentChartData = chartData.slice(-14);
 
     return {
       totalEntries: goalLogs.length,
       avgGap,
       trend,
       isTimeFormat,
-      recentEntries,
+      chartData: recentChartData,
       hasTarget: !!targetValue,
       targetValue,
     };
@@ -135,117 +185,180 @@ export const ActualValueAnalysis = ({ goal, logs }: ActualValueAnalysisProps) =>
     return null;
   }
 
+  const renderChart = () => {
+    if (!analysis.hasTarget || analysis.chartData.length === 0) return null;
+
+    const minGap = Math.min(...analysis.chartData.map((d) => d.gap));
+    const maxGap = Math.max(...analysis.chartData.map((d) => d.gap));
+    const yMin = Math.min(minGap - 10, 0);
+    const yMax = Math.max(maxGap + 10, 0);
+
+    const commonProps = {
+      data: analysis.chartData,
+      margin: { top: 10, right: 10, left: -20, bottom: 0 },
+    };
+
+    const getBarColor = (gap: number) => {
+      if (Math.abs(gap) <= 10) return "hsl(var(--success))";
+      if (Math.abs(gap) <= 30) return "hsl(var(--warning))";
+      return "hsl(var(--destructive))";
+    };
+
+    switch (chartType) {
+      case "bar":
+        return (
+          <BarChart {...commonProps}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} domain={[yMin, yMax]} />
+            <Tooltip content={<CustomTooltip isTimeFormat={analysis.isTimeFormat} unit={goal.target_unit} />} />
+            <ReferenceLine y={0} stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 5" />
+            <Bar dataKey="gap" radius={[4, 4, 0, 0]}>
+              {analysis.chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={getBarColor(entry.gap)} />
+              ))}
+            </Bar>
+          </BarChart>
+        );
+      case "area":
+        return (
+          <RechartsAreaChart {...commonProps}>
+            <defs>
+              <linearGradient id="gapGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.05} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} domain={[yMin, yMax]} />
+            <Tooltip content={<CustomTooltip isTimeFormat={analysis.isTimeFormat} unit={goal.target_unit} />} />
+            <ReferenceLine y={0} stroke="hsl(var(--success))" strokeWidth={2} label={{ value: "יעד", position: "right", fontSize: 10 }} />
+            <Area
+              type="monotone"
+              dataKey="gap"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              fill="url(#gapGradient)"
+            />
+          </RechartsAreaChart>
+        );
+      case "line":
+      default:
+        return (
+          <LineChart {...commonProps}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} domain={[yMin, yMax]} />
+            <Tooltip content={<CustomTooltip isTimeFormat={analysis.isTimeFormat} unit={goal.target_unit} />} />
+            <ReferenceLine y={0} stroke="hsl(var(--success))" strokeWidth={2} strokeDasharray="5 5" label={{ value: "יעד", position: "right", fontSize: 10 }} />
+            <Line
+              type="monotone"
+              dataKey="gap"
+              stroke="hsl(var(--primary))"
+              strokeWidth={3}
+              dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
+              activeDot={{ r: 6, fill: "hsl(var(--primary))" }}
+            />
+          </LineChart>
+        );
+    }
+  };
+
   return (
     <Card className="glass-card">
       <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <ArrowLeftRight className="w-5 h-5 text-primary" />
-          <CardTitle className="text-lg">ניתוח פער מהיעד</CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ArrowLeftRight className="w-5 h-5 text-primary" />
+            <CardTitle className="text-lg">ניתוח פער מהיעד</CardTitle>
+          </div>
+          {analysis.hasTarget && analysis.chartData.length > 0 && (
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50">
+              {CHART_OPTIONS.map((option) => (
+                <Button
+                  key={option.value}
+                  variant={chartType === option.value ? "default" : "ghost"}
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setChartType(option.value)}
+                  title={option.label}
+                >
+                  <option.icon className="w-4 h-4" />
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
         <CardDescription>השוואה בין היעד לביצוע בפועל</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Chart */}
+        {analysis.hasTarget && analysis.chartData.length > 0 && (
+          <div className="h-[200px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              {renderChart()}
+            </ResponsiveContainer>
+          </div>
+        )}
+
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-lg bg-muted/30 border">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <Target className="w-4 h-4" />
-              רשומות בפועל
+        <div className="grid grid-cols-3 gap-2">
+          <div className="p-3 rounded-lg bg-muted/30 border text-center">
+            <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-1">
+              <Target className="w-3 h-3" />
+              רשומות
             </div>
-            <p className="text-xl font-bold">{analysis.totalEntries}</p>
+            <p className="text-lg font-bold">{analysis.totalEntries}</p>
           </div>
           
           {analysis.hasTarget && (
-            <div className="p-3 rounded-lg bg-muted/30 border">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                {analysis.trend === "improving" ? (
-                  <TrendingUp className="w-4 h-4 text-success" />
-                ) : analysis.trend === "declining" ? (
-                  <TrendingDown className="w-4 h-4 text-destructive" />
-                ) : (
-                  <Minus className="w-4 h-4" />
-                )}
-                מגמה
-              </div>
-              <Badge
-                variant={
-                  analysis.trend === "improving"
-                    ? "default"
-                    : analysis.trend === "declining"
-                    ? "destructive"
-                    : "secondary"
-                }
-                className="text-sm"
-              >
-                {analysis.trend === "improving"
-                  ? "משתפר"
-                  : analysis.trend === "declining"
-                  ? "ירידה"
-                  : "יציב"}
-              </Badge>
-            </div>
-          )}
-        </div>
-
-        {analysis.hasTarget && analysis.recentEntries.length > 0 && (
-          <>
-            {/* Average Gap */}
-            <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">פער ממוצע מהיעד:</span>
-                <span className={`font-bold ${Math.abs(analysis.avgGap) <= 10 ? "text-success" : Math.abs(analysis.avgGap) <= 30 ? "text-warning" : "text-destructive"}`}>
+            <>
+              <div className="p-3 rounded-lg bg-muted/30 border text-center">
+                <div className="text-xs text-muted-foreground mb-1">פער ממוצע</div>
+                <p className={`text-lg font-bold ${Math.abs(analysis.avgGap) <= 10 ? "text-success" : Math.abs(analysis.avgGap) <= 30 ? "text-warning" : "text-destructive"}`}>
                   {analysis.avgGap >= 0 ? "+" : ""}
                   {analysis.isTimeFormat
                     ? formatMinutesToTime(analysis.avgGap)
-                    : analysis.avgGap.toFixed(1)}{" "}
-                  {goal.target_unit || ""}
-                </span>
+                    : analysis.avgGap.toFixed(0)}
+                </p>
               </div>
-            </div>
 
-            {/* Recent Entries */}
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                רשומות אחרונות
-              </h4>
-              <div className="space-y-1">
-                {analysis.recentEntries.map((entry) => (
-                  <div
-                    key={entry.date}
-                    className="flex items-center justify-between p-2 rounded-lg bg-muted/20 text-sm"
-                  >
-                    <span className="text-muted-foreground">
-                      {format(parseISO(entry.date), "EEE d/M", { locale: he })}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium">{entry.actual}</span>
-                      <Badge
-                        variant={
-                          Math.abs(entry.gap) <= 10
-                            ? "default"
-                            : Math.abs(entry.gap) <= 30
-                            ? "secondary"
-                            : "destructive"
-                        }
-                        className="text-xs"
-                      >
-                        {entry.gap >= 0 ? "+" : ""}
-                        {analysis.isTimeFormat
-                          ? formatMinutesToTime(entry.gap)
-                          : entry.gap.toFixed(0)}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
+              <div className="p-3 rounded-lg bg-muted/30 border text-center">
+                <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-1">
+                  {analysis.trend === "improving" ? (
+                    <TrendingUp className="w-3 h-3 text-success" />
+                  ) : analysis.trend === "declining" ? (
+                    <TrendingDown className="w-3 h-3 text-destructive" />
+                  ) : (
+                    <Minus className="w-3 h-3" />
+                  )}
+                  מגמה
+                </div>
+                <Badge
+                  variant={
+                    analysis.trend === "improving"
+                      ? "default"
+                      : analysis.trend === "declining"
+                      ? "destructive"
+                      : "secondary"
+                  }
+                  className="text-xs"
+                >
+                  {analysis.trend === "improving"
+                    ? "משתפר"
+                    : analysis.trend === "declining"
+                    ? "ירידה"
+                    : "יציב"}
+                </Badge>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
 
         {!analysis.hasTarget && (
           <p className="text-sm text-muted-foreground text-center py-2">
-            הגדר יעד מספרי (בעריכת היעד) כדי לראות ניתוח פער מפורט
+            הגדר יעד מספרי (בעריכת היעד) כדי לראות גרף פער מפורט
           </p>
         )}
       </CardContent>
