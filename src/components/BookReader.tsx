@@ -5,6 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   BookOpen, 
   ChevronRight, 
@@ -19,7 +27,13 @@ import {
   Trash2,
   Plus,
   Star,
-  FileText
+  FileText,
+  LayoutGrid,
+  Maximize2,
+  Minimize2,
+  Square,
+  ZoomIn,
+  Check
 } from "lucide-react";
 import { dailyCoachTips, type DailyTip } from "@/data/dailyCoachTips";
 import { useBookReader, type BookNote } from "@/hooks/useBookReader";
@@ -28,6 +42,9 @@ import { UserBooksSection } from "@/components/book/UserBooksSection";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+type FrameSize = 'small' | 'medium' | 'large' | 'full';
+type DisplayMode = 'normal' | 'wide' | 'framed';
+
 export const BookReader = () => {
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
   const [newNote, setNewNote] = useState("");
@@ -35,6 +52,27 @@ export const BookReader = () => {
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState("read");
+  const [frameSize, setFrameSize] = useState<FrameSize>('medium');
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('normal');
+  const [zoom, setZoom] = useState(100);
+
+  const getFrameSizeClass = () => {
+    switch (frameSize) {
+      case 'small': return 'max-w-xl';
+      case 'medium': return 'max-w-2xl';
+      case 'large': return 'max-w-4xl';
+      case 'full': return 'max-w-full';
+      default: return 'max-w-2xl';
+    }
+  };
+
+  const getDisplayModeClass = () => {
+    switch (displayMode) {
+      case 'wide': return 'px-2';
+      case 'framed': return 'px-6 border-2 border-primary/30 rounded-xl shadow-lg';
+      default: return 'px-4';
+    }
+  };
   
   const { 
     progress, 
@@ -169,9 +207,70 @@ export const BookReader = () => {
             <p className="text-sm text-muted-foreground">ספר לטיפול עצמי בנטייה לדחות דברים</p>
           </div>
         </div>
-        <Badge variant="outline" className="text-sm">
-          {currentTipIndex + 1} / {totalTips}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {/* Display Options Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-9 w-9">
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 bg-popover border border-border z-50">
+              <DropdownMenuLabel>גודל מסגרת</DropdownMenuLabel>
+              {([
+                { value: 'small', label: 'קטן', icon: Minimize2 },
+                { value: 'medium', label: 'בינוני', icon: Square },
+                { value: 'large', label: 'גדול', icon: Maximize2 },
+                { value: 'full', label: 'מלא', icon: Maximize2 },
+              ] as const).map(({ value, label, icon: Icon }) => (
+                <DropdownMenuItem
+                  key={value}
+                  onClick={() => setFrameSize(value)}
+                  className="gap-2"
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                  {frameSize === value && <Check className="w-4 h-4 mr-auto" />}
+                </DropdownMenuItem>
+              ))}
+              
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>מצב תצוגה</DropdownMenuLabel>
+              {([
+                { value: 'normal', label: 'רגיל' },
+                { value: 'wide', label: 'רחב' },
+                { value: 'framed', label: 'ממוסגר' },
+              ] as const).map(({ value, label }) => (
+                <DropdownMenuItem
+                  key={value}
+                  onClick={() => setDisplayMode(value)}
+                  className="gap-2"
+                >
+                  {label}
+                  {displayMode === value && <Check className="w-4 h-4 mr-auto" />}
+                </DropdownMenuItem>
+              ))}
+
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>זום מהיר</DropdownMenuLabel>
+              {[75, 100, 125, 150].map((z) => (
+                <DropdownMenuItem
+                  key={z}
+                  onClick={() => setZoom(z)}
+                  className="gap-2"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                  {z}%
+                  {zoom === z && <Check className="w-4 h-4 mr-auto" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Badge variant="outline" className="text-sm">
+            {currentTipIndex + 1} / {totalTips}
+          </Badge>
+        </div>
       </div>
 
       {/* Main Tabs */}
@@ -201,7 +300,11 @@ export const BookReader = () => {
 
         {/* Reading Tab */}
         <TabsContent value="read" className="space-y-4">
-          <Card className="p-6 royal-card">
+          <div className={`mx-auto transition-all duration-300 ${getFrameSizeClass()}`}>
+            <Card 
+              className={`p-6 royal-card ${getDisplayModeClass()}`}
+              style={{ fontSize: `${zoom}%` }}
+            >
             {/* Chapter Header */}
             <div className="flex items-center justify-between mb-4">
               <Badge variant="secondary">{currentTip.source}</Badge>
@@ -276,7 +379,8 @@ export const BookReader = () => {
                 <ChevronLeft className="w-4 h-4" />
               </Button>
             </div>
-          </Card>
+            </Card>
+          </div>
 
           {/* Add Note Input */}
           {showNoteInput && (
