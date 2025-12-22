@@ -59,6 +59,7 @@ import {
 import { usePDFAnnotations, type PDFAnnotation } from "@/hooks/usePDFAnnotations";
 import { PDFFormOverlay } from "./PDFFormOverlay";
 import { toast } from "sonner";
+import { getRTLSelectedText } from "@/utils/rtlTextSelection";
 import {
   Dialog,
   DialogContent,
@@ -218,12 +219,14 @@ export const LuxuryPDFReader = ({
     return () => window.removeEventListener("resize", updateWidth);
   }, [showSidePanel]);
 
-  // Text selection handler for highlighting
+  // Text selection handler for highlighting - uses RTL-aware selection
   useEffect(() => {
     const handleTextSelection = () => {
       const selection = window.getSelection();
       if (selection && selection.toString().trim()) {
-        setSelectedText(selection.toString().trim());
+        // Use RTL-aware text selection to fix reversed Hebrew text
+        const rtlText = getRTLSelectedText();
+        setSelectedText(rtlText || selection.toString().trim());
       }
     };
 
@@ -1180,33 +1183,41 @@ export const LuxuryPDFReader = ({
                             open={expandedGroups.has(page)}
                             onOpenChange={() => togglePageGroup(page)}
                           >
-                            <CollapsibleTrigger
-                              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                                page === currentPage ? "bg-primary/10 border border-primary/20" : "hover:bg-muted"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <ChevronDown
-                                  className={`w-4 h-4 transition-transform ${
-                                    expandedGroups.has(page) ? "" : "-rotate-90"
-                                  }`}
-                                />
-                                <span className="font-medium">עמוד {page}</span>
-                                <Badge variant="secondary" className="text-xs">
-                                  {annotationsByPage[page].length}
-                                </Badge>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  goToPage(page);
-                                }}
+                            <CollapsibleTrigger asChild>
+                              <div
+                                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-colors cursor-pointer ${
+                                  page === currentPage ? "bg-primary/10 border border-primary/20" : "hover:bg-muted"
+                                }`}
                               >
-                                <ChevronLeft className="w-3 h-3" />
-                              </Button>
+                                <div className="flex items-center gap-2">
+                                  <ChevronDown
+                                    className={`w-4 h-4 transition-transform ${
+                                      expandedGroups.has(page) ? "" : "-rotate-90"
+                                    }`}
+                                  />
+                                  <span className="font-medium">עמוד {page}</span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {annotationsByPage[page].length}
+                                  </Badge>
+                                </div>
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted/80"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    goToPage(page);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.stopPropagation();
+                                      goToPage(page);
+                                    }
+                                  }}
+                                >
+                                  <ChevronLeft className="w-3 h-3" />
+                                </span>
+                              </div>
                             </CollapsibleTrigger>
 
                             <CollapsibleContent className="pr-4 mt-2 space-y-2">
