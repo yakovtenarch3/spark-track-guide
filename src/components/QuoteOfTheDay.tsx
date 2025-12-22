@@ -89,14 +89,14 @@ export const QuoteOfTheDay = () => {
   };
 
   return (
-    <Card className="p-6 glass-card border-primary/20 animate-fade-in">
+    <Card className="p-6 royal-card animate-fade-in">
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 p-3 rounded-full bg-gradient-to-br from-primary/10 to-accent/10">
-          <Sparkles className="w-6 h-6 text-primary" />
+        <div className="flex-shrink-0 p-3 rounded-full bg-gradient-to-br from-accent/20 to-primary/10">
+          <Sparkles className="w-6 h-6 text-accent" />
         </div>
         <div className="flex-1 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-primary uppercase tracking-wide">
+            <h3 className="text-sm font-semibold text-accent uppercase tracking-wide">
               ציטוט מעורר השראה
             </h3>
             <div className="flex items-center gap-2">
@@ -104,7 +104,7 @@ export const QuoteOfTheDay = () => {
                 size="sm"
                 variant="ghost"
                 onClick={handleManualRefresh}
-                className="h-8 w-8 p-0 hover:bg-primary/10 transition-colors"
+                className="h-8 w-8 p-0 hover:bg-accent/10 transition-colors"
                 title="החלף ציטוט"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -122,19 +122,19 @@ export const QuoteOfTheDay = () => {
           </div>
           
           <blockquote className="text-lg font-medium text-foreground leading-relaxed">
-            "{quote.text}"
+            &quot;{quote.text}&quot;
           </blockquote>
           
           <p className="text-sm text-muted-foreground">— {quote.author}</p>
           
           {autoRotate && (
-            <div className="space-y-3 pt-2 border-t border-border/50">
+            <div className="space-y-3 pt-2 border-t border-accent/30">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-primary" />
+                <Clock className="w-4 h-4 text-accent" />
                 <Label htmlFor="interval-slider" className="text-sm font-medium">
                   החלפה כל {rotateInterval} {rotateInterval === 1 ? "דקה" : "דקות"}
                 </Label>
-                <span className="mr-auto w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <span className="mr-auto w-2 h-2 rounded-full bg-accent animate-pulse" />
               </div>
               <Slider
                 id="interval-slider"
