@@ -12,7 +12,7 @@ import {
   Plus
 } from "lucide-react";
 import { PDFUploader } from "./PDFUploader";
-import { EnhancedPDFReader } from "./EnhancedPDFReader";
+import { LuxuryPDFReader } from "./LuxuryPDFReader";
 import { useUserBooks, type UserBook } from "@/hooks/useUserBooks";
 import { toast } from "sonner";
 
@@ -77,13 +77,16 @@ export const UserBooksSection = () => {
 
   if (selectedBook) {
     return (
-      <EnhancedPDFReader
+      <LuxuryPDFReader
         bookId={selectedBook.id}
         fileUrl={selectedBook.file_url}
         fileName={selectedBook.title}
         currentPage={selectedBook.current_page || 1}
         totalPages={selectedBook.total_pages || 100}
         onPageChange={handlePageChange}
+        onTotalPagesChange={(total) => {
+          // Could update total pages in DB here if needed
+        }}
         onDelete={() => handleDeleteBook(selectedBook)}
         onBack={() => setSelectedBook(null)}
       />
