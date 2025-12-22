@@ -51,6 +51,10 @@ import {
   FileDown,
   Settings2,
   Edit3,
+  Pin,
+  PinOff,
+  Columns,
+  LayoutList,
 } from "lucide-react";
 import { usePDFAnnotations, type PDFAnnotation } from "@/hooks/usePDFAnnotations";
 import { PDFFormOverlay } from "./PDFFormOverlay";
@@ -132,7 +136,9 @@ export const LuxuryPDFReader = ({
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [sidePanel, setSidePanel] = useState<"index" | "progress" | "annotations" | "settings">("index");
   const [searchQuery, setSearchQuery] = useState("");
-  const [indexViewMode, setIndexViewMode] = useState<"grid" | "list" | "compact">("grid");
+  const [indexViewMode, setIndexViewMode] = useState<"grid" | "list" | "compact" | "mini">("grid");
+  const [sidePanelPinned, setSidePanelPinned] = useState(true);
+  const [sidePanelWidth, setSidePanelWidth] = useState<"normal" | "wide" | "narrow">("normal");
 
   // Typography states
   const [fontSize, setFontSize] = useState(16);
@@ -589,10 +595,90 @@ export const LuxuryPDFReader = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div 
+        className="flex flex-1 overflow-hidden"
+        onMouseLeave={() => {
+          if (!sidePanelPinned && showSidePanel) {
+            setShowSidePanel(false);
+          }
+        }}
+      >
+        {/* Side Panel Trigger (when unpinned and hidden) */}
+        {!showSidePanel && !sidePanelPinned && (
+          <div 
+            className="w-2 bg-primary/10 hover:bg-primary/30 cursor-pointer transition-colors flex items-center justify-center"
+            onMouseEnter={() => setShowSidePanel(true)}
+          >
+            <div className="w-1 h-16 bg-primary/40 rounded-full" />
+          </div>
+        )}
+
         {/* Side Panel */}
         {showSidePanel && (
-          <div className={`w-80 lg:w-96 border-l-2 border-primary/20 flex flex-col ${nightMode ? "bg-slate-800" : "bg-card"}`}>
+          <div 
+            className={`flex flex-col border-l-2 border-primary/20 transition-all shrink-0 ${
+              nightMode ? "bg-slate-800" : "bg-card"
+            } ${
+              sidePanelWidth === "narrow" ? "w-64" : sidePanelWidth === "wide" ? "w-[28rem]" : "w-80"
+            }`}
+            onMouseEnter={() => !sidePanelPinned && setShowSidePanel(true)}
+          >
+            {/* Panel Header with controls */}
+            <div className="flex items-center justify-between px-2 py-1.5 border-b border-border bg-muted/30">
+              <div className="flex gap-0.5">
+                {/* Width controls */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" title="גודל פאנל">
+                      <Columns className="w-3.5 h-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-popover z-50">
+                    <DropdownMenuLabel className="text-xs">רוחב פאנל</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setSidePanelWidth("narrow")} className="gap-2 text-xs">
+                      <LayoutList className="w-3.5 h-3.5" />
+                      צר
+                      {sidePanelWidth === "narrow" && <Check className="w-3 h-3 mr-auto" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSidePanelWidth("normal")} className="gap-2 text-xs">
+                      <Columns className="w-3.5 h-3.5" />
+                      רגיל
+                      {sidePanelWidth === "normal" && <Check className="w-3 h-3 mr-auto" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSidePanelWidth("wide")} className="gap-2 text-xs">
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      רחב
+                      {sidePanelWidth === "wide" && <Check className="w-3 h-3 mr-auto" />}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              <div className="flex gap-0.5">
+                {/* Pin toggle */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setSidePanelPinned(!sidePanelPinned)}
+                  title={sidePanelPinned ? "בטל נעיצה (אוטו-הסתרה)" : "נעץ פאנל"}
+                >
+                  {sidePanelPinned ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
+                </Button>
+                {/* Close panel */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setShowSidePanel(false)}
+                  title="סגור פאנל"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+
             {/* Panel Tabs */}
             <div className="flex border-b border-border">
               {[
@@ -604,35 +690,35 @@ export const LuxuryPDFReader = ({
                 <button
                   key={tab.id}
                   onClick={() => setSidePanel(tab.id as typeof sidePanel)}
-                  className={`flex-1 px-1.5 py-2.5 text-[10px] font-medium transition-all flex flex-col items-center gap-0.5 ${
+                  className={`flex-1 px-1.5 py-2 text-[10px] font-medium transition-all flex flex-col items-center gap-0.5 ${
                     sidePanel === tab.id
                       ? "bg-primary/10 text-primary border-b-2 border-primary"
                       : "text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  <tab.icon className="w-4 h-4" />
+                  <tab.icon className="w-3.5 h-3.5" />
                   {tab.label}
                 </button>
               ))}
             </div>
 
             <ScrollArea className="flex-1">
-              <div className="p-3">
+              <div className="p-2">
                 {/* Page Index - ALL pages */}
                 {sidePanel === "index" && (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {/* Search and view toggle */}
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <div className="flex gap-1.5 flex-wrap">
+                      <div className="relative flex-1 min-w-[120px]">
+                        <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                         <Input
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder="חפש עמוד..."
-                          className="pr-9 text-sm"
+                          className="pr-8 text-xs h-8"
                         />
                       </div>
-                      <div className="flex gap-1 bg-muted rounded-lg p-1">
+                      <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">
                         <Button
                           variant={indexViewMode === "list" ? "default" : "ghost"}
                           size="icon"
@@ -640,25 +726,34 @@ export const LuxuryPDFReader = ({
                           onClick={() => setIndexViewMode("list")}
                           title="תצוגת רשימה"
                         >
-                          <Rows3 className="w-3.5 h-3.5" />
+                          <Rows3 className="w-3 h-3" />
                         </Button>
                         <Button
                           variant={indexViewMode === "grid" ? "default" : "ghost"}
                           size="icon"
                           className="h-7 w-7"
                           onClick={() => setIndexViewMode("grid")}
-                          title="תצוגת רשת"
+                          title="תצוגת רשת 5x"
                         >
-                          <Grid3X3 className="w-3.5 h-3.5" />
+                          <Grid3X3 className="w-3 h-3" />
                         </Button>
                         <Button
                           variant={indexViewMode === "compact" ? "default" : "ghost"}
                           size="icon"
                           className="h-7 w-7"
                           onClick={() => setIndexViewMode("compact")}
-                          title="תצוגה קומפקטית"
+                          title="תצוגת רשת 10x"
                         >
-                          <LayoutGrid className="w-3.5 h-3.5" />
+                          <LayoutGrid className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant={indexViewMode === "mini" ? "default" : "ghost"}
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => setIndexViewMode("mini")}
+                          title="תצוגה מינימלית"
+                        >
+                          <LayoutList className="w-3 h-3" />
                         </Button>
                       </div>
                     </div>
@@ -784,6 +879,36 @@ export const LuxuryPDFReader = ({
                               {hasAnnotations && (
                                 <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary rounded-full" />
                               )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Mini View - single row of numbers */}
+                    {indexViewMode === "mini" && (
+                      <div className="flex flex-wrap gap-0.5">
+                        {filteredPages.map((page) => {
+                          const hasAnnotations = annotationCountsByPage[page] > 0;
+                          const isActive = page === currentPage;
+                          const isRead = readPages.has(page);
+
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => goToPage(page)}
+                              className={`w-6 h-5 flex items-center justify-center text-[8px] font-medium rounded transition-all ${
+                                isActive
+                                  ? "bg-primary text-primary-foreground"
+                                  : isRead
+                                  ? "bg-green-300 dark:bg-green-700 text-green-900 dark:text-green-100"
+                                  : hasAnnotations
+                                  ? "bg-amber-200 dark:bg-amber-800"
+                                  : "bg-muted/40 hover:bg-muted"
+                              }`}
+                              title={`עמוד ${page}`}
+                            >
+                              {page}
                             </button>
                           );
                         })}
