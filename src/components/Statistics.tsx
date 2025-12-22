@@ -2,26 +2,74 @@ import { Card } from "@/components/ui/card";
 import { useHabits } from "@/hooks/useHabits";
 import { useCompletions } from "@/hooks/useCompletions";
 import { useProfile } from "@/hooks/useProfile";
-import { Target, TrendingUp, Award } from "lucide-react";
+import { Award, Target, TrendingUp } from "lucide-react";
+
+function daysDiffFromNow(dateIso: string) {
+  const date = new Date(dateIso);
+  return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 export const Statistics = () => {
-  const {
-    habits
-  } = useHabits();
-  const {
-    completions
-  } = useCompletions(30);
-  const {
-    profile
-  } = useProfile();
-  const completedToday = habits.filter(h => h.completedToday).length;
+  const { habits } = useHabits();
+  const { completions } = useCompletions(30);
+  const { profile } = useProfile();
+
+  const completedToday = habits.filter((h) => h.completedToday).length;
   const totalHabits = habits.length;
-  const completionRate = totalHabits > 0 ? Math.round(completedToday / totalHabits * 100) : 0;
-  const longestStreak = habits.length > 0 ? Math.max(...habits.map(h => h.streak)) : 0;
-  const last7Days = completions.filter(c => {
-    const date = new Date(c.completed_at);
-    const daysDiff = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
-    return daysDiff < 7;
-  });
-  const weeklyAverage = Math.round(last7Days.length / 7);
-  return;
+  const completionRate = totalHabits > 0 ? Math.round((completedToday / totalHabits) * 100) : 0;
+
+  const longestStreak = habits.length > 0 ? Math.max(...habits.map((h) => h.streak ?? 0)) : 0;
+
+  const last7DaysCount = completions.filter((c) => daysDiffFromNow(c.completed_at) < 7).length;
+  const weeklyAverage = Math.round(last7DaysCount / 7);
+
+  const level = profile?.level ?? 1;
+  const totalPoints = profile?.total_points ?? 0;
+
+  return (
+    <section aria-label="סטטיסטיקות" className="grid gap-4 md:grid-cols-3">
+      <Card className="p-4 royal-card">
+        <div className="flex flex-row-reverse items-start justify-between gap-4">
+          <div className="min-w-0 text-right">
+            <p className="text-sm text-muted-foreground">היום</p>
+            <p className="text-2xl font-bold text-foreground">
+              {completedToday} / {totalHabits}
+            </p>
+            <p className="text-sm text-muted-foreground">אחוז השלמה: {completionRate}%</p>
+          </div>
+          <div className="shrink-0 rounded-lg bg-primary/10 p-2">
+            <Target className="h-5 w-5 text-primary" />
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-4 royal-card">
+        <div className="flex flex-row-reverse items-start justify-between gap-4">
+          <div className="min-w-0 text-right">
+            <p className="text-sm text-muted-foreground">שבוע אחרון</p>
+            <p className="text-2xl font-bold text-foreground">{weeklyAverage}</p>
+            <p className="text-sm text-muted-foreground">ממוצע השלמות ליום</p>
+          </div>
+          <div className="shrink-0 rounded-lg bg-accent/10 p-2">
+            <TrendingUp className="h-5 w-5 text-accent" />
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-4 royal-card">
+        <div className="flex flex-row-reverse items-start justify-between gap-4">
+          <div className="min-w-0 text-right">
+            <p className="text-sm text-muted-foreground">התקדמות</p>
+            <p className="text-2xl font-bold text-foreground">רמה {level}</p>
+            <p className="text-sm text-muted-foreground">
+              {totalPoints.toLocaleString("he-IL")} נקודות • רצף שיא: {longestStreak}
+            </p>
+          </div>
+          <div className="shrink-0 rounded-lg bg-warning/10 p-2">
+            <Award className="h-5 w-5 text-warning" />
+          </div>
+        </div>
+      </Card>
+    </section>
+  );
 };
