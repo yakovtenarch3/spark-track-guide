@@ -220,4 +220,17 @@ All colors MUST be HSL.
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  
+  /* PDF Text Layer - make text selection more visible */
+  .pdf-page-with-highlights .react-pdf__Page__textContent {
+    pointer-events: auto !important;
+  }
+  
+  .pdf-page-with-highlights .react-pdf__Page__textContent span::selection {
+    background-color: hsl(48 100% 50% / 0.5) !important;
+  }
+  
+  .pdf-page-with-highlights .react-pdf__Page__textContent span::-moz-selection {
+    background-color: hsl(48 100% 50% / 0.5) !important;
+  }
 }
