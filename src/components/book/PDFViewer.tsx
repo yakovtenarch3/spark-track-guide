@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,10 +16,19 @@ import {
   Edit2,
   X,
   Check,
-  StickyNote
+  StickyNote,
+  Grid3X3,
+  FileText,
+  Download
 } from "lucide-react";
-import { usePDFAnnotations, type PDFAnnotation } from "@/hooks/usePDFAnnotations";
+import { usePDFAnnotations } from "@/hooks/usePDFAnnotations";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface PDFViewerProps {
   bookId: string;
@@ -47,7 +56,8 @@ export const PDFViewer = ({
   onDelete 
 }: PDFViewerProps) => {
   const [zoom, setZoom] = useState(100);
-  const [showAnnotationPanel, setShowAnnotationPanel] = useState(true);
+  const [showAnnotationPanel, setShowAnnotationPanel] = useState(false);
+  const [showFullscreen, setShowFullscreen] = useState(false);
   const [newNote, setNewNote] = useState("");
   const [newHighlight, setNewHighlight] = useState("");
   const [selectedColor, setSelectedColor] = useState('#FFEB3B');
@@ -114,18 +124,21 @@ export const PDFViewer = ({
     );
   };
 
-  // For PDF.js or iframe display
-  const pdfUrlWithPage = `${fileUrl}#page=${currentPage}`;
+  // Use Google Docs Viewer as fallback for better compatibility
+  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
 
   return (
     <div className="flex gap-4" dir="rtl">
       {/* Main PDF Viewer */}
-      <Card className="flex-1 p-4 royal-card overflow-hidden">
+      <Card className="flex-1 p-4 border border-[hsl(43,70%,55%)] rounded-xl bg-card shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4 pb-3 border-b">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
           <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-primary" />
             <h3 className="font-medium truncate max-w-[200px]">{fileName}</h3>
-            <Badge variant="outline">עמוד {currentPage}</Badge>
+            <Badge variant="outline" className="text-xs">
+              עמוד {currentPage}
+            </Badge>
             {annotationCountsByPage[currentPage] > 0 && (
               <Badge variant="secondary" className="gap-1">
                 <MessageSquare className="w-3 h-3" />
@@ -135,7 +148,15 @@ export const PDFViewer = ({
           </div>
           <div className="flex items-center gap-1">
             <Button 
-              variant={showAnnotationPanel ? "default" : "outline"} 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setShowFullscreen(true)}
+              title="מסך מלא"
+            >
+              <Grid3X3 className="w-4 h-4" />
+            </Button>
+            <Button 
+              variant={showAnnotationPanel ? "default" : "ghost"} 
               size="icon" 
               onClick={() => setShowAnnotationPanel(!showAnnotationPanel)}
               title="הערות"
@@ -149,7 +170,12 @@ export const PDFViewer = ({
             <Button variant="ghost" size="icon" onClick={handleZoomIn} disabled={zoom >= 200}>
               <ZoomIn className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" asChild>
+            <Button variant="ghost" size="icon" asChild title="הורד PDF">
+              <a href={fileUrl} download target="_blank" rel="noopener noreferrer">
+                <Download className="w-4 h-4" />
+              </a>
+            </Button>
+            <Button variant="ghost" size="icon" asChild title="פתח בחלון חדש">
               <a href={fileUrl} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="w-4 h-4" />
               </a>
@@ -159,27 +185,55 @@ export const PDFViewer = ({
               size="icon" 
               className="text-destructive hover:bg-destructive/10"
               onClick={onDelete}
+              title="מחק ספר"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        {/* PDF Viewer */}
+        {/* PDF Viewer - Using embed with multiple fallbacks */}
         <div 
-          className="bg-muted/50 rounded-lg overflow-hidden"
-          style={{ height: '55vh' }}
+          className="bg-muted/30 rounded-lg overflow-hidden"
+          style={{ height: '60vh' }}
         >
-          <iframe
-            src={pdfUrlWithPage}
-            className="w-full h-full border-0"
+          <object
+            data={`${fileUrl}#page=${currentPage}&zoom=${zoom}`}
+            type="application/pdf"
+            className="w-full h-full"
             style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
-            title={fileName}
-          />
+          >
+            {/* Fallback to Google Docs Viewer */}
+            <iframe
+              src={googleViewerUrl}
+              className="w-full h-full border-0"
+              title={fileName}
+            >
+              {/* Final fallback */}
+              <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                <FileText className="w-16 h-16 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  הדפדפן שלך לא תומך בהצגת PDF ישירה.
+                </p>
+                <div className="flex gap-2">
+                  <Button asChild>
+                    <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                      פתח בחלון חדש
+                    </a>
+                  </Button>
+                  <Button variant="outline" asChild>
+                    <a href={fileUrl} download>
+                      הורד PDF
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </iframe>
+          </object>
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between mt-4 pt-3 border-t">
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
           <Button
             variant="outline"
             onClick={() => onPageChange(currentPage - 1)}
@@ -198,7 +252,7 @@ export const PDFViewer = ({
                 const page = parseInt(e.target.value);
                 if (page > 0) onPageChange(page);
               }}
-              className="w-16 text-center p-1 border rounded bg-background"
+              className="w-16 text-center p-2 border rounded-lg bg-background text-sm"
               min={1}
               dir="ltr"
             />
@@ -217,7 +271,7 @@ export const PDFViewer = ({
 
       {/* Annotations Panel */}
       {showAnnotationPanel && (
-        <Card className="w-80 p-4 royal-card flex flex-col">
+        <Card className="w-80 p-4 border border-[hsl(43,70%,55%)] rounded-xl bg-card flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-medium flex items-center gap-2">
               <StickyNote className="w-4 h-4 text-primary" />
@@ -288,7 +342,7 @@ export const PDFViewer = ({
                 {pageAnnotations.map((annotation) => (
                   <div
                     key={annotation.id}
-                    className="p-3 rounded-lg border"
+                    className="p-3 rounded-lg border bg-card"
                     style={{ borderRightWidth: 4, borderRightColor: annotation.color }}
                   >
                     {/* Highlighted text */}
@@ -379,6 +433,32 @@ export const PDFViewer = ({
           )}
         </Card>
       )}
+
+      {/* Fullscreen PDF Dialog */}
+      <Dialog open={showFullscreen} onOpenChange={setShowFullscreen}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-4" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              {fileName}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 h-[calc(95vh-100px)] bg-muted/30 rounded-lg overflow-hidden">
+            <object
+              data={fileUrl}
+              type="application/pdf"
+              className="w-full h-full"
+            >
+              <iframe
+                src={googleViewerUrl}
+                className="w-full h-full border-0"
+                title={fileName}
+              />
+            </object>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
