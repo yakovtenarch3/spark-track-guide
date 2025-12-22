@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { useHabits } from "@/hooks/useHabits";
 import { useCompletions } from "@/hooks/useCompletions";
 import { useProfile } from "@/hooks/useProfile";
-import { Trophy, Target, TrendingUp, Award } from "lucide-react";
+import { Target, TrendingUp, Award } from "lucide-react";
 export const Statistics = () => {
   const {
     habits
@@ -25,17 +25,7 @@ export const Statistics = () => {
   const weeklyAverage = Math.round(last7Days.length / 7);
   return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <Card className="p-6 royal-card bg-gradient-to-br from-primary/5 to-primary/10 animate-fade-in">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary/20 rounded-xl shadow-lg">
-            <Target className="w-6 h-6 text-blue-900" />
-          </div>
-          <div className="flex-1">
-            <div className="text-3xl font-bold text-primary">
-              {completionRate}%
-            </div>
-            <div className="text-sm text-muted-foreground font-medium">אחוז השלמה היום</div>
-          </div>
-        </div>
+        
       </Card>
 
       <Card className="p-6 royal-card bg-gradient-to-br from-success/5 to-success/10 animate-fade-in" style={{
@@ -43,7 +33,7 @@ export const Statistics = () => {
     }}>
         <div className="flex items-center gap-4">
           <div className="p-3 bg-success/20 rounded-xl shadow-lg">
-            <Trophy className="w-6 h-6 text-success" />
+            
           </div>
           <div className="flex-1">
             <div className="text-3xl font-bold text-success">
@@ -57,16 +47,11 @@ export const Statistics = () => {
       <Card className="p-6 royal-card bg-gradient-to-br from-info/5 to-info/10 animate-fade-in" style={{
       animationDelay: "0.2s"
     }}>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 text-[#fbf7ee] bg-white">
           <div className="p-3 bg-info/20 rounded-xl shadow-lg">
             <TrendingUp className="w-6 h-6 text-info" />
           </div>
-          <div className="flex-1">
-            <div className="text-3xl font-bold text-info">
-              {weeklyAverage}
-            </div>
-            <div className="text-sm text-muted-foreground font-medium">ממוצע יומי (7 ימים)</div>
-          </div>
+          
         </div>
       </Card>
 
