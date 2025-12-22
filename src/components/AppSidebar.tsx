@@ -61,7 +61,7 @@ export function AppSidebar() {
       onMouseLeave={() => setIsHovered(false)}
       className="bg-[hsl(var(--sidebar-background,var(--background)))] border-[hsl(var(--sidebar-border,var(--border)))]"
     >
-      <SidebarContent className="bg-[hsl(var(--sidebar-background,var(--background)))]">
+      <SidebarContent className="bg-[hsl(var(--sidebar-background,var(--background)))] rounded-2xl">
         {/* Pin button - only visible on hover and not mobile */}
         {!isMobile && (
           <div className={`absolute top-2 left-2 z-10 transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
@@ -92,7 +92,7 @@ export function AppSidebar() {
                   <SidebarMenuButton 
                     asChild 
                     isActive={isActive(item.url)} 
-                    className="text-[hsl(var(--sidebar-foreground,var(--foreground)))] hover:bg-[hsl(var(--sidebar-accent,var(--accent)))] data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                    className="text-[hsl(var(--sidebar-foreground,var(--foreground)))] hover:bg-[hsl(var(--sidebar-accent,var(--accent)))] data-[active=true]:bg-primary data-[active=true]:text-primary-foreground rounded-xl"
                   >
                     <NavLink to={item.url} end>
                       <item.icon className="ml-2 h-4 w-4" />

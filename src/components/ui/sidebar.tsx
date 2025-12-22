@@ -137,11 +137,60 @@ const Sidebar = React.forwardRef<
   }
 >(({ side = "left", variant = "sidebar", collapsible = "offcanvas", className, children, ...props }, ref) => {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const [sidebarWidth, setSidebarWidth] = React.useState(() => {
+    const saved = localStorage.getItem("sidebar-width");
+    return saved ? saved : SIDEBAR_WIDTH;
+  });
+  const [isResizing, setIsResizing] = React.useState(false);
+  const sidebarRef = React.useRef<HTMLDivElement>(null);
+
+  // Save width to localStorage
+  React.useEffect(() => {
+    localStorage.setItem("sidebar-width", sidebarWidth);
+  }, [sidebarWidth]);
+
+  // Handle resize
+  const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  React.useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      const newWidth = side === "right" 
+        ? window.innerWidth - e.clientX 
+        : e.clientX;
+      
+      // Clamp between min and max
+      const clampedWidth = Math.max(180, Math.min(400, newWidth));
+      setSidebarWidth(`${clampedWidth}px`);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = side === "right" ? "w-resize" : "e-resize";
+      document.body.style.userSelect = "none";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing, side]);
 
   if (collapsible === "none") {
     return (
       <div
-        className={cn("flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground", className)}
+        className={cn("flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground rounded-2xl", className)}
         ref={ref}
         {...props}
       >
@@ -156,7 +205,7 @@ const Sidebar = React.forwardRef<
         <SheetContent
           data-sidebar="sidebar"
           data-mobile="true"
-          className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+          className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden rounded-l-3xl"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -178,6 +227,11 @@ const Sidebar = React.forwardRef<
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant={variant}
       data-side={side}
+      style={
+        {
+          "--sidebar-width": sidebarWidth,
+        } as React.CSSProperties
+      }
     >
       {/* This is what handles the sidebar gap on desktop */}
       <div
@@ -191,6 +245,7 @@ const Sidebar = React.forwardRef<
         )}
       />
       <div
+        ref={sidebarRef}
         className={cn(
           "fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex",
           side === "left"
@@ -206,9 +261,28 @@ const Sidebar = React.forwardRef<
       >
         <div
           data-sidebar="sidebar"
-          className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+          className="flex h-full w-full flex-col bg-sidebar rounded-2xl m-2 shadow-lg border border-sidebar-border group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-lg"
         >
           {children}
+        </div>
+        
+        {/* Resize Handle */}
+        <div
+          onMouseDown={handleMouseDown}
+          className={cn(
+            "absolute top-0 bottom-0 w-2 cursor-col-resize z-50 group/resize",
+            "hover:bg-primary/20 active:bg-primary/30 transition-colors",
+            side === "left" ? "-right-1" : "-left-1",
+            isResizing && "bg-primary/30"
+          )}
+        >
+          <div 
+            className={cn(
+              "absolute top-1/2 -translate-y-1/2 w-1 h-12 rounded-full bg-border opacity-0 group-hover/resize:opacity-100 transition-opacity",
+              side === "left" ? "right-0.5" : "left-0.5",
+              isResizing && "opacity-100 bg-primary"
+            )}
+          />
         </div>
       </div>
     </div>
