@@ -30,10 +30,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Edit, Trash2, Sparkles, Star, Download, Upload, FileJson } from "lucide-react";
+import { Plus, Edit, Trash2, Sparkles, Star, Download, Upload, FileJson, FileText } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const categories = [
   { value: "success", label: "הצלחה" },
@@ -59,7 +65,7 @@ export const QuoteManagement = () => {
   });
 
   // Export quotes to JSON file
-  const handleExport = () => {
+  const handleExportJSON = () => {
     if (quotes.length === 0) {
       toast.error("אין משפטים לייצוא");
       return;
@@ -86,13 +92,82 @@ export const QuoteManagement = () => {
     toast.success(`יוצאו ${quotes.length} משפטים בהצלחה!`);
   };
 
+  // Export quotes to TXT file
+  const handleExportTXT = () => {
+    if (quotes.length === 0) {
+      toast.error("אין משפטים לייצוא");
+      return;
+    }
+
+    // Format: "Quote text" - Author [category]
+    const txtContent = quotes
+      .map((q) => `"${q.text}" - ${q.author} [${q.category}]`)
+      .join("\n\n");
+
+    const blob = new Blob([txtContent], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `motivational-quotes-${new Date().toISOString().split("T")[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast.success(`יוצאו ${quotes.length} משפטים בהצלחה!`);
+  };
+
+  // Parse TXT content
+  const parseTxtContent = (content: string): any[] => {
+    const lines = content.split("\n").filter((line) => line.trim().length > 0);
+    const parsed: any[] = [];
+
+    for (const line of lines) {
+      // Try to match: "Quote text" - Author [category]
+      const fullMatch = line.match(/^"(.+?)"\s*-\s*(.+?)\s*\[(\w+)\]$/);
+      if (fullMatch) {
+        parsed.push({
+          text: fullMatch[1],
+          author: fullMatch[2].trim(),
+          category: fullMatch[3],
+        });
+        continue;
+      }
+
+      // Try to match: "Quote text" - Author (without category)
+      const noCategory = line.match(/^"(.+?)"\s*-\s*(.+)$/);
+      if (noCategory) {
+        parsed.push({
+          text: noCategory[1],
+          author: noCategory[2].trim(),
+          category: "success",
+        });
+        continue;
+      }
+
+      // Simple line - treat as quote with unknown author
+      if (line.trim().length > 5) {
+        parsed.push({
+          text: line.trim().replace(/^"|"$/g, ""),
+          author: "לא ידוע",
+          category: "success",
+        });
+      }
+    }
+
+    return parsed;
+  };
+
   // Handle file selection for import
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith(".json")) {
-      toast.error("יש לבחור קובץ JSON");
+    const isJson = file.name.endsWith(".json");
+    const isTxt = file.name.endsWith(".txt");
+
+    if (!isJson && !isTxt) {
+      toast.error("יש לבחור קובץ JSON או TXT");
       return;
     }
 
@@ -100,28 +175,40 @@ export const QuoteManagement = () => {
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
-        const data = JSON.parse(content);
 
-        if (!Array.isArray(data)) {
-          toast.error("פורמט קובץ לא תקין");
-          return;
+        if (isJson) {
+          const data = JSON.parse(content);
+
+          if (!Array.isArray(data)) {
+            toast.error("פורמט קובץ לא תקין");
+            return;
+          }
+
+          const validQuotes = data.filter(
+            (item) =>
+              typeof item.text === "string" &&
+              typeof item.author === "string"
+          );
+
+          if (validQuotes.length === 0) {
+            toast.error("לא נמצאו משפטים תקינים בקובץ");
+            return;
+          }
+
+          setImportPreview(validQuotes);
+          setImportDialogOpen(true);
+        } else {
+          // TXT file
+          const parsed = parseTxtContent(content);
+
+          if (parsed.length === 0) {
+            toast.error("לא נמצאו משפטים תקינים בקובץ");
+            return;
+          }
+
+          setImportPreview(parsed);
+          setImportDialogOpen(true);
         }
-
-        // Validate structure
-        const validQuotes = data.filter(
-          (item) =>
-            typeof item.text === "string" &&
-            typeof item.author === "string" &&
-            typeof item.category === "string"
-        );
-
-        if (validQuotes.length === 0) {
-          toast.error("לא נמצאו משפטים תקינים בקובץ");
-          return;
-        }
-
-        setImportPreview(validQuotes);
-        setImportDialogOpen(true);
       } catch {
         toast.error("שגיאה בקריאת הקובץ");
       }
@@ -206,11 +293,25 @@ export const QuoteManagement = () => {
           <h3 className="text-lg font-semibold">משפטי מוטיבציה מותאמים אישית</h3>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Export Button */}
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={quotes.length === 0}>
-            <Download className="w-4 h-4 ml-2" />
-            ייצוא
-          </Button>
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={quotes.length === 0}>
+                <Download className="w-4 h-4 ml-2" />
+                ייצוא
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportJSON}>
+                <FileJson className="w-4 h-4 ml-2" />
+                ייצוא JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportTXT}>
+                <FileText className="w-4 h-4 ml-2" />
+                ייצוא TXT
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Import Button */}
           <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
@@ -220,7 +321,7 @@ export const QuoteManagement = () => {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json"
+            accept=".json,.txt"
             onChange={handleFileSelect}
             className="hidden"
           />
