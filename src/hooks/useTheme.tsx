@@ -7,6 +7,7 @@ export interface ThemeColors {
   foreground: string;
   card: string;
   cardForeground: string;
+  cardBorder: string;
   primary: string;
   primaryForeground: string;
   secondary: string;
@@ -24,7 +25,6 @@ export interface ThemeColors {
   borderColor?: string;
   buttonBg?: string;
   buttonText?: string;
-  cardBorder?: string;
   // Sidebar colors
   sidebarBackground?: string;
   sidebarForeground?: string;
@@ -48,6 +48,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "210 20% 12%",
       card: "0 0% 100%",
       cardForeground: "210 20% 12%",
+      cardBorder: "43 70% 55%",
       primary: "210 30% 15%",
       primaryForeground: "40 40% 99%",
       secondary: "40 25% 88%",
@@ -69,6 +70,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "209 62% 18%",
       card: "205 95% 98%",
       cardForeground: "209 62% 18%",
+      cardBorder: "195 60% 45%",
       primary: "209 62% 35%",
       primaryForeground: "0 0% 100%",
       secondary: "200 50% 75%",
@@ -90,6 +92,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "230 60% 15%",
       card: "230 40% 97%",
       cardForeground: "230 60% 15%",
+      cardBorder: "240 55% 35%",
       primary: "230 60% 25%",
       primaryForeground: "0 0% 100%",
       secondary: "220 50% 70%",
@@ -111,6 +114,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "15 40% 18%",
       card: "15 50% 98%",
       cardForeground: "15 40% 18%",
+      cardBorder: "340 65% 45%",
       primary: "350 70% 50%",
       primaryForeground: "0 0% 100%",
       secondary: "25 75% 65%",
@@ -132,6 +136,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "165 45% 15%",
       card: "165 45% 98%",
       cardForeground: "165 45% 15%",
+      cardBorder: "175 60% 45%",
       primary: "165 65% 40%",
       primaryForeground: "0 0% 100%",
       secondary: "155 55% 70%",
@@ -153,6 +158,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "35 40% 18%",
       card: "35 50% 98%",
       cardForeground: "35 40% 18%",
+      cardBorder: "15 70% 50%",
       primary: "25 75% 45%",
       primaryForeground: "0 0% 100%",
       secondary: "45 70% 70%",
@@ -174,6 +180,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "20 30% 15%",
       card: "20 55% 97%",
       cardForeground: "20 30% 15%",
+      cardBorder: "340 75% 55%",
       primary: "15 80% 50%",
       primaryForeground: "0 0% 100%",
       secondary: "35 70% 60%",
@@ -195,6 +202,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "120 25% 15%",
       card: "120 25% 97%",
       cardForeground: "120 25% 15%",
+      cardBorder: "165 55% 40%",
       primary: "145 60% 35%",
       primaryForeground: "0 0% 100%",
       secondary: "85 45% 70%",
@@ -216,6 +224,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "270 25% 15%",
       card: "270 35% 98%",
       cardForeground: "270 25% 15%",
+      cardBorder: "250 65% 55%",
       primary: "265 60% 50%",
       primaryForeground: "0 0% 100%",
       secondary: "280 40% 75%",
@@ -237,6 +246,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "220 45% 18%",
       card: "40 40% 97%",
       cardForeground: "220 45% 18%",
+      cardBorder: "43 80% 48%",
       primary: "220 55% 22%",
       primaryForeground: "40 45% 92%",
       secondary: "43 75% 55%",
@@ -258,6 +268,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "215 50% 20%",
       card: "40 35% 98%",
       cardForeground: "215 50% 20%",
+      cardBorder: "42 70% 50%",
       primary: "215 55% 25%",
       primaryForeground: "42 35% 95%",
       secondary: "42 55% 65%",
@@ -279,6 +290,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "215 60% 18%",
       card: "0 0% 100%",
       cardForeground: "215 60% 18%",
+      cardBorder: "43 70% 55%",
       primary: "215 60% 18%",
       primaryForeground: "0 0% 100%",
       secondary: "43 80% 55%",
@@ -295,7 +307,6 @@ export const themes: Record<ThemeName, Theme> = {
       borderColor: "43 70% 55%",
       buttonBg: "0 0% 100%",
       buttonText: "215 60% 18%",
-      cardBorder: "43 70% 55%",
     },
   },
   cream: {
@@ -306,6 +317,7 @@ export const themes: Record<ThemeName, Theme> = {
       foreground: "30 25% 20%",
       card: "45 40% 98%",
       cardForeground: "30 25% 20%",
+      cardBorder: "40 40% 75%",
       primary: "30 45% 25%",
       primaryForeground: "45 40% 98%",
       secondary: "40 50% 75%",
@@ -322,7 +334,6 @@ export const themes: Record<ThemeName, Theme> = {
       borderColor: "40 35% 80%",
       buttonBg: "30 45% 25%",
       buttonText: "45 40% 98%",
-      cardBorder: "40 40% 75%",
     },
   },
 };

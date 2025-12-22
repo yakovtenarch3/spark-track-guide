@@ -11,8 +11,9 @@ All colors MUST be HSL.
     --background: 40 30% 97%;
     --foreground: 210 20% 12%;
 
-    --card: 40 40% 99%;
+    --card: 0 0% 100%;
     --card-foreground: 210 20% 12%;
+    --card-border: 43 70% 55%;
 
     --popover: 40 40% 99%;
     --popover-foreground: 210 20% 12%;
@@ -90,6 +91,7 @@ All colors MUST be HSL.
 
     --card: 210 20% 12%;
     --card-foreground: 40 20% 92%;
+    --card-border: 43 60% 45%;
 
     --popover: 210 20% 12%;
     --popover-foreground: 40 20% 92%;
@@ -175,13 +177,12 @@ All colors MUST be HSL.
   /* Royal/Elegant card style (themeable) */
   .royal-card {
     @apply rounded-xl shadow-md bg-card;
-    border: 2px solid hsl(var(--card-border, var(--border)));
+    border: 2px solid hsl(var(--card-border));
     position: relative;
   }
   
   .royal-card:hover {
     @apply shadow-lg;
-    border-color: hsl(var(--ring));
   }
   
   /* Chart colors - navy blue */
