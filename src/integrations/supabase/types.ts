@@ -65,6 +65,33 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_coach_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          is_favorite: boolean
+          messages: Json
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_favorite?: boolean
+          messages?: Json
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_favorite?: boolean
+          messages?: Json
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       alarms: {
         Row: {
           created_at: string

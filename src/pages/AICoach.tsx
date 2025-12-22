@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, Loader2, Sparkles, RefreshCw } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, RefreshCw, Star, History } from "lucide-react";
 import { toast } from "sonner";
-
+import { useAIConversations } from "@/hooks/useAIConversations";
+import SavedConversationsDialog from "@/components/SavedConversationsDialog";
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -24,8 +25,10 @@ const AICoach = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [savedDialogOpen, setSavedDialogOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { saveConversation } = useAIConversations();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -134,6 +137,21 @@ const AICoach = () => {
     toast.success("השיחה נמחקה");
   };
 
+  const handleSaveConversation = () => {
+    if (messages.length < 2) {
+      toast.error("השיחה קצרה מדי לשמירה");
+      return;
+    }
+    const firstUserMessage = messages.find((m) => m.role === "user");
+    const title = firstUserMessage?.content.slice(0, 50) || "שיחה עם המאמן";
+    saveConversation.mutate({ title, messages });
+  };
+
+  const handleLoadConversation = (loadedMessages: Message[]) => {
+    setMessages(loadedMessages);
+    toast.success("השיחה נטענה");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6" dir="rtl">
       <div className="max-w-3xl mx-auto h-[calc(100vh-120px)] flex flex-col">
@@ -159,12 +177,24 @@ const AICoach = () => {
               <Sparkles className="w-4 h-4 text-primary" />
               שיחה
             </CardTitle>
-            {messages.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearChat}>
-                <RefreshCw className="w-4 h-4 ml-1" />
-                שיחה חדשה
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setSavedDialogOpen(true)}>
+                <History className="w-4 h-4 ml-1" />
+                שיחות שמורות
               </Button>
-            )}
+              {messages.length >= 2 && (
+                <Button variant="ghost" size="sm" onClick={handleSaveConversation} disabled={saveConversation.isPending}>
+                  <Star className="w-4 h-4 ml-1" />
+                  שמור
+                </Button>
+              )}
+              {messages.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearChat}>
+                  <RefreshCw className="w-4 h-4 ml-1" />
+                  חדש
+                </Button>
+              )}
+            </div>
           </CardHeader>
 
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
@@ -262,6 +292,12 @@ const AICoach = () => {
             </form>
           </CardContent>
         </Card>
+
+        <SavedConversationsDialog
+          open={savedDialogOpen}
+          onOpenChange={setSavedDialogOpen}
+          onLoadConversation={handleLoadConversation}
+        />
       </div>
     </div>
   );
