@@ -1,7 +1,4 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Progress } from "@/components/ui/progress";
 import {
   ChevronRight,
   ChevronLeft,
@@ -33,7 +29,6 @@ import {
   BookOpen,
   ChevronDown,
   Loader2,
-  Search,
   X,
   Moon,
   Sun,
@@ -47,10 +42,8 @@ import {
   Grid3X3,
   LayoutGrid,
   Rows3,
-  PenTool,
-  FileDown,
-  Settings2,
   Edit3,
+  FileDown,
   Pin,
   PinOff,
   Columns,
@@ -79,9 +72,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+import {
+  PDFHighlighterComponent,
+  CustomHighlight,
+  convertAnnotationToHighlight,
+  convertHighlightToAnnotation,
+  HIGHLIGHT_COLORS,
+} from "./PDFHighlighter";
 
 interface LuxuryPDFReaderProps {
   bookId: string;
@@ -95,15 +92,6 @@ interface LuxuryPDFReaderProps {
   onBack: () => void;
 }
 
-const HIGHLIGHT_COLORS = [
-  { value: "#FFEB3B", label: "צהוב", className: "bg-yellow-400" },
-  { value: "#81C784", label: "ירוק", className: "bg-green-400" },
-  { value: "#64B5F6", label: "כחול", className: "bg-blue-400" },
-  { value: "#FF8A65", label: "כתום", className: "bg-orange-400" },
-  { value: "#CE93D8", label: "סגול", className: "bg-purple-400" },
-  { value: "#F48FB1", label: "ורוד", className: "bg-pink-400" },
-];
-
 const FONT_OPTIONS = [
   { value: "system-ui", label: "מערכת" },
   { value: "'David Libre', serif", label: "דוד" },
@@ -112,89 +100,6 @@ const FONT_OPTIONS = [
   { value: "'Rubik', sans-serif", label: "רוביק" },
   { value: "'Assistant', sans-serif", label: "אסיסטנט" },
 ];
-
-// Fullscreen PDF with highlights component
-const FullscreenPDFWithHighlights = ({ 
-  fileUrl, 
-  currentPage, 
-  nightMode, 
-  annotations,
-  onHighlightContextMenu 
-}: { 
-  fileUrl: string;
-  currentPage: number;
-  nightMode: boolean;
-  annotations: PDFAnnotation[];
-  onHighlightContextMenu: (e: React.MouseEvent, annotationId: string) => void;
-}) => {
-  const [pageHeight, setPageHeight] = useState(800);
-  const pageWidth = Math.min(window.innerWidth * 0.92, 1400);
-  
-  return (
-    <div className="relative" style={{ width: pageWidth, height: pageHeight }}>
-      <Document file={fileUrl} loading={null}>
-        <Page 
-          pageNumber={currentPage} 
-          width={pageWidth}
-          renderTextLayer={true}
-          renderAnnotationLayer={true}
-          className="pdf-page-with-highlights"
-          onRenderSuccess={(page) => {
-            setPageHeight(page.height * (pageWidth / page.width));
-          }}
-        />
-      </Document>
-      
-      {/* Highlights overlay for fullscreen */}
-      <div 
-        className="absolute inset-0 pointer-events-none z-10"
-        style={{ width: pageWidth, height: pageHeight }}
-      >
-        {annotations.map((annotation) => (
-          annotation.highlight_rects && Array.isArray(annotation.highlight_rects) && annotation.highlight_rects.length > 0 ? (
-            annotation.highlight_rects.map((rect, rectIndex) => (
-              <div
-                key={`fs-${annotation.id}-${rectIndex}`}
-                className="absolute pointer-events-auto cursor-pointer transition-all hover:opacity-70 hover:ring-2 hover:ring-red-400"
-                style={{
-                  left: `${rect.x}%`,
-                  top: `${rect.y}%`,
-                  width: `${rect.width}%`,
-                  height: `${rect.height}%`,
-                  backgroundColor: `${annotation.color}60`,
-                  borderRadius: '2px',
-                  mixBlendMode: 'multiply',
-                }}
-                title={`${annotation.highlight_text || annotation.note_text}\n\nלחיצה ימנית למחיקה`}
-                onContextMenu={(e) => onHighlightContextMenu(e, annotation.id)}
-              />
-            ))
-          ) : annotation.highlight_text ? (
-            <div
-              key={`fs-${annotation.id}`}
-              className="absolute top-2 right-2 pointer-events-auto cursor-pointer z-20"
-              onContextMenu={(e) => onHighlightContextMenu(e, annotation.id)}
-            >
-              <div 
-                className="px-2 py-1 rounded-lg text-xs font-medium shadow-md hover:scale-105 transition-transform flex items-center gap-1"
-                style={{ 
-                  backgroundColor: annotation.color || '#FFEB3B',
-                  color: '#000'
-                }}
-                title={`"${annotation.highlight_text}"\n\nלחיצה ימנית למחיקה`}
-              >
-                <Highlighter className="w-3 h-3" />
-                {(annotation.highlight_text?.length || 0) > 25 
-                  ? annotation.highlight_text?.substring(0, 25) + '...' 
-                  : annotation.highlight_text}
-              </div>
-            </div>
-          ) : null
-        ))}
-      </div>
-    </div>
-  );
-};
 
 export const LuxuryPDFReader = ({
   bookId,
@@ -209,9 +114,7 @@ export const LuxuryPDFReader = ({
 }: LuxuryPDFReaderProps) => {
   // PDF states
   const [numPages, setNumPages] = useState<number>(initialTotalPages);
-  const [pageWidth, setPageWidth] = useState<number>(1000);
   const [isLoading, setIsLoading] = useState(true);
-  const [pdfError, setPdfError] = useState<string | null>(null);
 
   // View states
   const [zoom, setZoom] = useState(100);
@@ -231,19 +134,8 @@ export const LuxuryPDFReader = ({
   
   // Reading mode states
   const [nightMode, setNightMode] = useState(false);
-  const [highlightMode, setHighlightMode] = useState(false);
-  const [selectedText, setSelectedText] = useState("");
-  const [selectedRects, setSelectedRects] = useState<DOMRect[]>([]);
   const [showFormMode, setShowFormMode] = useState(false);
-  const [pdfPageHeight, setPdfPageHeight] = useState(800);
-  const [pdfPageWidth, setPdfPageWidth] = useState(800);
   
-  // Reading progress - pages that have been read
-  const [readPages, setReadPages] = useState<Set<number>>(() => {
-    const saved = localStorage.getItem(`book-progress-${bookId}`);
-    return saved ? new Set(JSON.parse(saved)) : new Set<number>();
-  });
-
   // Annotation states
   const [newNote, setNewNote] = useState("");
   const [newHighlight, setNewHighlight] = useState("");
@@ -252,6 +144,12 @@ export const LuxuryPDFReader = ({
   const [editText, setEditText] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set([currentPage]));
   
+  // Reading progress - pages that have been read
+  const [readPages, setReadPages] = useState<Set<number>>(() => {
+    const saved = localStorage.getItem(`book-progress-${bookId}`);
+    return saved ? new Set(JSON.parse(saved)) : new Set<number>();
+  });
+
   // Form filling - page-specific text inputs
   const [formInputs, setFormInputs] = useState<Record<string, Record<string, string>>>(() => {
     const saved = localStorage.getItem(`book-forms-${bookId}`);
@@ -259,7 +157,6 @@ export const LuxuryPDFReader = ({
   });
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const pdfContainerRef = useRef<HTMLDivElement>(null);
 
   const {
     annotations,
@@ -270,6 +167,11 @@ export const LuxuryPDFReader = ({
     annotationCountsByPage,
   } = usePDFAnnotations(bookId);
   
+  // Convert database annotations to library format
+  const libraryHighlights: CustomHighlight[] = annotations
+    .map(convertAnnotationToHighlight)
+    .filter((h): h is CustomHighlight => h !== null);
+
   // Save form inputs to localStorage
   useEffect(() => {
     localStorage.setItem(`book-forms-${bookId}`, JSON.stringify(formInputs));
@@ -287,108 +189,30 @@ export const LuxuryPDFReader = ({
     }
   }, [currentPage]);
 
-  // Resize handler - wider default width
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        const containerWidth = containerRef.current.clientWidth;
-        // Use more of the available width
-        const width = showSidePanel ? containerWidth - 320 - 32 : containerWidth - 32;
-        setPageWidth(Math.min(Math.max(width, 600), 1400));
-      }
-    };
+  // Handle highlight from new library
+  const handleAddLibraryHighlight = useCallback((highlight: CustomHighlight) => {
+    const annotationData = convertHighlightToAnnotation(highlight, bookId);
+    addAnnotation.mutate({
+      bookId: annotationData.bookId,
+      pageNumber: annotationData.pageNumber,
+      noteText: annotationData.noteText,
+      highlightText: annotationData.highlightText,
+      color: annotationData.color,
+      highlightRects: annotationData.highlightRects,
+    });
+  }, [addAnnotation, bookId]);
 
-    updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
-  }, [showSidePanel]);
+  const handleDeleteLibraryHighlight = useCallback((id: string) => {
+    deleteAnnotation.mutate({ annotationId: id });
+  }, [deleteAnnotation]);
 
-  // Text selection handler for highlighting - capture rects from PDF text layer
-  useEffect(() => {
-    const handleTextSelection = () => {
-      const selection = window.getSelection();
-      if (selection && selection.toString().trim()) {
-        const text = selection.toString().trim();
-        setSelectedText(text);
-        
-        // Get the bounding rects of the selection relative to the PDF container
-        const range = selection.getRangeAt(0);
-        const rects = Array.from(range.getClientRects());
-        
-        // Find the PDF page container to get relative positions
-        const pdfContainer = pdfContainerRef.current?.querySelector('.react-pdf__Page');
-        if (pdfContainer && rects.length > 0) {
-          const containerRect = pdfContainer.getBoundingClientRect();
-          
-          // Convert to relative coordinates (percentage-based for scaling)
-          const relativeRects = rects.map(rect => ({
-            x: ((rect.left - containerRect.left) / containerRect.width) * 100,
-            y: ((rect.top - containerRect.top) / containerRect.height) * 100,
-            width: (rect.width / containerRect.width) * 100,
-            height: (rect.height / containerRect.height) * 100,
-          }));
-          
-          setSelectedRects(relativeRects as unknown as DOMRect[]);
-        }
-      }
-    };
-
-    document.addEventListener("mouseup", handleTextSelection);
-    return () => document.removeEventListener("mouseup", handleTextSelection);
-  }, []);
-
-  // Save highlight from selected text with position data
-  const handleSaveHighlight = (colorOverride?: string) => {
-    if (!selectedText) return;
-    
-    const colorToUse = colorOverride || selectedColor;
-    
-    addAnnotation.mutate(
-      {
-        bookId,
-        pageNumber: currentPage,
-        noteText: `הדגשה: ${selectedText}`,
-        highlightText: selectedText,
-        color: colorToUse,
-        highlightRects: selectedRects.length > 0 ? selectedRects : undefined,
-      },
-      {
-        onSuccess: () => {
-          toast.success("ההדגשה נשמרה!");
-          setSelectedText("");
-          setSelectedRects([]);
-          window.getSelection()?.removeAllRanges();
-        },
-      }
-    );
-  };
-  
-  // Handle right-click delete on highlight
-  const handleHighlightContextMenu = (e: React.MouseEvent, annotationId: string) => {
-    e.preventDefault();
-    if (window.confirm("למחוק את ההדגשה?")) {
-      deleteAnnotation.mutate({ annotationId }, { 
-        onSuccess: () => toast.success("ההדגשה נמחקה") 
-      });
-    }
-  };
-
-  // PDF handlers
-  const onDocumentLoadSuccess = useCallback(
-    ({ numPages }: { numPages: number }) => {
-      setNumPages(numPages);
-      setIsLoading(false);
-      setPdfError(null);
-      onTotalPagesChange?.(numPages);
-    },
-    [onTotalPagesChange]
-  );
-
-  const onDocumentLoadError = useCallback((error: Error) => {
-    console.error("PDF load error:", error);
-    setPdfError("שגיאה בטעינת הקובץ");
-    setIsLoading(false);
-  }, []);
+  const handleUpdateLibraryHighlight = useCallback((id: string, updates: Partial<CustomHighlight>) => {
+    updateAnnotation.mutate({ 
+      annotationId: id, 
+      color: updates.color,
+      noteText: updates.noteText,
+    });
+  }, [updateAnnotation]);
 
   // Group annotations by page
   const annotationsByPage = annotations.reduce((acc, ann) => {
@@ -476,7 +300,7 @@ export const LuxuryPDFReader = ({
           p.toString().includes(searchQuery) ||
           (annotationCountsByPage[p] > 0 && `עמוד ${p}`.includes(searchQuery))
       )
-    : allPages; // Show ALL pages, not just every 5th
+    : allPages;
   
   // Reading progress calculation
   const readCount = readPages.size;
@@ -570,26 +394,6 @@ export const LuxuryPDFReader = ({
     toast.success("הקובץ יוצא בהצלחה!");
   };
 
-  // Calculate display width based on frame size and display mode
-  const getDisplayWidth = () => {
-    const baseWidth = pageWidth;
-    const frameSizeMultiplier = 
-      pdfFrameSize === "small" ? 0.6 :
-      pdfFrameSize === "medium" ? 0.8 :
-      pdfFrameSize === "large" ? 1.0 : 1.2;
-    
-    const displayModeMultiplier = 
-      pdfDisplayMode === "fit" ? 1.1 :
-      pdfDisplayMode === "wide" ? 1.3 : 1.0;
-    
-    return (baseWidth * frameSizeMultiplier * displayModeMultiplier * zoom) / 100;
-  };
-
-  const scaledWidth = getDisplayWidth();
-
-  // Gold border style
-  const goldBorderStyle = "ring-1 ring-primary/30 shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]";
-
   return (
     <div 
       className={`flex flex-col h-[calc(100vh-100px)] min-h-[600px] rounded-xl overflow-hidden shadow-xl transition-colors ring-2 ring-primary/40 ${
@@ -597,31 +401,6 @@ export const LuxuryPDFReader = ({
       }`} 
       dir="rtl"
     >
-      {/* Floating Highlight Bar - click color to save immediately */}
-      {selectedText && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-card border-2 border-primary shadow-2xl rounded-2xl p-3 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-          <span className="text-sm font-medium text-muted-foreground">לחץ על צבע לשמירה:</span>
-          <div className="flex gap-1.5">
-            {HIGHLIGHT_COLORS.map((color) => (
-              <button
-                key={color.value}
-                onClick={() => handleSaveHighlight(color.value)}
-                className="w-8 h-8 rounded-full border-2 border-transparent hover:scale-110 hover:border-foreground transition-all shadow-md hover:shadow-lg"
-                style={{ backgroundColor: color.value }}
-                title={`הדגש ב${color.label}`}
-              />
-            ))}
-          </div>
-          <Button size="sm" variant="ghost" onClick={() => {
-            setSelectedText("");
-            setSelectedRects([]);
-            window.getSelection()?.removeAllRanges();
-          }}>
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
-
       {/* Top Header */}
       <div className={`flex items-center justify-between p-3 border-b-2 border-primary/20 ${nightMode ? "bg-slate-800" : "bg-card"}`}>
         <div className="flex items-center gap-3">
@@ -637,7 +416,7 @@ export const LuxuryPDFReader = ({
             <div>
               <h3 className="font-semibold truncate max-w-[200px] text-sm">{fileName}</h3>
               <p className="text-xs text-muted-foreground">
-                עמוד {currentPage} / {numPages}
+                {annotations.length} הדגשות
               </p>
             </div>
           </div>
@@ -652,52 +431,6 @@ export const LuxuryPDFReader = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-popover z-50">
-              <DropdownMenuLabel>גודל מסגרת</DropdownMenuLabel>
-              <div className="grid grid-cols-4 gap-1 p-2">
-                {[
-                  { value: "small", label: "קטן", size: "60%" },
-                  { value: "medium", label: "בינוני", size: "80%" },
-                  { value: "large", label: "גדול", size: "100%" },
-                  { value: "full", label: "מלא", size: "120%" },
-                ].map((size) => (
-                  <button
-                    key={size.value}
-                    onClick={() => setPdfFrameSize(size.value as typeof pdfFrameSize)}
-                    className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
-                      pdfFrameSize === size.value
-                        ? "bg-primary text-primary-foreground ring-2 ring-primary"
-                        : "bg-muted hover:bg-muted/80"
-                    }`}
-                  >
-                    <div 
-                      className={`border-2 rounded ${pdfFrameSize === size.value ? "border-primary-foreground" : "border-muted-foreground"}`}
-                      style={{ 
-                        width: size.value === "small" ? 16 : size.value === "medium" ? 20 : size.value === "large" ? 24 : 28,
-                        height: size.value === "small" ? 20 : size.value === "medium" ? 26 : size.value === "large" ? 32 : 36
-                      }}
-                    />
-                    <span className="text-[10px]">{size.label}</span>
-                  </button>
-                ))}
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>מצב תצוגה</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setPdfDisplayMode("single")} className="gap-2">
-                <FileText className="w-4 h-4" />
-                עמוד בודד
-                {pdfDisplayMode === "single" && <Check className="w-3 h-3 mr-auto" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setPdfDisplayMode("fit")} className="gap-2">
-                <Maximize2 className="w-4 h-4" />
-                התאם לרוחב
-                {pdfDisplayMode === "fit" && <Check className="w-3 h-3 mr-auto" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setPdfDisplayMode("wide")} className="gap-2">
-                <Columns className="w-4 h-4" />
-                תצוגה רחבה
-                {pdfDisplayMode === "wide" && <Check className="w-3 h-3 mr-auto" />}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuLabel>זום מהיר</DropdownMenuLabel>
               <div className="grid grid-cols-4 gap-1 p-2">
                 {[50, 75, 100, 150].map((z) => (
@@ -740,16 +473,6 @@ export const LuxuryPDFReader = ({
             <Maximize2 className="w-4 h-4" />
           </Button>
 
-          {/* Form Fill Mode Toggle */}
-          <Button
-            variant={showFormMode ? "default" : "ghost"}
-            size="icon"
-            onClick={() => setShowFormMode(!showFormMode)}
-            title="מצב מילוי טפסים"
-            className={showFormMode ? "bg-primary text-primary-foreground" : ""}
-          >
-            <Edit3 className="w-4 h-4" />
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" title="ייצוא">
@@ -799,24 +522,7 @@ export const LuxuryPDFReader = ({
       </div>
 
       {/* Main Content Area */}
-      <div 
-        className="flex flex-1 overflow-hidden"
-        onMouseLeave={() => {
-          if (!sidePanelPinned && showSidePanel) {
-            setShowSidePanel(false);
-          }
-        }}
-      >
-        {/* Side Panel Trigger (when unpinned and hidden) */}
-        {!showSidePanel && !sidePanelPinned && (
-          <div 
-            className="w-2 bg-primary/10 hover:bg-primary/30 cursor-pointer transition-colors flex items-center justify-center"
-            onMouseEnter={() => setShowSidePanel(true)}
-          >
-            <div className="w-1 h-16 bg-primary/40 rounded-full" />
-          </div>
-        )}
-
+      <div className="flex flex-1 overflow-hidden">
         {/* Side Panel */}
         {showSidePanel && (
           <div 
@@ -825,12 +531,10 @@ export const LuxuryPDFReader = ({
             } ${
               sidePanelWidth === "narrow" ? "w-64" : sidePanelWidth === "wide" ? "w-[28rem]" : "w-80"
             }`}
-            onMouseEnter={() => !sidePanelPinned && setShowSidePanel(true)}
           >
             {/* Panel Header with controls */}
             <div className="flex items-center justify-between px-2 py-1.5 border-b border-border bg-muted/30">
               <div className="flex gap-0.5">
-                {/* Width controls */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-6 w-6" title="גודל פאנל">
@@ -860,17 +564,6 @@ export const LuxuryPDFReader = ({
               </div>
 
               <div className="flex gap-0.5">
-                {/* Pin toggle */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setSidePanelPinned(!sidePanelPinned)}
-                  title={sidePanelPinned ? "בטל נעיצה (אוטו-הסתרה)" : "נעץ פאנל"}
-                >
-                  {sidePanelPinned ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
-                </Button>
-                {/* Close panel */}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -886,9 +579,8 @@ export const LuxuryPDFReader = ({
             {/* Panel Tabs */}
             <div className="flex border-b border-border">
               {[
-                { id: "index", icon: List, label: "אינדקס" },
+                { id: "annotations", icon: MessageSquare, label: "הדגשות" },
                 { id: "progress", icon: BookMarked, label: "מעקב" },
-                { id: "annotations", icon: MessageSquare, label: "הערות" },
                 { id: "settings", icon: Eye, label: "תצוגה" },
               ].map((tab) => (
                 <button
@@ -908,321 +600,6 @@ export const LuxuryPDFReader = ({
 
             <ScrollArea className="flex-1">
               <div className="p-2">
-                {/* Page Index - ALL pages */}
-                {sidePanel === "index" && (
-                  <div className="space-y-2">
-                    {/* Search and view toggle */}
-                    <div className="flex gap-1.5 flex-wrap">
-                      <div className="relative flex-1 min-w-[120px]">
-                        <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                        <Input
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          placeholder="חפש עמוד..."
-                          className="pr-8 text-xs h-8"
-                        />
-                      </div>
-                      <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">
-                        <Button
-                          variant={indexViewMode === "list" ? "default" : "ghost"}
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => setIndexViewMode("list")}
-                          title="תצוגת רשימה"
-                        >
-                          <Rows3 className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant={indexViewMode === "grid" ? "default" : "ghost"}
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => setIndexViewMode("grid")}
-                          title="תצוגת רשת 5x"
-                        >
-                          <Grid3X3 className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant={indexViewMode === "compact" ? "default" : "ghost"}
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => setIndexViewMode("compact")}
-                          title="תצוגת רשת 10x"
-                        >
-                          <LayoutGrid className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant={indexViewMode === "mini" ? "default" : "ghost"}
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => setIndexViewMode("mini")}
-                          title="תצוגה מינימלית"
-                        >
-                          <LayoutList className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Progress bar */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">התקדמות קריאה</span>
-                        <span className="font-medium text-primary">{progressPercentage}%</span>
-                      </div>
-                      <Progress value={progressPercentage} className="h-2" />
-                      <p className="text-[10px] text-muted-foreground">
-                        {readCount} מתוך {numPages} עמודים נקראו
-                      </p>
-                    </div>
-
-                    {/* Grid View */}
-                    {indexViewMode === "grid" && (
-                      <div className="grid grid-cols-5 gap-1.5">
-                        {filteredPages.map((page) => {
-                          const hasAnnotations = annotationCountsByPage[page] > 0;
-                          const isActive = page === currentPage;
-                          const isRead = readPages.has(page);
-
-                          return (
-                            <button
-                              key={page}
-                              onClick={() => goToPage(page)}
-                              className={`relative aspect-square flex items-center justify-center text-xs font-medium rounded-lg transition-all ring-1 ring-primary/20 ${
-                                isActive
-                                  ? "bg-primary text-primary-foreground shadow-md scale-110 z-10 ring-2 ring-primary"
-                                  : isRead
-                                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 ring-green-400/30"
-                                  : "bg-muted hover:bg-muted/80"
-                              }`}
-                              title={`עמוד ${page}${isRead ? " (נקרא)" : ""}${hasAnnotations ? ` - ${annotationCountsByPage[page]} הערות` : ""}`}
-                            >
-                              {page}
-                              {hasAnnotations && (
-                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full" />
-                              )}
-                              {isRead && !isActive && (
-                                <CheckCircle2 className="absolute -bottom-0.5 -left-0.5 w-3 h-3 text-green-600" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* List View */}
-                    {indexViewMode === "list" && (
-                      <div className="space-y-1">
-                        {filteredPages.map((page) => {
-                          const hasAnnotations = annotationCountsByPage[page] > 0;
-                          const isActive = page === currentPage;
-                          const isRead = readPages.has(page);
-
-                          return (
-                            <div
-                              key={page}
-                              className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-all border border-primary/10 ${
-                                isActive
-                                  ? "bg-primary text-primary-foreground shadow-md border-primary"
-                                  : isRead
-                                  ? "bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 border-green-400/30"
-                                  : "hover:bg-muted"
-                              }`}
-                            >
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  togglePageRead(page);
-                                }}
-                                className={`shrink-0 ${isActive ? "text-primary-foreground" : ""}`}
-                              >
-                                {isRead ? (
-                                  <CheckCircle2 className={`w-4 h-4 ${isActive ? "" : "text-green-600"}`} />
-                                ) : (
-                                  <Circle className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </button>
-                              <button
-                                onClick={() => goToPage(page)}
-                                className="flex-1 text-right font-medium"
-                              >
-                                עמוד {page}
-                              </button>
-                              {hasAnnotations && (
-                                <Badge variant={isActive ? "outline" : "secondary"} className="text-[10px] gap-0.5 h-5">
-                                  <MessageSquare className="w-2.5 h-2.5" />
-                                  {annotationCountsByPage[page]}
-                                </Badge>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Compact View - 10 columns */}
-                    {indexViewMode === "compact" && (
-                      <div className="grid grid-cols-10 gap-0.5">
-                        {filteredPages.map((page) => {
-                          const hasAnnotations = annotationCountsByPage[page] > 0;
-                          const isActive = page === currentPage;
-                          const isRead = readPages.has(page);
-
-                          return (
-                            <button
-                              key={page}
-                              onClick={() => goToPage(page)}
-                              className={`relative aspect-square flex items-center justify-center text-[9px] font-medium rounded transition-all ${
-                                isActive
-                                  ? "bg-primary text-primary-foreground shadow ring-1 ring-primary"
-                                  : isRead
-                                  ? "bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200"
-                                  : "bg-muted/60 hover:bg-muted"
-                              }`}
-                              title={`עמוד ${page}`}
-                            >
-                              {page}
-                              {hasAnnotations && (
-                                <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary rounded-full" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Mini View - single row of numbers */}
-                    {indexViewMode === "mini" && (
-                      <div className="flex flex-wrap gap-0.5">
-                        {filteredPages.map((page) => {
-                          const hasAnnotations = annotationCountsByPage[page] > 0;
-                          const isActive = page === currentPage;
-                          const isRead = readPages.has(page);
-
-                          return (
-                            <button
-                              key={page}
-                              onClick={() => goToPage(page)}
-                              className={`w-6 h-5 flex items-center justify-center text-[8px] font-medium rounded transition-all ${
-                                isActive
-                                  ? "bg-primary text-primary-foreground"
-                                  : isRead
-                                  ? "bg-green-300 dark:bg-green-700 text-green-900 dark:text-green-100"
-                                  : hasAnnotations
-                                  ? "bg-amber-200 dark:bg-amber-800"
-                                  : "bg-muted/40 hover:bg-muted"
-                              }`}
-                              title={`עמוד ${page}`}
-                            >
-                              {page}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Reading Progress Panel */}
-                {sidePanel === "progress" && (
-                  <div className="space-y-4">
-                    {/* Progress Overview */}
-                    <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-                      <div className="text-center space-y-3">
-                        <div className="relative w-24 h-24 mx-auto">
-                          <svg className="w-24 h-24 -rotate-90">
-                            <circle
-                              cx="48"
-                              cy="48"
-                              r="40"
-                              strokeWidth="8"
-                              fill="none"
-                              className="stroke-muted"
-                            />
-                            <circle
-                              cx="48"
-                              cy="48"
-                              r="40"
-                              strokeWidth="8"
-                              fill="none"
-                              strokeDasharray={251.2}
-                              strokeDashoffset={251.2 - (251.2 * progressPercentage) / 100}
-                              className="stroke-primary transition-all duration-500"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-2xl font-bold text-primary">{progressPercentage}%</span>
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-lg font-semibold">{readCount} עמודים נקראו</p>
-                          <p className="text-sm text-muted-foreground">מתוך {numPages} עמודים</p>
-                        </div>
-                      </div>
-                    </Card>
-
-                    {/* Quick Actions */}
-                    <div className="space-y-2">
-                      <Button
-                        variant="outline"
-                        className="w-full gap-2 justify-start"
-                        onClick={markAllUpToCurrentAsRead}
-                      >
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                        סמן הכל עד עמוד {currentPage} כנקרא
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full gap-2 justify-start text-destructive hover:bg-destructive/10"
-                        onClick={clearReadProgress}
-                      >
-                        <X className="w-4 h-4" />
-                        אפס התקדמות קריאה
-                      </Button>
-                    </div>
-
-                    {/* Current Position */}
-                    <Card className="p-3">
-                      <p className="text-sm font-medium mb-2 flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-primary" />
-                        המיקום הנוכחי
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <Badge variant="secondary" className="text-lg px-3 py-1">
-                          עמוד {currentPage}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {numPages - currentPage} עמודים נותרו
-                        </span>
-                      </div>
-                    </Card>
-
-                    {/* Unread Pages */}
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">עמודים שלא נקראו</p>
-                      <div className="grid grid-cols-6 gap-1">
-                        {allPages.filter(p => !readPages.has(p)).slice(0, 30).map((page) => (
-                          <button
-                            key={page}
-                            onClick={() => goToPage(page)}
-                            className={`aspect-square flex items-center justify-center text-[10px] font-medium rounded transition-all ${
-                              page === currentPage
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted hover:bg-muted/80"
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        ))}
-                        {allPages.filter(p => !readPages.has(p)).length > 30 && (
-                          <div className="col-span-6 text-center text-xs text-muted-foreground py-1">
-                            ועוד {allPages.filter(p => !readPages.has(p)).length - 30} עמודים...
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Annotations Panel */}
                 {sidePanel === "annotations" && (
                   <div className="space-y-4">
@@ -1230,7 +607,7 @@ export const LuxuryPDFReader = ({
                     <Card className="p-3 border-2 border-dashed border-primary/30">
                       <p className="text-sm font-medium flex items-center gap-2 mb-3">
                         <Plus className="w-4 h-4 text-primary" />
-                        הוסף הערה לעמוד {currentPage}
+                        הוסף הערה ידנית
                       </p>
 
                       <div className="space-y-2">
@@ -1282,6 +659,14 @@ export const LuxuryPDFReader = ({
                       </div>
                     </Card>
 
+                    {/* Tip for highlighting */}
+                    <Card className="p-3 bg-primary/5 border-primary/20">
+                      <p className="text-xs text-muted-foreground flex items-center gap-2">
+                        <Highlighter className="w-4 h-4 text-primary" />
+                        סמן טקסט ב-PDF ובחר צבע להדגשה אוטומטית
+                      </p>
+                    </Card>
+
                     {/* Existing annotations */}
                     {pagesWithAnnotations.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
@@ -1297,9 +682,7 @@ export const LuxuryPDFReader = ({
                             onOpenChange={() => togglePageGroup(page)}
                           >
                             <CollapsibleTrigger
-                              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                                page === currentPage ? "bg-primary/10 border border-primary/20" : "hover:bg-muted"
-                              }`}
+                              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-colors hover:bg-muted"
                             >
                               <div className="flex items-center gap-2">
                                 <ChevronDown
@@ -1312,17 +695,6 @@ export const LuxuryPDFReader = ({
                                   {annotationsByPage[page].length}
                                 </Badge>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  goToPage(page);
-                                }}
-                              >
-                                <ChevronLeft className="w-3 h-3" />
-                              </Button>
                             </CollapsibleTrigger>
 
                             <CollapsibleContent className="pr-4 mt-2 space-y-2">
@@ -1350,8 +722,12 @@ export const LuxuryPDFReader = ({
                                         className="text-sm"
                                       />
                                       <div className="flex gap-2">
-                                        <Button size="sm" onClick={() => handleUpdateAnnotation(annotation.id)}>
-                                          שמור
+                                        <Button
+                                          size="sm"
+                                          onClick={() => handleUpdateAnnotation(annotation.id)}
+                                          disabled={updateAnnotation.isPending}
+                                        >
+                                          <Check className="w-3 h-3" />
                                         </Button>
                                         <Button
                                           size="sm"
@@ -1361,35 +737,35 @@ export const LuxuryPDFReader = ({
                                             setEditText("");
                                           }}
                                         >
-                                          ביטול
+                                          <X className="w-3 h-3" />
                                         </Button>
                                       </div>
                                     </div>
                                   ) : (
-                                    <>
-                                      <p className="text-sm">{annotation.note_text}</p>
-                                      <div className="flex gap-2 mt-2">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <p className="text-sm flex-1">{annotation.note_text}</p>
+                                      <div className="flex gap-1">
                                         <Button
-                                          size="sm"
                                           variant="ghost"
-                                          className="h-7 px-2 text-xs"
+                                          size="icon"
+                                          className="h-6 w-6"
                                           onClick={() => {
                                             setEditingAnnotation(annotation.id);
                                             setEditText(annotation.note_text);
                                           }}
                                         >
-                                          ערוך
+                                          <Edit3 className="w-3 h-3" />
                                         </Button>
                                         <Button
-                                          size="sm"
                                           variant="ghost"
-                                          className="h-7 px-2 text-xs text-destructive"
+                                          size="icon"
+                                          className="h-6 w-6 text-destructive"
                                           onClick={() => handleDeleteAnnotation(annotation.id)}
                                         >
-                                          מחק
+                                          <Trash2 className="w-3 h-3" />
                                         </Button>
                                       </div>
-                                    </>
+                                    </div>
                                   )}
                                 </Card>
                               ))}
@@ -1401,10 +777,68 @@ export const LuxuryPDFReader = ({
                   </div>
                 )}
 
+                {/* Reading Progress Panel */}
+                {sidePanel === "progress" && (
+                  <div className="space-y-4">
+                    <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                      <div className="text-center space-y-3">
+                        <div className="relative w-24 h-24 mx-auto">
+                          <svg className="w-24 h-24 -rotate-90">
+                            <circle
+                              cx="48"
+                              cy="48"
+                              r="40"
+                              strokeWidth="8"
+                              fill="none"
+                              className="stroke-muted"
+                            />
+                            <circle
+                              cx="48"
+                              cy="48"
+                              r="40"
+                              strokeWidth="8"
+                              fill="none"
+                              strokeDasharray={251.2}
+                              strokeDashoffset={251.2 - (251.2 * progressPercentage) / 100}
+                              className="stroke-primary transition-all duration-500"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-2xl font-bold text-primary">{progressPercentage}%</span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold">{readCount} עמודים נקראו</p>
+                          <p className="text-sm text-muted-foreground">מתוך {numPages} עמודים</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <div className="space-y-2">
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 justify-start"
+                        onClick={markAllUpToCurrentAsRead}
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        סמן הכל עד עמוד {currentPage} כנקרא
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 justify-start text-destructive hover:bg-destructive/10"
+                        onClick={clearReadProgress}
+                      >
+                        <X className="w-4 h-4" />
+                        אפס התקדמות קריאה
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Settings Panel */}
                 {sidePanel === "settings" && (
                   <div className="space-y-6">
-                    {/* Night Mode Toggle */}
                     <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
                       <label className="text-sm font-medium flex items-center gap-2">
                         {nightMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -1439,24 +873,6 @@ export const LuxuryPDFReader = ({
                       </div>
                     </div>
 
-                    {/* Quick Zoom Presets */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">זום מהיר</label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {[75, 100, 125, 150].map((z) => (
-                          <Button
-                            key={z}
-                            variant={zoom === z ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setZoom(z)}
-                            className="text-xs"
-                          >
-                            {z}%
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
                     <div className="space-y-3">
                       <label className="text-sm font-medium flex items-center gap-2">
                         <Highlighter className="w-4 h-4" />
@@ -1479,7 +895,6 @@ export const LuxuryPDFReader = ({
                       </div>
                     </div>
 
-                    {/* Tip Card */}
                     <Card className="p-4 bg-primary/5 border-primary/20">
                       <p className="text-sm font-medium flex items-center gap-2 mb-2">
                         <Highlighter className="w-4 h-4 text-primary" />
@@ -1487,6 +902,8 @@ export const LuxuryPDFReader = ({
                       </p>
                       <p className="text-xs text-muted-foreground">
                         סמנו טקסט על ה-PDF ותופיע אפשרות להדגשה ושמירה אוטומטית.
+                        <br />
+                        החזק Alt ובחר אזור להדגשת תמונות.
                       </p>
                     </Card>
                   </div>
@@ -1496,7 +913,7 @@ export const LuxuryPDFReader = ({
           </div>
         )}
 
-        {/* PDF Viewer */}
+        {/* PDF Viewer with react-pdf-highlighter-extended */}
         <div 
           ref={containerRef} 
           className={`flex-1 flex flex-col overflow-hidden transition-colors ${
@@ -1505,272 +922,49 @@ export const LuxuryPDFReader = ({
               : "bg-gradient-to-b from-muted/20 to-muted/40"
           }`}
         >
-          {/* PDF Content - with proper scrolling */}
-          <div 
-            ref={pdfContainerRef}
-            className="flex-1 overflow-y-auto overflow-x-auto"
-            style={{ 
-              minHeight: 0, // Important for flex scroll
-            }}
-          >
-            <div className="flex justify-center py-6 px-4 min-h-full">
-              {isLoading && (
-                <div className="flex flex-col items-center justify-center h-full gap-4">
-                  <Loader2 className="w-12 h-12 animate-spin text-primary" />
-                  <p className={nightMode ? "text-slate-300" : "text-muted-foreground"}>טוען את הספר...</p>
-                </div>
-              )}
-
-              {pdfError && (
-                <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
-                  <FileText className="w-16 h-16 text-muted-foreground" />
-                  <p className="text-destructive font-medium">{pdfError}</p>
-                  <Button asChild>
-                    <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-                      פתח בחלון חדש
-                    </a>
-                  </Button>
-                </div>
-              )}
-
-              {/* PDF with gold frame */}
-              <div className="relative ring-2 ring-primary/30 rounded-lg shadow-[0_0_15px_rgba(var(--primary-rgb),0.15)] overflow-hidden">
-                {/* Container that matches PDF page size exactly */}
-                <div 
-                  className="relative" 
-                  style={{ width: scaledWidth, height: pdfPageHeight }}
-                >
-                  <Document
-                    file={fileUrl}
-                    onLoadSuccess={onDocumentLoadSuccess}
-                    onLoadError={onDocumentLoadError}
-                    loading={null}
-                    className={`${nightMode ? "filter brightness-90 contrast-110" : ""}`}
-                  >
-                    <Page
-                      pageNumber={currentPage}
-                      width={scaledWidth}
-                      loading={
-                        <div className="flex items-center justify-center p-12">
-                          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                        </div>
-                      }
-                      className="bg-white pdf-page-with-highlights"
-                      renderTextLayer={true}
-                      renderAnnotationLayer={true}
-                      onRenderSuccess={(page) => {
-                        setPdfPageHeight(page.height * (scaledWidth / page.width));
-                        setPdfPageWidth(scaledWidth);
-                      }}
-                    />
-                  </Document>
-
-                  {/* Highlights Overlay - positioned exactly over the PDF page */}
-                  <div 
-                    className="absolute inset-0 pointer-events-none z-10"
-                    style={{ width: scaledWidth, height: pdfPageHeight }}
-                  >
-                    {getPageAnnotations(currentPage).map((annotation) => (
-                      annotation.highlight_rects && Array.isArray(annotation.highlight_rects) && annotation.highlight_rects.length > 0 ? (
-                        // Render highlight rectangles at exact positions
-                        annotation.highlight_rects.map((rect, rectIndex) => (
-                          <div
-                            key={`${annotation.id}-${rectIndex}`}
-                            className="absolute pointer-events-auto cursor-pointer transition-all hover:opacity-70 hover:ring-2 hover:ring-red-400"
-                            style={{
-                              left: `${rect.x}%`,
-                              top: `${rect.y}%`,
-                              width: `${rect.width}%`,
-                              height: `${rect.height}%`,
-                              backgroundColor: `${annotation.color}60`,
-                              borderRadius: '2px',
-                              mixBlendMode: 'multiply',
-                            }}
-                            title={`${annotation.highlight_text || annotation.note_text}\n\nלחיצה ימנית למחיקה`}
-                            onClick={() => {
-                              setSidePanel("annotations");
-                              setShowSidePanel(true);
-                            }}
-                            onContextMenu={(e) => handleHighlightContextMenu(e, annotation.id)}
-                          />
-                        ))
-                      ) : annotation.highlight_text ? (
-                        // Fallback: show highlight indicator badge for annotations without rects
-                        <div
-                          key={annotation.id}
-                          className="absolute top-2 right-2 pointer-events-auto cursor-pointer z-20"
-                          onClick={() => {
-                            setSidePanel("annotations");
-                            setShowSidePanel(true);
-                          }}
-                          onContextMenu={(e) => handleHighlightContextMenu(e, annotation.id)}
-                        >
-                          <div 
-                            className="px-2 py-1 rounded-lg text-xs font-medium shadow-md hover:scale-105 transition-transform flex items-center gap-1"
-                            style={{ 
-                              backgroundColor: annotation.color || '#FFEB3B',
-                              color: '#000'
-                            }}
-                            title={`"${annotation.highlight_text}" - ${annotation.note_text}\n\nלחיצה ימנית למחיקה`}
-                          >
-                            <Highlighter className="w-3 h-3" />
-                            {(annotation.highlight_text?.length || 0) > 20 
-                              ? annotation.highlight_text?.substring(0, 20) + '...' 
-                              : annotation.highlight_text}
-                          </div>
-                        </div>
-                      ) : null
-                    ))}
-                  </div>
-                </div>
-
-                {/* Form Overlay */}
-                {showFormMode && (
-                  <PDFFormOverlay
-                    pageNumber={currentPage}
-                    bookId={bookId}
-                    width={scaledWidth}
-                    height={pdfPageHeight}
-                    onClose={() => setShowFormMode(false)}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Navigation */}
-          <div className={`flex items-center justify-between p-3 border-t-2 border-primary/20 ${nightMode ? "bg-slate-800" : "bg-card"}`}>
-            <Button
-              variant="outline"
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage <= 1}
-              className="gap-2"
-            >
-              <ChevronRight className="w-4 h-4" />
-              <span className="hidden sm:inline">הקודם</span>
-            </Button>
-
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => goToPage(Math.max(1, currentPage - 10))}
-                disabled={currentPage <= 1}
-                className="hidden sm:flex"
-              >
-                -10
-              </Button>
-              
-              <Input
-                type="number"
-                value={currentPage}
-                onChange={(e) => goToPage(parseInt(e.target.value) || 1)}
-                className="w-16 text-center text-sm"
-                min={1}
-                max={numPages}
-                dir="ltr"
-              />
-              <span className={`text-sm hidden sm:inline ${nightMode ? "text-slate-400" : "text-muted-foreground"}`}>
-                / {numPages}
-              </span>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => goToPage(Math.min(numPages, currentPage + 10))}
-                disabled={currentPage >= numPages}
-                className="hidden sm:flex"
-              >
-                +10
-              </Button>
-            </div>
-
-            <Button
-              variant="outline"
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage >= numPages}
-              className="gap-2"
-            >
-              <span className="hidden sm:inline">הבא</span>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-          </div>
+          <PDFHighlighterComponent
+            fileUrl={fileUrl}
+            highlights={libraryHighlights}
+            onAddHighlight={handleAddLibraryHighlight}
+            onDeleteHighlight={handleDeleteLibraryHighlight}
+            onUpdateHighlight={handleUpdateLibraryHighlight}
+            nightMode={nightMode}
+            zoom={zoom}
+            className="flex-1"
+          />
         </div>
       </div>
 
-      {/* Fullscreen Dialog with Highlight Support */}
+      {/* Fullscreen Dialog */}
       <Dialog open={showFullscreen} onOpenChange={setShowFullscreen}>
         <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-2" dir="rtl">
           <DialogHeader className="pb-2">
             <DialogTitle className="flex items-center gap-2 text-sm">
               <FileText className="w-4 h-4" />
               {fileName}
-              <span className="text-muted-foreground text-xs">עמוד {currentPage} / {numPages}</span>
-              
-              {/* Highlight count badge in fullscreen */}
-              {getPageAnnotations(currentPage).length > 0 && (
+              {annotations.length > 0 && (
                 <Badge variant="secondary" className="gap-1 text-xs">
                   <Highlighter className="w-3 h-3" />
-                  {getPageAnnotations(currentPage).length}
+                  {annotations.length}
                 </Badge>
               )}
-              
               <Button variant="ghost" size="icon" className="mr-auto h-7 w-7" onClick={() => setShowFullscreen(false)}>
                 <X className="w-4 h-4" />
               </Button>
             </DialogTitle>
           </DialogHeader>
 
-          <div className={`flex-1 overflow-auto flex justify-center py-4 rounded-lg relative ${nightMode ? "bg-slate-900" : "bg-muted/30"}`}>
-            {/* PDF with highlights overlay in fullscreen - using state for page dimensions */}
-            <FullscreenPDFWithHighlights
+          <div className={`flex-1 overflow-hidden rounded-lg ${nightMode ? "bg-slate-900" : "bg-muted/30"}`}>
+            <PDFHighlighterComponent
               fileUrl={fileUrl}
-              currentPage={currentPage}
+              highlights={libraryHighlights}
+              onAddHighlight={handleAddLibraryHighlight}
+              onDeleteHighlight={handleDeleteLibraryHighlight}
+              onUpdateHighlight={handleUpdateLibraryHighlight}
               nightMode={nightMode}
-              annotations={getPageAnnotations(currentPage)}
-              onHighlightContextMenu={handleHighlightContextMenu}
+              zoom={100}
+              className="h-full"
             />
-          </div>
-          
-          {/* Fullscreen Navigation with highlight info */}
-          <div className="flex items-center justify-between gap-4 pt-2 px-4">
-            <Button
-              variant="outline"
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage <= 1}
-            >
-              <ChevronRight className="w-4 h-4" />
-              הקודם
-            </Button>
-            
-            <div className="flex items-center gap-4">
-              <span className="text-sm">{currentPage} / {numPages}</span>
-              
-              {/* Quick color picker for fullscreen */}
-              {selectedText && (
-                <div className="flex items-center gap-2 bg-card border rounded-lg px-2 py-1">
-                  <span className="text-xs text-muted-foreground">הדגש:</span>
-                  {HIGHLIGHT_COLORS.slice(0, 4).map((color) => (
-                    <button
-                      key={color.value}
-                      onClick={() => handleSaveHighlight(color.value)}
-                      className="w-6 h-6 rounded-full hover:scale-110 transition-transform shadow"
-                      style={{ backgroundColor: color.value }}
-                      title={color.label}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            <Button
-              variant="outline"
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage >= numPages}
-            >
-              הבא
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
