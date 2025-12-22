@@ -25,13 +25,13 @@ export const Statistics = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card className="p-6 glass-card bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-[var(--shadow-glow)] transition-[var(--transition-smooth)] animate-fade-in border-primary/20">
+      <Card className="p-6 royal-card bg-gradient-to-br from-primary/5 to-primary/10 animate-fade-in">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-primary/20 rounded-xl shadow-lg">
             <Target className="w-6 h-6 text-primary" />
           </div>
           <div className="flex-1">
-            <div className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            <div className="text-3xl font-bold text-primary">
               {completionRate}%
             </div>
             <div className="text-sm text-muted-foreground font-medium">אחוז השלמה היום</div>
@@ -39,13 +39,13 @@ export const Statistics = () => {
         </div>
       </Card>
 
-      <Card className="p-6 glass-card bg-gradient-to-br from-success/5 to-success/10 hover:shadow-[var(--shadow-success)] transition-[var(--transition-smooth)] animate-fade-in border-success/20" style={{ animationDelay: "0.1s" }}>
+      <Card className="p-6 royal-card bg-gradient-to-br from-success/5 to-success/10 animate-fade-in" style={{ animationDelay: "0.1s" }}>
         <div className="flex items-center gap-4">
           <div className="p-3 bg-success/20 rounded-xl shadow-lg">
             <Trophy className="w-6 h-6 text-success" />
           </div>
           <div className="flex-1">
-            <div className="text-3xl font-bold bg-gradient-to-r from-success to-success/70 bg-clip-text text-transparent">
+            <div className="text-3xl font-bold text-success">
               {longestStreak}
             </div>
             <div className="text-sm text-muted-foreground font-medium">הרצף הארוך ביותר</div>
@@ -53,13 +53,13 @@ export const Statistics = () => {
         </div>
       </Card>
 
-      <Card className="p-6 glass-card bg-gradient-to-br from-info/5 to-info/10 hover:shadow-[var(--shadow-glow)] transition-[var(--transition-smooth)] animate-fade-in border-info/20" style={{ animationDelay: "0.2s" }}>
+      <Card className="p-6 royal-card bg-gradient-to-br from-info/5 to-info/10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
         <div className="flex items-center gap-4">
           <div className="p-3 bg-info/20 rounded-xl shadow-lg">
             <TrendingUp className="w-6 h-6 text-info" />
           </div>
           <div className="flex-1">
-            <div className="text-3xl font-bold bg-gradient-to-r from-info to-info/70 bg-clip-text text-transparent">
+            <div className="text-3xl font-bold text-info">
               {weeklyAverage}
             </div>
             <div className="text-sm text-muted-foreground font-medium">ממוצע יומי (7 ימים)</div>
@@ -67,13 +67,13 @@ export const Statistics = () => {
         </div>
       </Card>
 
-      <Card className="p-6 glass-card bg-gradient-to-br from-warning/5 to-warning/10 hover:shadow-[var(--shadow-glow)] transition-[var(--transition-smooth)] animate-fade-in border-warning/20" style={{ animationDelay: "0.3s" }}>
+      <Card className="p-6 royal-card bg-gradient-to-br from-warning/5 to-warning/10 animate-fade-in" style={{ animationDelay: "0.3s" }}>
         <div className="flex items-center gap-4">
           <div className="p-3 bg-warning/20 rounded-xl shadow-lg">
             <Award className="w-6 h-6 text-warning" />
           </div>
           <div className="flex-1">
-            <div className="text-3xl font-bold bg-gradient-to-r from-warning to-warning/70 bg-clip-text text-transparent">
+            <div className="text-3xl font-bold text-warning">
               {profile?.level || 1}
             </div>
             <div className="text-sm text-muted-foreground font-medium">רמה נוכחית</div>

@@ -26,8 +26,8 @@ export const CompletionTrendChart = () => {
   const maxCount = Math.max(...data.map((d) => d.count), 1);
 
   return (
-    <Card className="p-6 glass-card animate-fade-in hover:shadow-[var(--shadow-glow)] transition-[var(--transition-smooth)]">
-      <h3 className="text-lg font-semibold mb-4">מגמת השלמות (14 ימים)</h3>
+    <Card className="p-6 royal-card animate-fade-in">
+      <h3 className="text-lg font-semibold mb-4 text-accent gold-underline">מגמת השלמות (14 ימים)</h3>
       <div className="h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
@@ -46,7 +46,7 @@ export const CompletionTrendChart = () => {
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+                    <div className="bg-card border-2 border-accent/50 rounded-lg p-3 shadow-lg">
                       <p className="font-semibold text-card-foreground">{payload[0].payload.date}</p>
                       <p className="text-sm text-muted-foreground">
                         השלמות: {payload[0].value}
