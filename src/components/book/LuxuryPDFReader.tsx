@@ -255,8 +255,10 @@ export const LuxuryPDFReader = ({
   }, []);
 
   // Save highlight from selected text with position data
-  const handleSaveHighlight = () => {
+  const handleSaveHighlight = (colorOverride?: string) => {
     if (!selectedText) return;
+    
+    const colorToUse = colorOverride || selectedColor;
     
     addAnnotation.mutate(
       {
@@ -264,7 +266,7 @@ export const LuxuryPDFReader = ({
         pageNumber: currentPage,
         noteText: `הדגשה: ${selectedText}`,
         highlightText: selectedText,
-        color: selectedColor,
+        color: colorToUse,
         highlightRects: selectedRects.length > 0 ? selectedRects : undefined,
       },
       {
@@ -276,6 +278,16 @@ export const LuxuryPDFReader = ({
         },
       }
     );
+  };
+  
+  // Handle right-click delete on highlight
+  const handleHighlightContextMenu = (e: React.MouseEvent, annotationId: string) => {
+    e.preventDefault();
+    if (window.confirm("למחוק את ההדגשה?")) {
+      deleteAnnotation.mutate({ annotationId }, { 
+        onSuccess: () => toast.success("ההדגשה נמחקה") 
+      });
+    }
   };
 
   // PDF handlers
@@ -502,30 +514,26 @@ export const LuxuryPDFReader = ({
       }`} 
       dir="rtl"
     >
-      {/* Floating Highlight Bar */}
+      {/* Floating Highlight Bar - click color to save immediately */}
       {selectedText && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-card border-2 border-primary shadow-2xl rounded-2xl p-3 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-          <span className="text-sm font-medium text-muted-foreground">הדגש טקסט:</span>
+          <span className="text-sm font-medium text-muted-foreground">לחץ על צבע לשמירה:</span>
           <div className="flex gap-1.5">
             {HIGHLIGHT_COLORS.map((color) => (
               <button
                 key={color.value}
-                onClick={() => setSelectedColor(color.value)}
-                className={`w-7 h-7 rounded-full border-2 transition-all ${
-                  selectedColor === color.value
-                    ? "border-foreground scale-110 ring-2 ring-offset-1 ring-primary"
-                    : "border-transparent hover:scale-105"
-                }`}
+                onClick={() => handleSaveHighlight(color.value)}
+                className="w-8 h-8 rounded-full border-2 border-transparent hover:scale-110 hover:border-foreground transition-all shadow-md hover:shadow-lg"
                 style={{ backgroundColor: color.value }}
-                title={color.label}
+                title={`הדגש ב${color.label}`}
               />
             ))}
           </div>
-          <Button size="sm" onClick={handleSaveHighlight} className="gap-1">
-            <Check className="w-4 h-4" />
-            שמור
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setSelectedText("")}>
+          <Button size="sm" variant="ghost" onClick={() => {
+            setSelectedText("");
+            setSelectedRects([]);
+            window.getSelection()?.removeAllRanges();
+          }}>
             <X className="w-4 h-4" />
           </Button>
         </div>
@@ -1475,21 +1483,22 @@ export const LuxuryPDFReader = ({
                     annotation.highlight_rects.map((rect, rectIndex) => (
                       <div
                         key={`${annotation.id}-${rectIndex}`}
-                        className="absolute pointer-events-auto cursor-pointer transition-opacity hover:opacity-80"
+                        className="absolute pointer-events-auto cursor-pointer transition-all hover:opacity-70 hover:ring-2 hover:ring-red-400"
                         style={{
                           left: `${rect.x}%`,
                           top: `${rect.y}%`,
                           width: `${rect.width}%`,
                           height: `${rect.height}%`,
-                          backgroundColor: `${annotation.color}50`,
+                          backgroundColor: `${annotation.color}60`,
                           borderRadius: '2px',
                           mixBlendMode: 'multiply',
                         }}
-                        title={annotation.highlight_text || annotation.note_text}
+                        title={`${annotation.highlight_text || annotation.note_text}\n\nלחיצה ימנית למחיקה`}
                         onClick={() => {
                           setSidePanel("annotations");
                           setShowSidePanel(true);
                         }}
+                        onContextMenu={(e) => handleHighlightContextMenu(e, annotation.id)}
                       />
                     ))
                   ) : annotation.highlight_text ? (
@@ -1501,6 +1510,7 @@ export const LuxuryPDFReader = ({
                         setSidePanel("annotations");
                         setShowSidePanel(true);
                       }}
+                      onContextMenu={(e) => handleHighlightContextMenu(e, annotation.id)}
                     >
                       <div 
                         className="px-2 py-1 rounded-lg text-xs font-medium shadow-md hover:scale-105 transition-transform flex items-center gap-1"
@@ -1508,7 +1518,7 @@ export const LuxuryPDFReader = ({
                           backgroundColor: annotation.color || '#FFEB3B',
                           color: '#000'
                         }}
-                        title={`"${annotation.highlight_text}" - ${annotation.note_text}`}
+                        title={`"${annotation.highlight_text}" - ${annotation.note_text}\n\nלחיצה ימנית למחיקה`}
                       >
                         <Highlighter className="w-3 h-3" />
                         {(annotation.highlight_text?.length || 0) > 20 
