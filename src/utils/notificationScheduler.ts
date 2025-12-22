@@ -1,53 +1,17 @@
 import { getRandomQuote } from "@/data/motivationalQuotes";
 
-// Check if we're in production using Vite's env flag
-const isProduction = () => {
-  // Use Vite's built-in production detection - reliable and accurate
-  return import.meta.env.PROD;
-};
-
-// Clear all Service Worker caches
-const clearAllCaches = async () => {
-  if ('caches' in window) {
-    const cacheNames = await caches.keys();
-    await Promise.all(
-      cacheNames.map(cacheName => caches.delete(cacheName))
-    );
-    console.log('[SW] All caches cleared');
-  }
-};
-
-// Unregister all Service Workers
-const unregisterAllServiceWorkers = async () => {
-  if ('serviceWorker' in navigator) {
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    for (const registration of registrations) {
-      await registration.unregister();
-      console.log('[SW] Service Worker unregistered');
-    }
-  }
-};
-
 // Notification scheduler that runs in the app
 export const initNotificationScheduler = () => {
-  // Only register SW in production, unregister in dev/preview
+  // Register service worker
   if ('serviceWorker' in navigator) {
-    if (isProduction()) {
-      // Production: register SW normally
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((registration) => {
-          console.log('[SW] Service Worker registered:', registration);
-        })
-        .catch((error) => {
-          console.error('[SW] Service Worker registration failed:', error);
-        });
-    } else {
-      // Development/Preview: unregister SW and clear caches
-      console.log('[SW] Development mode detected - clearing caches and unregistering SW');
-      unregisterAllServiceWorkers();
-      clearAllCaches();
-    }
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        console.log('Service Worker registered:', registration);
+      })
+      .catch((error) => {
+        console.error('Service Worker registration failed:', error);
+      });
   }
 
   // Check reminders every minute
@@ -57,21 +21,6 @@ export const initNotificationScheduler = () => {
 
   // Check immediately on load
   setTimeout(checkAndShowReminders, 1000);
-};
-
-// Manual cache clear function - can be called from settings
-export const clearCacheAndRefresh = async () => {
-  await clearAllCaches();
-  await unregisterAllServiceWorkers();
-  
-  // Clear display preferences from localStorage
-  localStorage.removeItem('book-reader-frame-size');
-  localStorage.removeItem('book-reader-frame-style');
-  localStorage.removeItem('book-reader-font');
-  localStorage.removeItem('book-reader-zoom');
-  
-  // Reload the page
-  window.location.reload();
 };
 
 const checkAndShowReminders = async () => {

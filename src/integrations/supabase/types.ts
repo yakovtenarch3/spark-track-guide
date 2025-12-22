@@ -457,11 +457,8 @@ export type Database = {
         Row: {
           book_id: string
           color: string | null
-          comment: string | null
           created_at: string
-          highlight_rects: Json | null
           highlight_text: string | null
-          highlight_type: string | null
           id: string
           note_text: string
           page_number: number
@@ -472,11 +469,8 @@ export type Database = {
         Insert: {
           book_id: string
           color?: string | null
-          comment?: string | null
           created_at?: string
-          highlight_rects?: Json | null
           highlight_text?: string | null
-          highlight_type?: string | null
           id?: string
           note_text: string
           page_number: number
@@ -487,11 +481,8 @@ export type Database = {
         Update: {
           book_id?: string
           color?: string | null
-          comment?: string | null
           created_at?: string
-          highlight_rects?: Json | null
           highlight_text?: string | null
-          highlight_type?: string | null
           id?: string
           note_text?: string
           page_number?: number

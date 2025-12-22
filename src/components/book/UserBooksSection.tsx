@@ -12,9 +12,8 @@ import {
   Plus
 } from "lucide-react";
 import { PDFUploader } from "./PDFUploader";
-import { PDFHighlightViewer, type PDFHighlight } from "./PDFHighlightViewer";
+import { LuxuryPDFReader } from "./LuxuryPDFReader";
 import { useUserBooks, type UserBook } from "@/hooks/useUserBooks";
-import { usePDFHighlights } from "@/hooks/usePDFHighlights";
 import { toast } from "sonner";
 
 export const UserBooksSection = () => {
@@ -24,7 +23,6 @@ export const UserBooksSection = () => {
   const [selectedBook, setSelectedBook] = useState<UserBook | null>(null);
 
   const { books, isLoading, addBook, updatePage, deleteBook } = useUserBooks();
-  const { highlights, addHighlight, updateHighlight, deleteHighlight } = usePDFHighlights(selectedBook?.id || null);
 
   const handleUploadComplete = (fileUrl: string, fileName: string) => {
     setPendingFile({ url: fileUrl, name: fileName });
@@ -52,6 +50,7 @@ export const UserBooksSection = () => {
 
   const handleDeleteBook = (book: UserBook) => {
     if (confirm("האם למחוק את הספר?")) {
+      // Extract file path from URL
       const urlParts = book.file_url.split('/');
       const filePath = urlParts.slice(-2).join('/');
       
@@ -78,18 +77,18 @@ export const UserBooksSection = () => {
 
   if (selectedBook) {
     return (
-      <PDFHighlightViewer
+      <LuxuryPDFReader
         bookId={selectedBook.id}
         fileUrl={selectedBook.file_url}
         fileName={selectedBook.title}
         currentPage={selectedBook.current_page || 1}
+        totalPages={selectedBook.total_pages || 100}
         onPageChange={handlePageChange}
+        onTotalPagesChange={(total) => {
+          // Could update total pages in DB here if needed
+        }}
         onDelete={() => handleDeleteBook(selectedBook)}
         onBack={() => setSelectedBook(null)}
-        highlights={highlights}
-        onAddHighlight={(h) => addHighlight.mutate(h)}
-        onUpdateHighlight={(id, updates) => updateHighlight.mutate({ id, updates })}
-        onDeleteHighlight={(id) => deleteHighlight.mutate(id)}
       />
     );
   }
@@ -165,18 +164,18 @@ export const UserBooksSection = () => {
                 className="p-4 royal-card hover:bg-muted/50 transition-colors cursor-pointer"
                 onClick={() => setSelectedBook(book)}
               >
-                <div className="flex items-center justify-between flex-row-reverse">
-                  <div className="flex items-center gap-3 flex-row-reverse text-right">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
                     <div className="p-2 bg-primary/10 rounded-lg">
                       <BookOpen className="w-5 h-5 text-primary" />
                     </div>
-                    <div className="text-right">
+                    <div>
                       <h4 className="font-medium">{book.title}</h4>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Badge variant="outline" className="text-xs">
                           עמוד {book.current_page}
                         </Badge>
-                        <span className="flex items-center gap-1 flex-row-reverse">
+                        <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {new Date(book.last_read_at).toLocaleDateString('he-IL')}
                         </span>
