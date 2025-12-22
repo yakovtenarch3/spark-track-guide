@@ -339,18 +339,29 @@ export const BookReader = () => {
 
   return (
     <div className="space-y-6" dir="rtl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      {/* Debug Status Bar - shows current display values */}
+      {process.env.NODE_ENV !== 'production' && (
+        <div className="bg-muted/50 border border-border rounded-lg p-2 text-xs text-muted-foreground flex flex-wrap gap-4 justify-end">
+          <span>מסגרת: <strong className="text-foreground">{frameSizeLabels[frameSize]}</strong></span>
+          <span>סגנון: <strong className="text-foreground">{currentFrameStyle.label}</strong></span>
+          <span>גופן: <strong className="text-foreground">{currentFont.label}</strong></span>
+          <span>זום: <strong className="text-foreground">{zoom}%</strong></span>
+          <span>maxWidth: <strong className="text-foreground">{getFrameStyles().maxWidth}</strong></span>
+        </div>
+      )}
+
+      {/* Header - RTL aligned */}
+      <div className="flex items-center justify-between flex-row-reverse">
+        <div className="flex items-center gap-3 flex-row-reverse">
           <div className="p-3 bg-primary/10 rounded-xl">
             <BookOpen className="w-6 h-6 text-primary" />
           </div>
-          <div>
+          <div className="text-right">
             <h1 className="text-2xl font-bold text-foreground">אומר ועושה</h1>
             <p className="text-sm text-muted-foreground">ספר לטיפול עצמי בנטייה לדחות דברים</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-row-reverse">
           {/* Display Options Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -358,8 +369,8 @@ export const BookReader = () => {
                 <LayoutGrid className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-popover border border-border z-50">
-              <DropdownMenuLabel>גודל מסגרת</DropdownMenuLabel>
+            <DropdownMenuContent align="start" className="w-56 bg-popover border border-border z-50 text-right">
+              <DropdownMenuLabel className="text-right">גודל מסגרת</DropdownMenuLabel>
               {([
                 { value: 'compact' as FrameSize, label: 'קומפקטי', icon: Minimize2 },
                 { value: 'normal' as FrameSize, label: 'רגיל', icon: Square },
@@ -369,59 +380,59 @@ export const BookReader = () => {
                 <DropdownMenuItem
                   key={value}
                   onSelect={() => handleSetFrameSize(value)}
-                  className="gap-2 cursor-pointer"
+                  className="gap-2 cursor-pointer flex-row-reverse justify-end"
                 >
+                  {frameSize === value && <Check className="w-4 h-4 text-primary" />}
+                  <span>{label}</span>
                   <Icon className="w-4 h-4" />
-                  {label}
-                  {frameSize === value && <Check className="w-4 h-4 mr-auto text-primary" />}
                 </DropdownMenuItem>
               ))}
 
               <DropdownMenuSeparator />
-              <DropdownMenuLabel className="flex items-center gap-2">
+              <DropdownMenuLabel className="flex items-center gap-2 flex-row-reverse justify-end">
+                <span>סגנון מסגרת</span>
                 <Palette className="w-4 h-4" />
-                סגנון מסגרת
               </DropdownMenuLabel>
               {FRAME_STYLES.map(({ value, label, borderColor }) => (
                 <DropdownMenuItem
                   key={value}
                   onSelect={() => handleSetFrameStyle(value)}
-                  className="gap-2 cursor-pointer"
+                  className="gap-2 cursor-pointer flex-row-reverse justify-end"
                 >
+                  {frameStyle === value && <Check className="w-4 h-4 text-primary" />}
+                  <span>{label}</span>
                   <div className="w-4 h-4 rounded border-2" style={{ borderColor }} />
-                  {label}
-                  {frameStyle === value && <Check className="w-4 h-4 mr-auto text-primary" />}
                 </DropdownMenuItem>
               ))}
 
               <DropdownMenuSeparator />
-              <DropdownMenuLabel className="flex items-center gap-2">
+              <DropdownMenuLabel className="flex items-center gap-2 flex-row-reverse justify-end">
+                <span>גופן</span>
                 <Type className="w-4 h-4" />
-                גופן
               </DropdownMenuLabel>
               {FONT_OPTIONS.map(({ value, label }) => (
                 <DropdownMenuItem
                   key={value}
                   onSelect={() => handleSetFontFamily(value)}
-                  className="gap-2 cursor-pointer"
+                  className="gap-2 cursor-pointer flex-row-reverse justify-end"
                   style={{ fontFamily: value }}
                 >
-                  {label}
-                  {fontFamily === value && <Check className="w-4 h-4 mr-auto text-primary" />}
+                  {fontFamily === value && <Check className="w-4 h-4 text-primary" />}
+                  <span>{label}</span>
                 </DropdownMenuItem>
               ))}
 
               <DropdownMenuSeparator />
-              <DropdownMenuLabel>זום</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-right">זום</DropdownMenuLabel>
               {[75, 100, 125, 150].map((z) => (
                 <DropdownMenuItem
                   key={z}
                   onSelect={() => handleSetZoom(z)}
-                  className="gap-2 cursor-pointer"
+                  className="gap-2 cursor-pointer flex-row-reverse justify-end"
                 >
+                  {zoom === z && <Check className="w-4 h-4 text-primary" />}
+                  <span>{z}%</span>
                   <ZoomIn className="w-4 h-4" />
-                  {z}%
-                  {zoom === z && <Check className="w-4 h-4 mr-auto text-primary" />}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
