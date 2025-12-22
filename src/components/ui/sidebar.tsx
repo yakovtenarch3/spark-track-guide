@@ -261,9 +261,17 @@ const Sidebar = React.forwardRef<
       >
         <div
           data-sidebar="sidebar"
-          className="flex h-full w-full flex-col bg-sidebar rounded-2xl m-2 shadow-lg border border-sidebar-border group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-lg"
+          className="flex h-full w-full flex-col rounded-2xl m-2 shadow-lg border-[3px] overflow-hidden p-1"
+          style={{
+            borderColor: 'hsl(var(--sidebar-border, 43 70% 55%))',
+            backgroundColor: 'hsl(var(--sidebar-border, 43 70% 55%))'
+          }}
         >
-          {children}
+          <div 
+            className="flex-1 rounded-xl overflow-hidden bg-sidebar"
+          >
+            {children}
+          </div>
         </div>
         
         {/* Resize Handle */}
