@@ -46,7 +46,7 @@ export const themes: Record<ThemeName, Theme> = {
     colors: {
       background: "40 30% 97%",
       foreground: "210 20% 12%",
-      card: "40 40% 99%",
+      card: "0 0% 100%",
       cardForeground: "210 20% 12%",
       primary: "210 30% 15%",
       primaryForeground: "40 40% 99%",

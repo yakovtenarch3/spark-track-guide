@@ -172,22 +172,16 @@ All colors MUST be HSL.
     @apply shadow-xl border-border/80;
   }
   
-  /* Royal/Elegant card style with white background and gold border */
+  /* Royal/Elegant card style (themeable) */
   .royal-card {
-    @apply rounded-xl shadow-md;
-    background: white;
-    border: 2px solid #D4A84B;
+    @apply rounded-xl shadow-md bg-card;
+    border: 2px solid hsl(var(--card-border, var(--border)));
     position: relative;
-  }
-  
-  .dark .royal-card {
-    background: hsl(var(--card));
-    border-color: #D4A84B;
   }
   
   .royal-card:hover {
     @apply shadow-lg;
-    border-color: #C49A3C;
+    border-color: hsl(var(--ring));
   }
   
   /* Chart colors - navy blue */
