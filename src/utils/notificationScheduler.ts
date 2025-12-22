@@ -23,7 +23,7 @@ export const initNotificationScheduler = () => {
   setTimeout(checkAndShowReminders, 1000);
 };
 
-const checkAndShowReminders = () => {
+const checkAndShowReminders = async () => {
   const now = new Date();
   const currentHours = now.getHours();
   const currentMinutes = now.getMinutes();
@@ -34,8 +34,10 @@ const checkAndShowReminders = () => {
   const goalReminders = JSON.parse(localStorage.getItem('goalReminders') || '[]');
   // Check wake-up reminder
   const wakeUpReminder = JSON.parse(localStorage.getItem('wakeUpReminder') || 'null');
+  // Check coach reminders
+  const coachReminders = JSON.parse(localStorage.getItem('coachReminders') || '[]');
   
-  const allReminders = [...habitReminders, ...goalReminders];
+  const allReminders = [...habitReminders, ...goalReminders, ...coachReminders];
   
   // Add wake-up reminder if exists
   if (wakeUpReminder) {
@@ -46,8 +48,18 @@ const checkAndShowReminders = () => {
     if (reminder.hours === currentHours && reminder.minutes === currentMinutes) {
       // Get motivational quote
       const quote = getRandomQuote();
-      const motivationalBody = `${reminder.body}\n\n💪 ${quote.text}\n- ${quote.author}`;
-      const icon = reminder.type === 'wakeup' ? '🌅' : reminder.type === 'goal' ? '🎯' : '⏰';
+      let motivationalBody = `${reminder.body}\n\n💪 ${quote.text}\n- ${quote.author}`;
+      let icon = '⏰';
+      
+      if (reminder.type === 'wakeup') {
+        icon = '🌅';
+      } else if (reminder.type === 'goal') {
+        icon = '🎯';
+      } else if (reminder.type === 'coach') {
+        icon = '✨';
+        // For coach reminders, get today's tip dynamically
+        motivationalBody = reminder.body;
+      }
       
       // Show notification
       if (Notification.permission === 'granted') {

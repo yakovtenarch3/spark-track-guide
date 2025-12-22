@@ -46,14 +46,14 @@ export const useNotifications = () => {
     body: string,
     time: string,
     habitId: string,
-    type: "habit" | "goal" = "habit"
+    type: "habit" | "goal" | "coach" = "habit"
   ) => {
     if (permission !== "granted") {
       const granted = await requestPermission();
       if (!granted) return;
     }
 
-    const storageKey = type === "habit" ? "habitReminders" : "goalReminders";
+    const storageKey = type === "habit" ? "habitReminders" : type === "goal" ? "goalReminders" : "coachReminders";
     const reminders = JSON.parse(localStorage.getItem(storageKey) || "[]");
     const [hours, minutes] = time.split(":");
     
@@ -87,8 +87,8 @@ export const useNotifications = () => {
     }
   };
 
-  const cancelNotification = (habitId: string, type: "habit" | "goal" = "habit") => {
-    const storageKey = type === "habit" ? "habitReminders" : "goalReminders";
+  const cancelNotification = (habitId: string, type: "habit" | "goal" | "coach" = "habit") => {
+    const storageKey = type === "habit" ? "habitReminders" : type === "goal" ? "goalReminders" : "coachReminders";
     const reminders = JSON.parse(localStorage.getItem(storageKey) || "[]");
     const filtered = reminders.filter((r: any) => r.habitId !== habitId);
     localStorage.setItem(storageKey, JSON.stringify(filtered));
