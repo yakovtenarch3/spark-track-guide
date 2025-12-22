@@ -15,6 +15,7 @@ import Achievements from "./pages/Achievements";
 import Archive from "./pages/Archive";
 import Settings from "./pages/Settings";
 import Install from "./pages/Install";
+import BookReaderPage from "./pages/BookReader";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
                 <Route path="/archive" element={<Archive />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/install" element={<Install />} />
+                <Route path="/book" element={<BookReaderPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>

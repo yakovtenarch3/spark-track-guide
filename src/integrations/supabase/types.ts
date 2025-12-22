@@ -134,6 +134,93 @@ export type Database = {
         }
         Relationships: []
       }
+      book_bookmarks: {
+        Row: {
+          book_id: string
+          created_at: string
+          id: string
+          tip_id: number
+          title: string | null
+        }
+        Insert: {
+          book_id?: string
+          created_at?: string
+          id?: string
+          tip_id: number
+          title?: string | null
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          id?: string
+          tip_id?: number
+          title?: string | null
+        }
+        Relationships: []
+      }
+      book_notes: {
+        Row: {
+          book_id: string
+          chapter: number | null
+          created_at: string
+          id: string
+          is_favorite: boolean | null
+          note_text: string
+          note_type: string | null
+          tip_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          book_id?: string
+          chapter?: number | null
+          created_at?: string
+          id?: string
+          is_favorite?: boolean | null
+          note_text: string
+          note_type?: string | null
+          tip_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          book_id?: string
+          chapter?: number | null
+          created_at?: string
+          id?: string
+          is_favorite?: boolean | null
+          note_text?: string
+          note_type?: string | null
+          tip_id?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      book_progress: {
+        Row: {
+          book_id: string
+          created_at: string
+          current_chapter: number | null
+          current_tip: number | null
+          id: string
+          last_read_at: string | null
+        }
+        Insert: {
+          book_id?: string
+          created_at?: string
+          current_chapter?: number | null
+          current_tip?: number | null
+          id?: string
+          last_read_at?: string | null
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          current_chapter?: number | null
+          current_tip?: number | null
+          id?: string
+          last_read_at?: string | null
+        }
+        Relationships: []
+      }
       custom_quotes: {
         Row: {
           author: string
