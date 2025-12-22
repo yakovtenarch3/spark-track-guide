@@ -1,7 +1,11 @@
-import { Home, Target, Trophy, Archive, Settings, Sun, ListChecks, MessageCircle } from "lucide-react";
+import { useState } from "react";
+import { Home, Target, Trophy, Archive, Settings, Sun, ListChecks, MessageCircle, Pin, PinOff } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { useSidebarPin } from "@/hooks/useSidebarPin";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
 const items = [{
   title: "בית",
   url: "/",
@@ -35,31 +39,63 @@ const items = [{
   url: "/settings",
   icon: Settings
 }];
+
 export function AppSidebar() {
-  const { state } = useSidebar();
-  const { pinned } = useSidebarPin();
+  const { state, isMobile } = useSidebar();
+  const { pinned, togglePinned } = useSidebarPin();
   const location = useLocation();
   const currentPath = location.pathname;
   const isActive = (path: string) => currentPath === path;
   const isCollapsed = state === "collapsed";
-  return <Sidebar side="right" collapsible={pinned ? "icon" : "offcanvas"}>
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <Sidebar 
+      side="right" 
+      collapsible={pinned ? "icon" : "offcanvas"}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <SidebarContent>
-        <SidebarGroup>
+        {/* Pin button - only visible on hover and not mobile */}
+        {!isMobile && (
+          <div className={`absolute top-2 left-2 z-10 transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label={pinned ? "ביטול הצמדה" : "הצמד סיידבר"}
+                  onClick={togglePinned}
+                >
+                  {pinned ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">{pinned ? "ביטול הצמדה (אוטוהייד)" : "הצמד סיידבר"}</TooltipContent>
+            </Tooltip>
+          </div>
+        )}
+
+        <SidebarGroup className="mt-10">
           <SidebarGroupLabel>תפריט ראשי</SidebarGroupLabel>
 
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map(item => <SidebarMenuItem key={item.title}>
+              {items.map(item => (
+                <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)} className="text-sidebar-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground">
                     <NavLink to={item.url} end>
                       <item.icon className="ml-2 h-4 w-4" />
                       {!isCollapsed && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
-                </SidebarMenuItem>)}
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-    </Sidebar>;
+    </Sidebar>
+  );
 }
