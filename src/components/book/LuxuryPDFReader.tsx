@@ -1443,30 +1443,70 @@ export const LuxuryPDFReader = ({
                   />
                 </Document>
 
-                {/* Highlights Overlay - visual indicators for saved highlights */}
+                {/* Highlights Overlay - visual annotations displayed on the page */}
                 {getPageAnnotations(currentPage).filter(a => a.highlight_text).length > 0 && (
-                  <div className="absolute top-2 right-2 z-10">
-                    <div className="flex flex-wrap gap-1 max-w-[200px]">
+                  <div className="absolute inset-0 pointer-events-none z-10 p-4">
+                    <div className="space-y-2">
                       {getPageAnnotations(currentPage)
                         .filter(a => a.highlight_text)
-                        .map((annotation) => (
+                        .map((annotation, index) => (
                           <div
                             key={annotation.id}
-                            className="px-2 py-1 rounded text-xs font-medium cursor-pointer hover:scale-105 transition-transform shadow-sm"
+                            className="pointer-events-auto cursor-pointer group animate-in fade-in duration-300"
                             style={{ 
-                              backgroundColor: annotation.color || '#FFEB3B',
-                              color: '#000'
+                              animationDelay: `${index * 50}ms`,
+                              marginTop: index === 0 ? '0' : '8px'
                             }}
-                            title={`"${annotation.highlight_text}" - ${annotation.note_text}`}
                             onClick={() => {
                               setSidePanel("annotations");
                               setShowSidePanel(true);
                             }}
                           >
-                            <Highlighter className="w-3 h-3 inline mr-1" />
-                            {(annotation.highlight_text?.length || 0) > 15 
-                              ? annotation.highlight_text?.substring(0, 15) + '...' 
-                              : annotation.highlight_text}
+                            {/* Highlight card on page */}
+                            <div 
+                              className="relative rounded-lg shadow-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-xl border-r-4"
+                              style={{ 
+                                backgroundColor: `${annotation.color}20`,
+                                borderRightColor: annotation.color || '#FFEB3B',
+                                backdropFilter: 'blur(4px)'
+                              }}
+                            >
+                              <div className="p-3">
+                                {/* Highlighted text */}
+                                <p 
+                                  className="text-sm font-medium mb-1 leading-relaxed"
+                                  style={{ color: '#000' }}
+                                >
+                                  <Highlighter 
+                                    className="w-4 h-4 inline-block ml-1.5 -mt-0.5" 
+                                    style={{ color: annotation.color }}
+                                  />
+                                  <span 
+                                    className="px-1 rounded"
+                                    style={{ backgroundColor: `${annotation.color}40` }}
+                                  >
+                                    "{annotation.highlight_text}"
+                                  </span>
+                                </p>
+                                
+                                {/* Note text if different from highlight */}
+                                {annotation.note_text && !annotation.note_text.startsWith('הדגשה:') && (
+                                  <p className="text-xs text-gray-600 mt-2 pr-5 border-t pt-2" style={{ borderColor: `${annotation.color}40` }}>
+                                    💬 {annotation.note_text}
+                                  </p>
+                                )}
+                                
+                                {/* Date indicator */}
+                                <p className="text-[10px] text-gray-400 mt-1 pr-5">
+                                  {new Date(annotation.created_at).toLocaleDateString('he-IL')}
+                                </p>
+                              </div>
+                              
+                              {/* Hover indicator */}
+                              <div className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MessageSquare className="w-4 h-4 text-gray-400" />
+                              </div>
+                            </div>
                           </div>
                         ))}
                     </div>
