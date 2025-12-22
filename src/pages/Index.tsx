@@ -7,6 +7,7 @@ import { QuoteOfTheDay } from "@/components/QuoteOfTheDay";
 import { Statistics } from "@/components/Statistics";
 import { AIAnalysis } from "@/components/AIAnalysis";
 import { GoalsTracking } from "@/components/GoalsTracking";
+import DailyCoach from "@/components/DailyCoach";
 import { LayoutDashboard, TrendingUp, Trophy, Brain, Flag } from "lucide-react";
 
 const Index = () => {
@@ -45,7 +46,10 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 animate-fade-in">
-            <QuoteOfTheDay />
+            <div className="grid gap-6 md:grid-cols-2">
+              <QuoteOfTheDay />
+              <DailyCoach />
+            </div>
             <Statistics />
             <div className="grid gap-6 md:grid-cols-2">
               <StreakChart />
