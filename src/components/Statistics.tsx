@@ -26,7 +26,9 @@ export const Statistics = () => {
   return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <Card className="p-6 royal-card bg-gradient-to-br from-primary/5 to-primary/10 animate-fade-in">
         <div className="flex items-center gap-4">
-          
+          <div className="p-3 bg-primary/20 rounded-xl shadow-lg">
+            <Target className="w-6 h-6 text-blue-900" />
+          </div>
           <div className="flex-1">
             <div className="text-3xl font-bold text-primary">
               {completionRate}%
@@ -40,9 +42,11 @@ export const Statistics = () => {
       animationDelay: "0.1s"
     }}>
         <div className="flex items-center gap-4">
-          
+          <div className="p-3 bg-success/20 rounded-xl shadow-lg">
+            <Trophy className="w-6 h-6 text-success" />
+          </div>
           <div className="flex-1">
-            <div className="text-3xl font-bold text-blue-900">
+            <div className="text-3xl font-bold text-success">
               {longestStreak}
             </div>
             <div className="text-sm text-muted-foreground font-medium">הרצף הארוך ביותר</div>
@@ -54,9 +58,11 @@ export const Statistics = () => {
       animationDelay: "0.2s"
     }}>
         <div className="flex items-center gap-4">
-          
+          <div className="p-3 bg-info/20 rounded-xl shadow-lg">
+            <TrendingUp className="w-6 h-6 text-info" />
+          </div>
           <div className="flex-1">
-            <div className="text-3xl font-bold text-blue-900">
+            <div className="text-3xl font-bold text-info">
               {weeklyAverage}
             </div>
             <div className="text-sm text-muted-foreground font-medium">ממוצע יומי (7 ימים)</div>
@@ -68,9 +74,11 @@ export const Statistics = () => {
       animationDelay: "0.3s"
     }}>
         <div className="flex items-center gap-4">
-          
+          <div className="p-3 bg-warning/20 rounded-xl shadow-lg">
+            <Award className="w-6 h-6 text-warning" />
+          </div>
           <div className="flex-1">
-            <div className="text-3xl font-bold text-blue-900">
+            <div className="text-3xl font-bold text-warning">
               {profile?.level || 1}
             </div>
             <div className="text-sm text-muted-foreground font-medium">רמה נוכחית</div>
