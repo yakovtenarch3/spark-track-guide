@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import * as pdfjs from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
   PdfLoader,
   PdfHighlighter,
@@ -17,8 +18,8 @@ import type {
   Scaled,
 } from "react-pdf-highlighter-extended";
 
-// Configure PDF.js worker to match the library version (4.4.168)
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs`;
+// Configure PDF.js worker from the same installed pdfjs-dist version
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 import "react-pdf-highlighter-extended/dist/esm/style/AreaHighlight.css";
 import "react-pdf-highlighter-extended/dist/esm/style/MouseSelection.css";
 import "react-pdf-highlighter-extended/dist/esm/style/PdfHighlighter.css";
