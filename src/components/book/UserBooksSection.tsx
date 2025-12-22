@@ -12,8 +12,9 @@ import {
   Plus
 } from "lucide-react";
 import { PDFUploader } from "./PDFUploader";
-import { LuxuryPDFReader } from "./LuxuryPDFReader";
+import { PDFHighlightViewer, type PDFHighlight } from "./PDFHighlightViewer";
 import { useUserBooks, type UserBook } from "@/hooks/useUserBooks";
+import { usePDFHighlights } from "@/hooks/usePDFHighlights";
 import { toast } from "sonner";
 
 export const UserBooksSection = () => {
@@ -23,6 +24,7 @@ export const UserBooksSection = () => {
   const [selectedBook, setSelectedBook] = useState<UserBook | null>(null);
 
   const { books, isLoading, addBook, updatePage, deleteBook } = useUserBooks();
+  const { highlights, addHighlight, updateHighlight, deleteHighlight } = usePDFHighlights(selectedBook?.id || null);
 
   const handleUploadComplete = (fileUrl: string, fileName: string) => {
     setPendingFile({ url: fileUrl, name: fileName });
@@ -50,7 +52,6 @@ export const UserBooksSection = () => {
 
   const handleDeleteBook = (book: UserBook) => {
     if (confirm("האם למחוק את הספר?")) {
-      // Extract file path from URL
       const urlParts = book.file_url.split('/');
       const filePath = urlParts.slice(-2).join('/');
       
@@ -77,18 +78,18 @@ export const UserBooksSection = () => {
 
   if (selectedBook) {
     return (
-      <LuxuryPDFReader
+      <PDFHighlightViewer
         bookId={selectedBook.id}
         fileUrl={selectedBook.file_url}
         fileName={selectedBook.title}
         currentPage={selectedBook.current_page || 1}
-        totalPages={selectedBook.total_pages || 100}
         onPageChange={handlePageChange}
-        onTotalPagesChange={(total) => {
-          // Could update total pages in DB here if needed
-        }}
         onDelete={() => handleDeleteBook(selectedBook)}
         onBack={() => setSelectedBook(null)}
+        highlights={highlights}
+        onAddHighlight={(h) => addHighlight.mutate(h)}
+        onUpdateHighlight={(id, updates) => updateHighlight.mutate({ id, updates })}
+        onDeleteHighlight={(id) => deleteHighlight.mutate(id)}
       />
     );
   }
