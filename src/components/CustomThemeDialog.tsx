@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
+import { Plus, Home, Target, Trophy, Settings } from "lucide-react";
 import { toast } from "sonner";
 import type { Theme } from "@/hooks/useTheme";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -30,6 +30,9 @@ interface ExtendedThemeColors {
   buttonBg?: string;
   buttonText?: string;
   accent?: string;
+  sidebarBackground?: string;
+  sidebarForeground?: string;
+  sidebarBorder?: string;
 }
 
 interface CustomThemeDialogProps {
@@ -57,6 +60,11 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
   const [buttonBgColor, setButtonBgColor] = useState("#ffffff");
   const [buttonTextColor, setButtonTextColor] = useState("#1a3a5c");
   const [accentColor, setAccentColor] = useState("#d4a84b");
+
+  // Sidebar colors
+  const [sidebarBgColor, setSidebarBgColor] = useState("#f5f0e8");
+  const [sidebarTextColor, setSidebarTextColor] = useState("#1a3a5c");
+  const [sidebarBorderColor, setSidebarBorderColor] = useState("#d4a84b");
 
   // Convert HSL to Hex
   const hslToHex = (hsl: string): string => {
@@ -105,38 +113,30 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
       setButtonBgColor(hslToHex(editTheme.colors.buttonBg || editTheme.colors.primary));
       setButtonTextColor(hslToHex(editTheme.colors.buttonText || editTheme.colors.primaryForeground));
       setAccentColor(hslToHex(editTheme.colors.accent));
+      setSidebarBgColor(hslToHex(editTheme.colors.sidebarBackground || editTheme.colors.background));
+      setSidebarTextColor(hslToHex(editTheme.colors.sidebarForeground || editTheme.colors.foreground));
+      setSidebarBorderColor(hslToHex(editTheme.colors.sidebarBorder || editTheme.colors.border));
     }
   }, [editTheme, open]);
 
   const hexToHSL = (hex: string): string => {
-    // Remove # if present
     hex = hex.replace(/^#/, "");
-
-    // Convert hex to RGB
     const r = parseInt(hex.substring(0, 2), 16) / 255;
     const g = parseInt(hex.substring(2, 4), 16) / 255;
     const b = parseInt(hex.substring(4, 6), 16) / 255;
 
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
-    let h = 0,
-      s = 0,
-      l = (max + min) / 2;
+    let h = 0, s = 0, l = (max + min) / 2;
 
     if (max !== min) {
       const d = max - min;
       s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
 
       switch (max) {
-        case r:
-          h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-          break;
-        case g:
-          h = ((b - r) / d + 2) / 6;
-          break;
-        case b:
-          h = ((r - g) / d + 4) / 6;
-          break;
+        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+        case g: h = ((b - r) / d + 2) / 6; break;
+        case b: h = ((r - g) / d + 4) / 6; break;
       }
     }
 
@@ -166,12 +166,14 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
       buttonBg: hexToHSL(buttonBgColor),
       buttonText: hexToHSL(buttonTextColor),
       accent: hexToHSL(accentColor),
+      sidebarBackground: hexToHSL(sidebarBgColor),
+      sidebarForeground: hexToHSL(sidebarTextColor),
+      sidebarBorder: hexToHSL(sidebarBorderColor),
     };
 
     onSaveTheme(themeName, colors);
     toast.success(`ערכת נושא "${themeName}" ${editTheme ? 'עודכנה' : 'נשמרה'} בהצלחה!`);
     
-    // Reset and close
     resetForm();
     setOpen(false);
     onEditComplete?.();
@@ -190,6 +192,9 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
     setButtonBgColor("#ffffff");
     setButtonTextColor("#1a3a5c");
     setAccentColor("#d4a84b");
+    setSidebarBgColor("#f5f0e8");
+    setSidebarTextColor("#1a3a5c");
+    setSidebarBorderColor("#d4a84b");
   };
 
   const ColorInput = ({ 
@@ -201,24 +206,31 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
     value: string; 
     onChange: (value: string) => void 
   }) => (
-    <div className="grid gap-2">
-      <Label className="text-sm">{label}</Label>
+    <div className="grid gap-1.5">
+      <Label className="text-xs font-medium">{label}</Label>
       <div className="flex gap-2 items-center">
         <Input
           type="color"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-14 h-10 p-1 cursor-pointer border-2"
+          className="w-12 h-9 p-1 cursor-pointer border-2 rounded-lg"
         />
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="#000000"
-          className="flex-1 font-mono text-sm"
+          className="flex-1 font-mono text-xs h-9"
         />
       </div>
     </div>
   );
+
+  const sidebarItems = [
+    { icon: Home, label: "בית" },
+    { icon: Target, label: "הרגלים" },
+    { icon: Trophy, label: "הישגים" },
+    { icon: Settings, label: "הגדרות" },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -230,165 +242,193 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh]" dir="rtl">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh]" dir="rtl">
         <DialogHeader>
           <DialogTitle>{editTheme ? 'ערוך ערכת נושא' : 'צור ערכת נושא חדשה'}</DialogTitle>
           <DialogDescription>
-            התאם אישית את כל הצבעים ליצירת ערכת נושא ייחודית
+            התאם אישית את כל הצבעים כולל סיידבר וכרטיסים
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="max-h-[60vh] pr-4">
-          <div className="space-y-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">שם ערכת הנושא</Label>
-              <Input
-                id="name"
-                value={themeName}
-                onChange={(e) => setThemeName(e.target.value)}
-                placeholder="לדוגמה: הערכה שלי"
-              />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Color Settings */}
+          <ScrollArea className="max-h-[55vh] pr-4">
+            <div className="space-y-4 py-2">
+              <div className="grid gap-2">
+                <Label htmlFor="name" className="font-medium">שם ערכת הנושא</Label>
+                <Input
+                  id="name"
+                  value={themeName}
+                  onChange={(e) => setThemeName(e.target.value)}
+                  placeholder="לדוגמה: הערכה שלי"
+                />
+              </div>
 
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="basic">בסיסי</TabsTrigger>
-                <TabsTrigger value="typography">טיפוגרפיה</TabsTrigger>
-                <TabsTrigger value="advanced">מתקדם</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="basic" className="space-y-4 mt-4">
-                <ColorInput
-                  label="צבע רקע ראשי"
-                  value={backgroundColor}
-                  onChange={setBackgroundColor}
-                />
-                <ColorInput
-                  label="צבע ראשי (Primary)"
-                  value={primaryColor}
-                  onChange={setPrimaryColor}
-                />
-                <ColorInput
-                  label="צבע משני (Secondary)"
-                  value={secondaryColor}
-                  onChange={setSecondaryColor}
-                />
-                <ColorInput
-                  label="צבע הדגשה (Accent)"
-                  value={accentColor}
-                  onChange={setAccentColor}
-                />
-              </TabsContent>
-
-              <TabsContent value="typography" className="space-y-4 mt-4">
-                <ColorInput
-                  label="צבע גופן ראשי"
-                  value={fontColor}
-                  onChange={setFontColor}
-                />
-                <ColorInput
-                  label="צבע כותרות"
-                  value={headingColor}
-                  onChange={setHeadingColor}
-                />
-              </TabsContent>
-
-              <TabsContent value="advanced" className="space-y-4 mt-4">
-                <ColorInput
-                  label="צבע רקע כרטיסים/מסגרות"
-                  value={cardColor}
-                  onChange={setCardColor}
-                />
-                <ColorInput
-                  label="צבע גבול כרטיסים/מסגרות"
-                  value={cardBorderColor}
-                  onChange={setCardBorderColor}
-                />
-                <ColorInput
-                  label="צבע גבולות כללי"
-                  value={borderColor}
-                  onChange={setBorderColor}
-                />
-                <ColorInput
-                  label="צבע רקע כפתורים"
-                  value={buttonBgColor}
-                  onChange={setButtonBgColor}
-                />
-                <ColorInput
-                  label="צבע טקסט כפתורים"
-                  value={buttonTextColor}
-                  onChange={setButtonTextColor}
-                />
-              </TabsContent>
-            </Tabs>
-
-            {/* Live Preview */}
-            <div className="mt-6 space-y-3">
-              <Label className="font-medium">תצוגה מקדימה</Label>
-              <div 
-                className="rounded-xl p-6 space-y-4 transition-all"
-                style={{ backgroundColor }}
-              >
-                <h3 
-                  className="text-xl font-bold"
-                  style={{ color: headingColor }}
-                >
-                  כותרת לדוגמה
-                </h3>
-                <p 
-                  className="text-sm"
-                  style={{ color: fontColor }}
-                >
-                  זהו טקסט לדוגמה שמציג את צבע הגופן הראשי שבחרת.
-                </p>
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 text-xs">
+                  <TabsTrigger value="basic">בסיסי</TabsTrigger>
+                  <TabsTrigger value="typography">טקסט</TabsTrigger>
+                  <TabsTrigger value="cards">כרטיסים</TabsTrigger>
+                  <TabsTrigger value="sidebar">סיידבר</TabsTrigger>
+                </TabsList>
                 
+                <TabsContent value="basic" className="space-y-3 mt-3">
+                  <ColorInput label="צבע רקע ראשי" value={backgroundColor} onChange={setBackgroundColor} />
+                  <ColorInput label="צבע ראשי (Primary)" value={primaryColor} onChange={setPrimaryColor} />
+                  <ColorInput label="צבע משני (Secondary)" value={secondaryColor} onChange={setSecondaryColor} />
+                  <ColorInput label="צבע הדגשה (Accent)" value={accentColor} onChange={setAccentColor} />
+                </TabsContent>
+
+                <TabsContent value="typography" className="space-y-3 mt-3">
+                  <ColorInput label="צבע גופן ראשי" value={fontColor} onChange={setFontColor} />
+                  <ColorInput label="צבע כותרות" value={headingColor} onChange={setHeadingColor} />
+                  <ColorInput label="צבע טקסט כפתורים" value={buttonTextColor} onChange={setButtonTextColor} />
+                </TabsContent>
+
+                <TabsContent value="cards" className="space-y-3 mt-3">
+                  <ColorInput label="צבע רקע כרטיסים" value={cardColor} onChange={setCardColor} />
+                  <ColorInput label="צבע גבול כרטיסים" value={cardBorderColor} onChange={setCardBorderColor} />
+                  <ColorInput label="צבע גבולות כללי" value={borderColor} onChange={setBorderColor} />
+                  <ColorInput label="צבע רקע כפתורים" value={buttonBgColor} onChange={setButtonBgColor} />
+                </TabsContent>
+
+                <TabsContent value="sidebar" className="space-y-3 mt-3">
+                  <ColorInput label="צבע רקע סיידבר" value={sidebarBgColor} onChange={setSidebarBgColor} />
+                  <ColorInput label="צבע טקסט סיידבר" value={sidebarTextColor} onChange={setSidebarTextColor} />
+                  <ColorInput label="צבע גבול סיידבר" value={sidebarBorderColor} onChange={setSidebarBorderColor} />
+                </TabsContent>
+              </Tabs>
+            </div>
+          </ScrollArea>
+
+          {/* Live Preview */}
+          <div className="space-y-2">
+            <Label className="font-medium text-sm">תצוגה מקדימה של האתר</Label>
+            <div 
+              className="rounded-xl overflow-hidden border-2 shadow-lg"
+              style={{ borderColor: borderColor }}
+            >
+              {/* Preview container */}
+              <div className="flex h-[350px]">
+                {/* Sidebar Preview */}
                 <div 
-                  className="rounded-lg p-4"
+                  className="w-16 flex flex-col items-center py-3 gap-2"
                   style={{ 
-                    backgroundColor: cardColor,
-                    border: `2px solid ${cardBorderColor}`
+                    backgroundColor: sidebarBgColor,
+                    borderLeft: `2px solid ${sidebarBorderColor}`
                   }}
                 >
+                  {sidebarItems.map((item, index) => (
+                    <div
+                      key={index}
+                      className={`p-2 rounded-lg transition-all ${index === 0 ? 'shadow-sm' : ''}`}
+                      style={{ 
+                        backgroundColor: index === 0 ? primaryColor : 'transparent',
+                        color: index === 0 ? '#ffffff' : sidebarTextColor
+                      }}
+                    >
+                      <item.icon className="w-4 h-4" />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Main Content Preview */}
+                <div 
+                  className="flex-1 p-3 space-y-3"
+                  style={{ backgroundColor }}
+                >
+                  <h3 
+                    className="text-base font-bold"
+                    style={{ color: headingColor }}
+                  >
+                    כותרת דף
+                  </h3>
                   <p 
-                    className="text-sm font-medium"
+                    className="text-xs"
                     style={{ color: fontColor }}
                   >
-                    דוגמה לכרטיס/מסגרת
+                    טקסט לדוגמה באתר
                   </p>
-                </div>
+                  
+                  {/* Stats Cards Preview */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "אחוז השלמה", value: "75%", bgColor: "#e8f4f8" },
+                      { label: "רצף ימים", value: "5", bgColor: "#e8f8e8" },
+                    ].map((stat, idx) => (
+                      <div 
+                        key={idx}
+                        className="rounded-lg p-2"
+                        style={{ 
+                          backgroundColor: cardColor,
+                          border: `2px solid ${cardBorderColor}`
+                        }}
+                      >
+                        <div 
+                          className="text-sm font-bold"
+                          style={{ color: headingColor }}
+                        >
+                          {stat.value}
+                        </div>
+                        <div 
+                          className="text-[10px]"
+                          style={{ color: fontColor }}
+                        >
+                          {stat.label}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
-                <div className="flex gap-2">
-                  <button
-                    className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
+                  {/* Card Preview */}
+                  <div 
+                    className="rounded-lg p-3"
                     style={{ 
-                      backgroundColor: buttonBgColor,
-                      color: buttonTextColor,
-                      border: `2px solid ${borderColor}`
+                      backgroundColor: cardColor,
+                      border: `2px solid ${cardBorderColor}`
                     }}
                   >
-                    כפתור ראשי
-                  </button>
-                  <button
-                    className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
-                    style={{ 
-                      backgroundColor: primaryColor,
-                      color: "#ffffff"
-                    }}
-                  >
-                    כפתור משני
-                  </button>
-                </div>
+                    <p 
+                      className="text-xs font-medium mb-2"
+                      style={{ color: fontColor }}
+                    >
+                      כרטיס לדוגמה
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        className="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+                        style={{ 
+                          backgroundColor: buttonBgColor,
+                          color: buttonTextColor,
+                          border: `1px solid ${borderColor}`
+                        }}
+                      >
+                        כפתור
+                      </button>
+                      <button
+                        className="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+                        style={{ 
+                          backgroundColor: primaryColor,
+                          color: "#ffffff"
+                        }}
+                      >
+                        שמור
+                      </button>
+                    </div>
+                  </div>
 
-                <div 
-                  className="h-2 rounded-full"
-                  style={{ backgroundColor: accentColor }}
-                />
+                  {/* Accent bar */}
+                  <div 
+                    className="h-1.5 rounded-full mt-2"
+                    style={{ backgroundColor: accentColor }}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 mt-4">
           <Button variant="outline" onClick={() => setOpen(false)}>
             ביטול
           </Button>

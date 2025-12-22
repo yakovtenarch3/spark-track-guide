@@ -35,6 +35,9 @@ interface ExtendedThemeColors {
   buttonBg?: string;
   buttonText?: string;
   accent?: string;
+  sidebarBackground?: string;
+  sidebarForeground?: string;
+  sidebarBorder?: string;
 }
 
 export const ThemeSettings = () => {
@@ -92,12 +95,16 @@ export const ThemeSettings = () => {
               }}
             >
               <div className="flex items-center gap-3 w-full">
-                <div
-                  className="w-6 h-6 rounded-full border-2 border-border flex-shrink-0"
-                  style={{
-                    background: `hsl(${theme.colors.primary})`,
-                  }}
-                />
+                <div className="flex gap-0.5">
+                  <div
+                    className="w-4 h-4 rounded-full border border-border flex-shrink-0"
+                    style={{ background: `hsl(${theme.colors.primary})` }}
+                  />
+                  <div
+                    className="w-4 h-4 rounded-full border border-border flex-shrink-0"
+                    style={{ background: `hsl(${theme.colors.secondary})` }}
+                  />
+                </div>
                 <span className="flex-1 truncate">{theme.label}</span>
                 <div className="flex items-center gap-1">
                   {currentTheme === theme.name && (

@@ -55,8 +55,9 @@ export function AppSidebar() {
       collapsible={pinned ? "icon" : "offcanvas"}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      className="bg-[hsl(var(--sidebar-background,var(--background)))] border-[hsl(var(--sidebar-border,var(--border)))]"
     >
-      <SidebarContent>
+      <SidebarContent className="bg-[hsl(var(--sidebar-background,var(--background)))]">
         {/* Pin button - only visible on hover and not mobile */}
         {!isMobile && (
           <div className={`absolute top-2 left-2 z-10 transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
@@ -65,7 +66,7 @@ export function AppSidebar() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 text-[hsl(var(--sidebar-foreground,var(--foreground)))]"
                   aria-label={pinned ? "ביטול הצמדה" : "הצמד סיידבר"}
                   onClick={togglePinned}
                 >
@@ -78,13 +79,17 @@ export function AppSidebar() {
         )}
 
         <SidebarGroup className="mt-10">
-          <SidebarGroupLabel>תפריט ראשי</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[hsl(var(--sidebar-foreground,var(--foreground)))]">תפריט ראשי</SidebarGroupLabel>
 
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map(item => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)} className="text-sidebar-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground">
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={isActive(item.url)} 
+                    className="text-[hsl(var(--sidebar-foreground,var(--foreground)))] hover:bg-[hsl(var(--sidebar-accent,var(--accent)))] data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                  >
                     <NavLink to={item.url} end>
                       <item.icon className="ml-2 h-4 w-4" />
                       {!isCollapsed && <span>{item.title}</span>}
