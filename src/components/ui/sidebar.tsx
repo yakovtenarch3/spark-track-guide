@@ -261,14 +261,13 @@ const Sidebar = React.forwardRef<
       >
         <div
           data-sidebar="sidebar"
-          className="flex h-full w-full flex-col rounded-2xl m-2 shadow-lg border-[3px] overflow-hidden p-1"
+          className="flex h-full w-full flex-col rounded-2xl m-2 shadow-lg border-2 overflow-hidden"
           style={{
-            borderColor: 'hsl(var(--sidebar-border, 43 70% 55%))',
-            backgroundColor: 'hsl(var(--sidebar-border, 43 70% 55%))'
+            borderColor: 'hsl(var(--sidebar-border, 43 70% 55%))'
           }}
         >
           <div 
-            className="flex-1 rounded-xl overflow-hidden bg-sidebar"
+            className="flex-1 rounded-xl overflow-hidden bg-sidebar m-[2px]"
           >
             {children}
           </div>
