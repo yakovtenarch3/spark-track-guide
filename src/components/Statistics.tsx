@@ -25,7 +25,7 @@ export const Statistics = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card className="p-6 royal-card bg-gradient-to-br from-primary/5 to-primary/10 animate-fade-in">
+      <Card className="p-6 royal-card animate-fade-in">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-primary/20 rounded-xl shadow-lg">
             <Target className="w-6 h-6 text-primary" />
@@ -39,7 +39,7 @@ export const Statistics = () => {
         </div>
       </Card>
 
-      <Card className="p-6 royal-card bg-gradient-to-br from-success/5 to-success/10 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+      <Card className="p-6 royal-card animate-fade-in" style={{ animationDelay: "0.1s" }}>
         <div className="flex items-center gap-4">
           <div className="p-3 bg-success/20 rounded-xl shadow-lg">
             <Trophy className="w-6 h-6 text-success" />
@@ -53,7 +53,7 @@ export const Statistics = () => {
         </div>
       </Card>
 
-      <Card className="p-6 royal-card bg-gradient-to-br from-info/5 to-info/10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+      <Card className="p-6 royal-card animate-fade-in" style={{ animationDelay: "0.2s" }}>
         <div className="flex items-center gap-4">
           <div className="p-3 bg-info/20 rounded-xl shadow-lg">
             <TrendingUp className="w-6 h-6 text-info" />
@@ -67,7 +67,7 @@ export const Statistics = () => {
         </div>
       </Card>
 
-      <Card className="p-6 royal-card bg-gradient-to-br from-warning/5 to-warning/10 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+      <Card className="p-6 royal-card animate-fade-in" style={{ animationDelay: "0.3s" }}>
         <div className="flex items-center gap-4">
           <div className="p-3 bg-warning/20 rounded-xl shadow-lg">
             <Award className="w-6 h-6 text-warning" />
