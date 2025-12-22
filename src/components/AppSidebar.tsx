@@ -61,7 +61,7 @@ export function AppSidebar() {
       onMouseLeave={() => setIsHovered(false)}
       className="bg-[hsl(var(--sidebar-background,var(--background)))] border-[hsl(var(--sidebar-border,var(--border)))]"
     >
-      <SidebarContent className="bg-[hsl(var(--sidebar-background,var(--background)))] rounded-2xl">
+      <SidebarContent className="bg-transparent rounded-xl"dir="rtl">
         {/* Pin button - only visible on hover and not mobile */}
         {!isMobile && (
           <div className={`absolute top-2 left-2 z-10 transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
