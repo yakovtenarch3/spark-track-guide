@@ -16,6 +16,7 @@ import Archive from "./pages/Archive";
 import Settings from "./pages/Settings";
 import Install from "./pages/Install";
 import BookReaderPage from "./pages/BookReader";
+import PDFTestPage from "./pages/PDFTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/install" element={<Install />} />
                 <Route path="/book" element={<BookReaderPage />} />
+                <Route path="/pdf-test" element={<PDFTestPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>

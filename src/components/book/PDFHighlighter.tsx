@@ -234,6 +234,7 @@ interface PDFHighlighterComponentProps {
   nightMode?: boolean;
   zoom?: number;
   className?: string;
+  onDocumentLoaded?: (totalPages: number) => void;
 }
 
 export const PDFHighlighterComponent = ({
@@ -247,8 +248,10 @@ export const PDFHighlighterComponent = ({
   nightMode = false,
   zoom = 100,
   className = "",
+  onDocumentLoaded,
 }: PDFHighlighterComponentProps) => {
   const highlighterUtilsRef = useRef<PdfHighlighterUtils | null>(null);
+  const didNotifyLoadedRef = useRef(false);
 
   // Scroll to page when currentPage changes
   useEffect(() => {
@@ -313,19 +316,26 @@ export const PDFHighlighterComponent = ({
   );
 
   return (
-    <div 
+    <div
       className={`w-full h-full relative ${nightMode ? "pdf-night-mode" : ""} ${className}`}
-      style={{ 
+      style={{
         transform: `scale(${zoom / 100})`,
         transformOrigin: "top center",
       }}
     >
       <PdfLoader
         document={fileUrl}
+        workerSrc={pdfjsWorker}
         beforeLoad={(progressData) => (
           <div className="flex items-center justify-center h-full gap-2">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span>טוען PDF... {progressData.loaded ? Math.round((progressData.loaded / (progressData.total || 1)) * 100) : 0}%</span>
+            <span>
+              טוען PDF...{" "}
+              {progressData.loaded
+                ? Math.round((progressData.loaded / (progressData.total || 1)) * 100)
+                : 0}
+              %
+            </span>
           </div>
         )}
         errorMessage={(error) => (
@@ -335,26 +345,30 @@ export const PDFHighlighterComponent = ({
           </div>
         )}
       >
-        {(pdfDocument) => (
-          <PdfHighlighter
-            pdfDocument={pdfDocument}
-            highlights={highlights}
-            enableAreaSelection={(event) => event.altKey}
-            utilsRef={(utils) => {
-              highlighterUtilsRef.current = utils;
-            }}
-            selectionTip={selectionTip}
-            style={{
-              width: "100%",
-              height: "100%",
-            }}
-          >
-            <HighlightContainer
-              onDelete={handleDelete}
-              onUpdateColor={handleUpdateColor}
-            />
-          </PdfHighlighter>
-        )}
+        {(pdfDocument) => {
+          if (!didNotifyLoadedRef.current) {
+            didNotifyLoadedRef.current = true;
+            onDocumentLoaded?.(pdfDocument.numPages);
+          }
+
+          return (
+            <PdfHighlighter
+              pdfDocument={pdfDocument}
+              highlights={highlights}
+              enableAreaSelection={(event) => event.altKey}
+              utilsRef={(utils) => {
+                highlighterUtilsRef.current = utils;
+              }}
+              selectionTip={selectionTip}
+              style={{
+                width: "100%",
+                height: "100%",
+              }}
+            >
+              <HighlightContainer onDelete={handleDelete} onUpdateColor={handleUpdateColor} />
+            </PdfHighlighter>
+          );
+        }}
       </PdfLoader>
 
       {/* Night mode overlay */}
