@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Target, Trophy, Archive, Settings, Sun, ListChecks, MessageCircle, Pin, PinOff, BookOpen, CheckSquare } from "lucide-react";
+import { Home, Target, Trophy, Archive, Settings, Sun, ListChecks, MessageCircle, Pin, PinOff, BookOpen, CheckSquare, BookMarked, Activity } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { useSidebarPin } from "@/hooks/useSidebarPin";
@@ -18,6 +18,14 @@ const items = [{
   title: "לוח משימות",
   url: "/tasks",
   icon: CheckSquare
+}, {
+  title: "יומן",
+  url: "/journal",
+  icon: BookMarked
+}, {
+  title: "בקרת מעקב",
+  url: "/accountability",
+  icon: Activity
 }, {
   title: "קימה בבוקר",
   url: "/wake-up",
