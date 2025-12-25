@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -28,6 +28,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   BookOpen,
   Trash2,
@@ -280,6 +288,8 @@ export const RichDocumentEditor = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [viewMode, setViewMode] = useState<"edit" | "word" | "canvas">("edit");
 
   const [notes, setNotes] = useState<DocNote[]>([]);
@@ -292,6 +302,9 @@ export const RichDocumentEditor = ({
     return saved ? new Set(JSON.parse(saved)) : new Set<string>();
   });
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [versions, setVersions] = useState<Array<{id: string, date: Date, content: string}>>([]);
+  
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const ext = useMemo(() => getFileExtension(fileName), [fileName]);
   const isDocx = ext === "docx";
@@ -420,6 +433,18 @@ export const RichDocumentEditor = ({
 
     try {
       const html = editor.getHTML();
+      
+      // Save version to history
+      const newVersion = {
+        id: `v-${Date.now()}`,
+        date: new Date(),
+        content: html
+      };
+      
+      const updatedVersions = [newVersion, ...versions].slice(0, 10); // Keep last 10 versions
+      setVersions(updatedVersions);
+      localStorage.setItem(`doc-versions-${bookId}`, JSON.stringify(updatedVersions));
+      
       const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${html}</body></html>`;
       const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
       const newFileName = `${Date.now()}.html`;
@@ -434,6 +459,7 @@ export const RichDocumentEditor = ({
       const { data: urlData } = supabase.storage.from("books").getPublicUrl(filePath);
       onFileSaved({ fileUrl: urlData.publicUrl, fileName: newFileName });
       setIsDirty(false);
+      setLastSaved(new Date());
       toast.success("המסמך נשמר בהצלחה!");
     } catch (e) {
       console.error(e);
@@ -442,6 +468,41 @@ export const RichDocumentEditor = ({
       setIsSaving(false);
     }
   };
+
+  // Auto-save with debounce
+  useEffect(() => {
+    if (!editor || !autoSaveEnabled || !isDirty) return;
+    
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    
+    autoSaveTimerRef.current = setTimeout(() => {
+      handleSave();
+    }, 3000); // Auto-save after 3 seconds of inactivity
+    
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [editor, isDirty, autoSaveEnabled]);
+
+  // Load versions from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(`doc-versions-${bookId}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setVersions(parsed.map((v: any) => ({
+          ...v,
+          date: new Date(v.date)
+        })));
+      } catch (e) {
+        console.error('Failed to load versions:', e);
+      }
+    }
+  }, [bookId]);
 
   const handleAddNote = () => {
     if (!selectionPreview.trim()) {
@@ -521,9 +582,19 @@ export const RichDocumentEditor = ({
                   לא נשמר
                 </Badge>
               )}
+              {autoSaveEnabled && (
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                  ⚡ שמירה אוטומטית
+                </Badge>
+              )}
+              {lastSaved && (
+                <Badge variant="outline" className="text-xs">
+                  נשמר {lastSaved.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                </Badge>
+              )}
             </div>
             <span className="text-xs text-muted-foreground">
-              {isWordView ? "תצוגת Word" : "עורך מסמכים מתקדם"}
+              {isWordView ? "תצוגת Word" : "עורך מסמכים מתקדם"} • {headings.length} כותרות
             </span>
           </div>
         </div>
@@ -554,6 +625,54 @@ export const RichDocumentEditor = ({
               </Button>
             </div>
           )}
+          <div className="flex items-center gap-1 border-l pl-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-xs h-8"
+              onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
+              title={autoSaveEnabled ? "השבת שמירה אוטומטית" : "הפעל שמירה אוטומטית"}
+            >
+              {autoSaveEnabled ? "✓" : "○"} Auto
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-1 text-xs h-8">
+                  📚 גרסאות ({versions.length})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>היסטוריית גרסאות</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {versions.length === 0 ? (
+                  <div className="p-3 text-xs text-muted-foreground text-center">
+                    אין גרסאות שמורות
+                  </div>
+                ) : (
+                  versions.map((version) => (
+                    <DropdownMenuItem
+                      key={version.id}
+                      onClick={() => {
+                        if (editor && confirm('לשחזר גרסה זו? השינויים הנוכחיים ילכו לאיבוד.')) {
+                          editor.commands.setContent(version.content);
+                          setIsDirty(true);
+                          toast.success('הגרסה שוחזרה');
+                        }
+                      }}
+                      className="gap-2 text-xs"
+                    >
+                      <span>🕐 {version.date.toLocaleString('he-IL', { 
+                        month: 'numeric', 
+                        day: 'numeric', 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}</span>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           <Button
             variant="default"
             size="sm"
@@ -867,9 +986,50 @@ export const RichDocumentEditor = ({
             <TabsContent value="index" className="flex-1 overflow-hidden">
               <ScrollArea className="h-full p-3">
                 {headings.length === 0 ? (
-                  <div className="text-sm text-muted-foreground text-center py-8">
-                    אין כותרות לאינדקס. הוסף כותרות (H1-H3) כדי ליצור תוכן עניינים.
-                  </div>
+                  <Card className="p-4 space-y-3 text-center">
+                    <div className="p-3 bg-muted rounded-full w-16 h-16 mx-auto flex items-center justify-center">
+                      <List className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-1">אין כותרות במסמך</h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        הוסף כותרות (H1-H3) כדי ליצור תוכן עניינים אוטומטי
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full gap-2"
+                        onClick={() => {
+                          if (editor) {
+                            editor.chain().focus().setHeading({ level: 1 }).insertContent("כותרת ראשית").run();
+                            toast.success("נוספה כותרת H1");
+                          }
+                        }}
+                      >
+                        <Heading1 className="w-4 h-4" />
+                        הוסף כותרת H1
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full gap-2"
+                        onClick={() => {
+                          if (editor) {
+                            editor.chain().focus().setHeading({ level: 2 }).insertContent("כותרת משנה").run();
+                            toast.success("נוספה כותרת H2");
+                          }
+                        }}
+                      >
+                        <Heading2 className="w-4 h-4" />
+                        הוסף כותרת H2
+                      </Button>
+                    </div>
+                    <div className="text-xs text-muted-foreground pt-2 border-t">
+                      💡 טיפ: בחר טקסט ולחץ על כפתורי H1/H2/H3 בסרגל הכלים
+                    </div>
+                  </Card>
                 ) : (
                   <div className="space-y-4">
                     {/* Progress Stats */}
