@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export type ThemeName = "default" | "ocean" | "sunset" | "forest" | "lavender" | "midnight" | "coral" | "mint" | "warm" | string;
 
@@ -349,7 +350,73 @@ export const useTheme = () => {
     return saved ? JSON.parse(saved) : {};
   });
 
+  const [isLoading, setIsLoading] = useState(true);
+
   const allThemes = { ...themes, ...customThemes };
+
+  // Save theme to cloud
+  const saveThemeToCloud = useCallback(async (themeName: string) => {
+    try {
+      await supabase
+        .from("user_preferences")
+        .upsert(
+          { preference_key: "app-theme", preference_value: themeName },
+          { onConflict: "preference_key" }
+        );
+    } catch (error) {
+      console.error("Failed to save theme to cloud:", error);
+    }
+  }, []);
+
+  // Save custom themes to cloud
+  const saveCustomThemesToCloud = useCallback(async (themesData: Record<string, Theme>) => {
+    try {
+      await supabase
+        .from("user_preferences")
+        .upsert(
+          { preference_key: "custom-themes", preference_value: JSON.stringify(themesData) },
+          { onConflict: "preference_key" }
+        );
+    } catch (error) {
+      console.error("Failed to save custom themes to cloud:", error);
+    }
+  }, []);
+
+  // Load theme from cloud on mount
+  useEffect(() => {
+    const loadFromCloud = async () => {
+      try {
+        const { data } = await supabase
+          .from("user_preferences")
+          .select("preference_key, preference_value")
+          .in("preference_key", ["app-theme", "custom-themes"]);
+
+        if (data) {
+          const themeRow = data.find(r => r.preference_key === "app-theme");
+          const customThemesRow = data.find(r => r.preference_key === "custom-themes");
+
+          if (customThemesRow?.preference_value) {
+            try {
+              const parsed = JSON.parse(customThemesRow.preference_value);
+              setCustomThemes(parsed);
+              localStorage.setItem("custom-themes", customThemesRow.preference_value);
+            } catch {}
+          }
+
+          if (themeRow?.preference_value) {
+            setCurrentTheme(themeRow.preference_value);
+            localStorage.setItem("app-theme", themeRow.preference_value);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load theme from cloud:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFromCloud();
+  }, []);
 
   // Apply theme on mount and when theme changes
   useEffect(() => {
@@ -375,13 +442,12 @@ export const useTheme = () => {
     localStorage.setItem("app-theme", currentTheme);
   }, [currentTheme, allThemes]);
 
-  // Apply saved theme immediately on first render
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("app-theme");
-    if (savedTheme && savedTheme !== currentTheme) {
-      setCurrentTheme(savedTheme);
-    }
-  }, []);
+  // Wrapper to set theme and save to cloud
+  const setTheme = useCallback((themeName: string) => {
+    setCurrentTheme(themeName);
+    localStorage.setItem("app-theme", themeName);
+    saveThemeToCloud(themeName);
+  }, [saveThemeToCloud]);
 
   // Extended custom theme colors interface
   interface ExtendedThemeColors {
@@ -438,7 +504,8 @@ export const useTheme = () => {
     const newCustomThemes = { ...customThemes, [name]: customTheme };
     setCustomThemes(newCustomThemes);
     localStorage.setItem("custom-themes", JSON.stringify(newCustomThemes));
-    setCurrentTheme(name);
+    saveCustomThemesToCloud(newCustomThemes);
+    setTheme(name);
   };
 
   const updateCustomTheme = (oldName: string, newName: string, colors: ExtendedThemeColors) => {
@@ -483,10 +550,11 @@ export const useTheme = () => {
     newCustomThemes[newName] = updatedTheme;
     setCustomThemes(newCustomThemes);
     localStorage.setItem("custom-themes", JSON.stringify(newCustomThemes));
+    saveCustomThemesToCloud(newCustomThemes);
     
     // Update current theme if editing active theme
     if (currentTheme === oldName) {
-      setCurrentTheme(newName);
+      setTheme(newName);
     }
   };
 
@@ -495,18 +563,20 @@ export const useTheme = () => {
     delete newCustomThemes[name];
     setCustomThemes(newCustomThemes);
     localStorage.setItem("custom-themes", JSON.stringify(newCustomThemes));
+    saveCustomThemesToCloud(newCustomThemes);
     
     if (currentTheme === name) {
-      setCurrentTheme("default");
+      setTheme("default");
     }
   };
 
   return {
     currentTheme,
-    setTheme: setCurrentTheme,
+    setTheme,
     themes: allThemes,
     addCustomTheme,
     updateCustomTheme,
     deleteCustomTheme,
+    isLoading,
   };
 };
