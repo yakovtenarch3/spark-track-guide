@@ -128,10 +128,10 @@ export const UserBooksSection = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between flex-row-reverse">
+        <div className="flex items-center gap-2 flex-row-reverse">
           <FileText className="w-5 h-5 text-primary" />
           <h3 className="font-medium">הספרים שלי</h3>
           <Badge variant="secondary">{books.length}</Badge>
@@ -198,18 +198,18 @@ export const UserBooksSection = () => {
                 className="p-4 royal-card hover:bg-muted/50 transition-colors cursor-pointer"
                 onClick={() => setSelectedBook(book)}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between flex-row-reverse">
+                  <div className="flex items-center gap-3 flex-row-reverse">
                     <div className="p-2 bg-primary/10 rounded-lg">
                       <BookOpen className="w-5 h-5 text-primary" />
                     </div>
-                    <div>
+                    <div className="text-right">
                       <h4 className="font-medium">{book.title}</h4>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
                         <Badge variant="outline" className="text-xs">
                           עמוד {book.current_page}
                         </Badge>
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 flex-row-reverse">
                           <Clock className="w-3 h-3" />
                           {new Date(book.last_read_at).toLocaleDateString('he-IL')}
                         </span>

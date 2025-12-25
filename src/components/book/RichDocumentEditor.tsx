@@ -48,12 +48,14 @@ import {
   Type,
   Palette,
   MessageSquarePlus,
+  MessageSquare,
   Loader2,
   Heading1,
   Heading2,
   Heading3,
   Minus,
   Quote,
+  CheckCircle2,
 } from "lucide-react";
 import DOMPurify from "dompurify";
 import { supabase } from "@/integrations/supabase/client";
@@ -285,6 +287,11 @@ export const RichDocumentEditor = ({
   const [selectionPreview, setSelectionPreview] = useState("");
 
   const [headings, setHeadings] = useState<DocHeading[]>([]);
+  const [readHeadings, setReadHeadings] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem(`doc-read-headings-${bookId}`);
+    return saved ? new Set(JSON.parse(saved)) : new Set<string>();
+  });
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   const ext = useMemo(() => getFileExtension(fileName), [fileName]);
   const isDocx = ext === "docx";
@@ -312,6 +319,11 @@ export const RichDocumentEditor = ({
   useEffect(() => {
     localStorage.setItem(notesStorageKey, JSON.stringify(notes));
   }, [notes, notesStorageKey]);
+
+  // Save read headings to localStorage
+  useEffect(() => {
+    localStorage.setItem(`doc-read-headings-${bookId}`, JSON.stringify([...readHeadings]));
+  }, [readHeadings, bookId]);
 
   const editor = useEditor({
     extensions: [
@@ -474,9 +486,14 @@ export const RichDocumentEditor = ({
       if (targetPos > 0) {
         editor.commands.setTextSelection(targetPos);
         editor.commands.scrollIntoView();
+        
+        // Mark heading as read
+        if (headings[index]) {
+          setReadHeadings(prev => new Set(prev).add(headings[index].id));
+        }
       }
     },
-    [editor]
+    [editor, headings]
   );
 
   if (!editor) return null;
@@ -850,22 +867,110 @@ export const RichDocumentEditor = ({
             <TabsContent value="index" className="flex-1 overflow-hidden">
               <ScrollArea className="h-full p-3">
                 {headings.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-muted-foreground text-center py-8">
                     אין כותרות לאינדקס. הוסף כותרות (H1-H3) כדי ליצור תוכן עניינים.
                   </div>
                 ) : (
-                  <div className="space-y-1">
-                    {headings.map((h, idx) => (
-                      <button
-                        key={`${h.id}-${idx}`}
-                        className="w-full text-right text-sm px-2 py-1 rounded hover:bg-muted transition-colors truncate"
-                        style={{ paddingRight: `${8 + (h.level - 1) * 12}px` }}
-                        onClick={() => scrollToHeading(idx)}
-                        title={h.text}
-                      >
-                        {h.text}
-                      </button>
-                    ))}
+                  <div className="space-y-4">
+                    {/* Progress Stats */}
+                    <Card className="p-3 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium">התקדמות בקריאה</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {readHeadings.size}/{headings.length}
+                          </Badge>
+                        </div>
+                        
+                        {/* Progress Bar */}
+                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                          <div 
+                            className="h-full bg-primary transition-all duration-500"
+                            style={{ width: `${headings.length > 0 ? (readHeadings.size / headings.length) * 100 : 0}%` }}
+                          />
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">
+                            {headings.length > 0 ? Math.round((readHeadings.size / headings.length) * 100) : 0}% הושלם
+                          </span>
+                          <span className="text-muted-foreground">{headings.length - readHeadings.size} נותרו</span>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Quick Stats */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <Card className="p-2 text-center">
+                        <div className="text-lg font-bold text-primary">{readHeadings.size}</div>
+                        <div className="text-[10px] text-muted-foreground">נקראו</div>
+                      </Card>
+                      <Card className="p-2 text-center">
+                        <div className="text-lg font-bold text-blue-500">{notes.length}</div>
+                        <div className="text-[10px] text-muted-foreground">הערות</div>
+                      </Card>
+                      <Card className="p-2 text-center">
+                        <div className="text-lg font-bold text-orange-500">{headings.length - readHeadings.size}</div>
+                        <div className="text-[10px] text-muted-foreground">נותרו</div>
+                      </Card>
+                    </div>
+
+                    {/* Headings List */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-xs font-medium">תוכן עניינים</span>
+                        <span className="text-xs text-muted-foreground">{headings.length} כותרות</span>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        {headings.map((h, idx) => {
+                          const isRead = readHeadings.has(h.id);
+                          const hasNotes = notes.some(n => n.selectedText && h.text.includes(n.selectedText));
+                          
+                          return (
+                            <button
+                              key={`${h.id}-${idx}`}
+                              className={`w-full text-right text-sm px-2 py-2 rounded transition-all truncate flex items-center justify-between group border ${
+                                isRead 
+                                  ? "bg-success/10 border-success/20 hover:bg-success/20" 
+                                  : "bg-muted/30 border-border hover:bg-muted/50"
+                              }`}
+                              style={{ paddingRight: `${8 + (h.level - 1) * 12}px` }}
+                              onClick={() => scrollToHeading(idx)}
+                              title={`${h.text}${isRead ? " - נקרא ✓" : ""}`}
+                            >
+                              <span className="flex-1 truncate">{h.text}</span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {isRead && (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                                )}
+                                {hasNotes && (
+                                  <MessageSquare className="w-3 h-3 text-primary" />
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Legend */}
+                      <div className="flex flex-wrap items-center gap-3 pt-3 border-t text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 bg-success/10 border border-success/20 rounded flex items-center justify-center">
+                            <CheckCircle2 className="w-2 h-2 text-success" />
+                          </div>
+                          <span className="text-muted-foreground">נקרא</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 bg-muted/30 border border-border rounded"></div>
+                          <span className="text-muted-foreground">לא נקרא</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <MessageSquare className="w-3 h-3 text-primary" />
+                          <span className="text-muted-foreground">עם הערות</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </ScrollArea>

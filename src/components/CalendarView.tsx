@@ -1,18 +1,45 @@
-import { format, subDays, startOfDay, isSameDay } from "date-fns";
+import { format, subDays, startOfDay, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { he } from "date-fns/locale";
 import { useCompletions } from "@/hooks/useCompletions";
 import { useHabits } from "@/hooks/useHabits";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "lucide-react";
+import { Calendar, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useState } from "react";
+
+type ViewMode = "day" | "week" | "month";
 
 export const CalendarView = () => {
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
   const { completions } = useCompletions(30);
   const { habits } = useHabits();
   
-  // Generate last 30 days
-  const days = Array.from({ length: 30 }, (_, i) => {
-    return startOfDay(subDays(new Date(), 29 - i));
-  });
+  // Generate days based on view mode
+  const getDays = () => {
+    const today = new Date();
+    
+    switch (viewMode) {
+      case "day":
+        return [startOfDay(today)];
+      case "week":
+        const weekStart = startOfWeek(today, { locale: he });
+        const weekEnd = endOfWeek(today, { locale: he });
+        return eachDayOfInterval({ start: weekStart, end: weekEnd });
+      case "month":
+      default:
+        return Array.from({ length: 30 }, (_, i) => {
+          return startOfDay(subDays(today, 29 - i));
+        });
+    }
+  };
+  
+  const days = getDays();
 
   const getCompletionInfo = (date: Date) => {
     const dayCompletions = completions.filter((c) => {
@@ -28,17 +55,61 @@ export const CalendarView = () => {
     return { completedCount, totalCount, percentage };
   };
 
+  const getTitle = () => {
+    switch (viewMode) {
+      case "day":
+        return "לוח שנה - היום";
+      case "week":
+        return "לוח שנה - השבוע";
+      case "month":
+      default:
+        return "לוח שנה - 30 ימים אחרונים";
+    }
+  };
+
   return (
     <Card className="glass-card">
       <CardHeader>
-        <CardTitle className="text-2xl flex items-center gap-2">
-          <Calendar className="w-6 h-6 text-primary" />
-          לוח שנה - 30 ימים אחרונים
-        </CardTitle>
-        <CardDescription>מעקב יומי אחר ההשלמות שלך</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Calendar className="w-6 h-6 text-primary" />
+              {getTitle()}
+            </CardTitle>
+            <CardDescription>מעקב יומי אחר ההשלמות שלך</CardDescription>
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1">
+                <ChevronDown className="w-3.5 h-3.5" />
+                <span className="text-xs">
+                  {viewMode === "day" && "יום"}
+                  {viewMode === "week" && "שבוע"}
+                  {viewMode === "month" && "חודש"}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setViewMode("day")}>
+                <span className={viewMode === "day" ? "font-bold" : ""}>יום</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode("week")}>
+                <span className={viewMode === "week" ? "font-bold" : ""}>שבוע</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode("month")}>
+                <span className={viewMode === "month" ? "font-bold" : ""}>חודש</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-10 gap-2">
+        <div className={`grid gap-2 ${
+          viewMode === "day" ? "grid-cols-1" : 
+          viewMode === "week" ? "grid-cols-7" : 
+          "grid-cols-10"
+        }`}>
           {days.map((day) => {
             const { completedCount, totalCount, percentage } = getCompletionInfo(day);
             const isToday = isSameDay(day, new Date());
@@ -47,7 +118,8 @@ export const CalendarView = () => {
               <div
                 key={day.toISOString()}
                 className={`
-                  aspect-square rounded-xl p-2 text-center transition-all cursor-pointer
+                  ${viewMode === "day" ? "h-32" : "aspect-square"} 
+                  rounded-xl p-2 text-center transition-all cursor-pointer
                   backdrop-blur-sm border
                   ${isToday ? "ring-2 ring-primary shadow-lg scale-105" : ""}
                   ${percentage === 100 ? "bg-success/20 hover:bg-success/30 border-success/30" : ""}
@@ -57,10 +129,10 @@ export const CalendarView = () => {
                 `}
                 title={`${format(day, "d בMMMM", { locale: he })} - ${completedCount}/${totalCount} הושלמו`}
               >
-                <div className="text-xs font-semibold text-foreground mb-1">
-                  {format(day, "d")}
+                <div className={`${viewMode === "day" ? "text-lg" : "text-xs"} font-semibold text-foreground mb-1`}>
+                  {viewMode === "day" ? format(day, "EEEE, d בMMMM", { locale: he }) : format(day, "d")}
                 </div>
-                <div className="text-xs font-medium text-muted-foreground">
+                <div className={`${viewMode === "day" ? "text-base" : "text-xs"} font-medium text-muted-foreground`}>
                   {completedCount}/{totalCount}
                 </div>
               </div>

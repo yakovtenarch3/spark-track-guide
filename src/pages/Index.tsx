@@ -21,7 +21,7 @@ const Index = () => {
           <p className="text-muted-foreground text-lg">עקוב אחר ההתקדמות שלך וקבל תובנות מתקדמות</p>
         </div>
 
-        <Tabs defaultValue="overview" className="w-full" dir="rtl">
+        <Tabs defaultValue="analytics" className="w-full" dir="rtl">
           <TabsList className="grid w-full grid-cols-5 mb-6 glass-card p-1">
             <TabsTrigger value="overview" className="gap-2">
               <LayoutDashboard className="w-4 h-4" />

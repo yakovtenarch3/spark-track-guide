@@ -121,6 +121,7 @@ export const LuxuryPDFReader = ({
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [sidePanel, setSidePanel] = useState<"index" | "progress" | "annotations" | "settings">("index");
+  const [showTableOfContents, setShowTableOfContents] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [indexViewMode, setIndexViewMode] = useState<"grid" | "list" | "compact" | "mini">("grid");
   const [sidePanelPinned, setSidePanelPinned] = useState(true);
@@ -579,6 +580,7 @@ export const LuxuryPDFReader = ({
             {/* Panel Tabs */}
             <div className="flex border-b border-border">
               {[
+                { id: "index", icon: LayoutGrid, label: "אינדקס" },
                 { id: "annotations", icon: MessageSquare, label: "הדגשות" },
                 { id: "progress", icon: BookMarked, label: "מעקב" },
                 { id: "settings", icon: Eye, label: "תצוגה" },
@@ -600,6 +602,149 @@ export const LuxuryPDFReader = ({
 
             <ScrollArea className="flex-1">
               <div className="p-2">
+                {/* Index/Table of Contents Panel */}
+                {sidePanel === "index" && (
+                  <div className="space-y-4">
+                    {/* Header & Stats */}
+                    <div className="space-y-3">
+                      <div className="text-center">
+                        <h3 className="text-sm font-bold">תוכן עניינים ומעקב</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          לחץ על עמוד כדי לעבור אליו
+                        </p>
+                      </div>
+
+                      {/* Progress Summary Card */}
+                      <Card className="p-3 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium">התקדמות כללית</span>
+                            <Badge variant="secondary" className="text-xs">
+                              {readCount}/{numPages}
+                            </Badge>
+                          </div>
+                          
+                          {/* Progress Bar */}
+                          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                            <div 
+                              className="h-full bg-primary transition-all duration-500"
+                              style={{ width: `${readPercentage}%` }}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">{Math.round(readPercentage)}% הושלם</span>
+                            <span className="text-muted-foreground">{numPages - readCount} נותרו</span>
+                          </div>
+                        </div>
+                      </Card>
+
+                      {/* Quick Stats */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <Card className="p-2 text-center">
+                          <div className="text-lg font-bold text-primary">{readCount}</div>
+                          <div className="text-[10px] text-muted-foreground">נקראו</div>
+                        </Card>
+                        <Card className="p-2 text-center">
+                          <div className="text-lg font-bold text-blue-500">{annotations.length}</div>
+                          <div className="text-[10px] text-muted-foreground">הערות</div>
+                        </Card>
+                        <Card className="p-2 text-center">
+                          <div className="text-lg font-bold text-orange-500">{numPages - readCount}</div>
+                          <div className="text-[10px] text-muted-foreground">נותרו</div>
+                        </Card>
+                      </div>
+                    </div>
+
+                    {/* Page Grid */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-xs font-medium">כל העמודים</span>
+                        <span className="text-xs text-muted-foreground">{numPages} עמודים</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-2">
+                        {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => {
+                          const isRead = readPages.has(pageNum);
+                          const isCurrent = pageNum === currentPage;
+                          const hasAnnotations = (annotationCountsByPage[pageNum] || 0) > 0;
+                          const annotationCount = annotationCountsByPage[pageNum] || 0;
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => onPageChange(pageNum)}
+                              className={`relative aspect-square rounded-lg p-2 text-center transition-all border-2 group ${
+                                isCurrent
+                                  ? "bg-primary text-primary-foreground border-primary shadow-lg scale-105 ring-2 ring-primary/20"
+                                  : isRead
+                                  ? "bg-success/20 border-success/30 hover:bg-success/30 hover:scale-105"
+                                  : "bg-muted/30 border-border hover:bg-muted/50 hover:scale-105"
+                              }`}
+                              title={`עמוד ${pageNum}${isRead ? " - נקרא ✓" : " - לא נקרא"}${hasAnnotations ? `\n📝 ${annotationCount} הערות` : ""}`}
+                            >
+                              <div className="flex flex-col items-center justify-center h-full relative">
+                                <span className={`text-xs font-bold ${isCurrent ? "text-sm" : ""}`}>
+                                  {pageNum}
+                                </span>
+                                
+                                {/* Status Icons */}
+                                <div className="flex items-center gap-0.5 mt-1">
+                                  {isRead && !isCurrent && (
+                                    <CheckCircle2 className="w-3 h-3 text-success" />
+                                  )}
+                                  {hasAnnotations && (
+                                    <Badge 
+                                      variant="secondary" 
+                                      className="text-[8px] h-3 px-1 bg-primary/20 text-primary"
+                                    >
+                                      {annotationCount}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Current Page Indicator */}
+                              {isCurrent && (
+                                <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Legend */}
+                    <div className="space-y-2 pt-2 border-t">
+                      <div className="text-xs font-medium px-1">מקרא</div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-4 h-4 bg-success/20 border-2 border-success/30 rounded flex items-center justify-center">
+                            <CheckCircle2 className="w-2.5 h-2.5 text-success" />
+                          </div>
+                          <span className="text-muted-foreground">נקרא</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-4 h-4 bg-primary border-2 border-primary rounded relative">
+                            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-primary rounded-full" />
+                          </div>
+                          <span className="text-muted-foreground">נוכחי</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-4 h-4 bg-muted/30 border-2 border-border rounded"></div>
+                          <span className="text-muted-foreground">לא נקרא</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="secondary" className="text-[8px] h-4 px-1.5 bg-primary/20 text-primary">
+                            3
+                          </Badge>
+                          <span className="text-muted-foreground">הערות</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Annotations Panel */}
                 {sidePanel === "annotations" && (
                   <div className="space-y-4">

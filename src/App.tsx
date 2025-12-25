@@ -6,6 +6,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopBar } from "@/components/TopBar";
 import { SidebarEdgeTrigger } from "@/components/SidebarEdgeTrigger";
+import { DevInspector } from "@/components/DevInspector";
 import Index from "./pages/Index";
 import Habits from "./pages/Habits";
 import WakeUp from "./pages/WakeUp";
@@ -26,6 +27,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <Toaster />
     <Sonner />
+    <DevInspector />
     <BrowserRouter>
       <SidebarProvider>
         <div className="min-h-screen flex w-full" dir="rtl">
