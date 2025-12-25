@@ -11,6 +11,25 @@ interface PDFUploaderProps {
   onUploadComplete: (fileUrl: string, fileName: string) => void;
 }
 
+const SUPPORTED_EXTENSIONS = new Set(["pdf", "docx", "txt", "html", "htm"]);
+
+const SUPPORTED_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+  "text/html",
+]);
+
+const isSupportedBookFile = (file: File) => {
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (!ext || !SUPPORTED_EXTENSIONS.has(ext)) return false;
+  // Some environments may return empty/unknown MIME type; fall back to extension check.
+  if (!file.type) return true;
+  return SUPPORTED_MIME_TYPES.has(file.type);
+};
+
+const getUploadHelpText = () => "PDF / Word (DOCX) / TXT / HTML";
+
 export const PDFUploader = ({ onUploadComplete }: PDFUploaderProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -32,19 +51,19 @@ export const PDFUploader = ({ onUploadComplete }: PDFUploaderProps) => {
     setIsDragging(false);
     
     const file = e.dataTransfer.files[0];
-    if (file && file.type === 'application/pdf') {
+    if (file && isSupportedBookFile(file)) {
       setSelectedFile(file);
     } else {
-      toast.error("נא להעלות קובץ PDF בלבד");
+      toast.error(`נא להעלות קובץ נתמך בלבד (${getUploadHelpText()})`);
     }
   }, []);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
+    if (file && isSupportedBookFile(file)) {
       setSelectedFile(file);
     } else if (file) {
-      toast.error("נא להעלות קובץ PDF בלבד");
+      toast.error(`נא להעלות קובץ נתמך בלבד (${getUploadHelpText()})`);
     }
   }, []);
 
@@ -96,7 +115,7 @@ export const PDFUploader = ({ onUploadComplete }: PDFUploaderProps) => {
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <Upload className="w-5 h-5 text-primary" />
-          <h3 className="font-medium">העלאת ספר PDF</h3>
+          <h3 className="font-medium">העלאת ספר</h3>
         </div>
 
         {/* Drop Zone */}
@@ -132,11 +151,11 @@ export const PDFUploader = ({ onUploadComplete }: PDFUploaderProps) => {
             <>
               <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
               <p className="text-muted-foreground mb-2">
-                גרור קובץ PDF לכאן או לחץ לבחירה
+                גרור קובץ לכאן או לחץ לבחירה ({getUploadHelpText()})
               </p>
               <Input
                 type="file"
-                accept="application/pdf"
+                accept=".pdf,.docx,.txt,.html,.htm,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/html"
                 onChange={handleFileSelect}
                 className="hidden"
                 id="pdf-upload"

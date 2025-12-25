@@ -63,6 +63,32 @@ export const useUserBooks = () => {
     },
   });
 
+  // Update file (used for edited non-PDF documents)
+  const updateBookFile = useMutation({
+    mutationFn: async ({
+      bookId,
+      fileUrl,
+      fileName,
+    }: {
+      bookId: string;
+      fileUrl: string;
+      fileName: string;
+    }) => {
+      const { error } = await supabase
+        .from("user_books")
+        .update({
+          file_url: fileUrl,
+          file_name: fileName,
+          last_read_at: new Date().toISOString(),
+        })
+        .eq("id", bookId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-books"] });
+    },
+  });
+
   // Delete a book
   const deleteBook = useMutation({
     mutationFn: async ({ bookId, filePath }: { bookId: string; filePath?: string }) => {
@@ -88,6 +114,7 @@ export const useUserBooks = () => {
     isLoading,
     addBook,
     updatePage,
+    updateBookFile,
     deleteBook,
   };
 };

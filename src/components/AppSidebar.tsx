@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Target, Trophy, Archive, Settings, Sun, ListChecks, MessageCircle, Pin, PinOff, BookOpen, FileText } from "lucide-react";
+import { Home, Target, Trophy, Archive, Settings, Sun, ListChecks, MessageCircle, Pin, PinOff, BookOpen } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { useSidebarPin } from "@/hooks/useSidebarPin";
@@ -26,10 +26,6 @@ const items = [{
   title: "הספר שלי",
   url: "/book",
   icon: BookOpen
-}, {
-  title: "הדגשת PDF",
-  url: "/pdf-highlighter",
-  icon: FileText
 }, {
   title: "מאמן AI",
   url: "/ai-coach",

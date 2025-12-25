@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { createPortal } from "react-dom";
 import * as pdfjs from "pdfjs-dist";
 import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
@@ -29,9 +28,8 @@ import "react-pdf-highlighter-extended/dist/esm/style/pdf_viewer.css";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, X, MessageSquare, Sparkles } from "lucide-react";
+import { Loader2, X, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
-import { runHebrewOcrOnCanvas, type OcrPageResult } from "@/utils/hebrewOcr";
 
 // Custom highlight type with color and note
 export interface CustomHighlight extends Highlight {
@@ -255,16 +253,6 @@ export const PDFHighlighterComponent = ({
   const highlighterUtilsRef = useRef<PdfHighlighterUtils | null>(null);
   const didNotifyLoadedRef = useRef(false);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const pdfDocumentRef = useRef<pdfjs.PDFDocumentProxy | null>(null);
-
-  const [ocrTargetPageNode, setOcrTargetPageNode] = useState<HTMLElement | null>(null);
-  const [ocrResult, setOcrResult] = useState<OcrPageResult | null>(null);
-  const [isOcrRunning, setIsOcrRunning] = useState(false);
-  const [ocrError, setOcrError] = useState<string | null>(null);
-  const [ocrColor, setOcrColor] = useState(HIGHLIGHT_COLORS[0].value);
-
   // Scroll to page when currentPage changes
   useEffect(() => {
     if (highlighterUtilsRef.current && currentPage) {
@@ -327,157 +315,6 @@ export const PDFHighlighterComponent = ({
     />
   );
 
-  const syncOcrTarget = useCallback(() => {
-    const root = containerRef.current;
-    if (!root) return;
-
-    const pageNode = root.querySelector(`[data-page-number='${currentPage}']`) as HTMLElement | null;
-    if (!pageNode) {
-      setOcrTargetPageNode(null);
-      return;
-    }
-    // Ensure absolute children can be positioned.
-    const computed = window.getComputedStyle(pageNode);
-    if (computed.position === "static") {
-      pageNode.style.position = "relative";
-    }
-    setOcrTargetPageNode(pageNode);
-  }, [currentPage]);
-
-  useEffect(() => {
-    // When page changes, re-target overlay and clear OCR results (page-specific).
-    syncOcrTarget();
-    setOcrResult(null);
-    setOcrError(null);
-  }, [currentPage, syncOcrTarget]);
-
-  const runOcrForCurrentPage = useCallback(async () => {
-    const pdfDoc = pdfDocumentRef.current;
-    if (!pdfDoc) {
-      toast.error("ה-PDF עדיין נטען");
-      return;
-    }
-
-    try {
-      setIsOcrRunning(true);
-      setOcrError(null);
-
-      // Try to align OCR coordinates with the currently rendered page size.
-      syncOcrTarget();
-      const pageNode = (containerRef.current?.querySelector(
-        `[data-page-number='${currentPage}']`
-      ) as HTMLElement | null);
-
-      const page = await pdfDoc.getPage(currentPage);
-      const baseViewport = page.getViewport({ scale: 1 });
-
-      // Prefer DOM size of rendered page for best alignment.
-      const domRect = pageNode?.getBoundingClientRect();
-      const cssWidth = domRect?.width ?? baseViewport.width;
-      const cssHeight = domRect?.height ?? baseViewport.height;
-
-      const scaleToCss = cssWidth / baseViewport.width;
-      const ocrScaleBoost = 2.5;
-      const viewport = page.getViewport({ scale: scaleToCss * ocrScaleBoost });
-
-      const ocrCanvas = document.createElement("canvas");
-      ocrCanvas.width = Math.max(1, Math.floor(viewport.width));
-      ocrCanvas.height = Math.max(1, Math.floor(viewport.height));
-      const ctx = ocrCanvas.getContext("2d");
-      if (!ctx) throw new Error("no-canvas-context");
-
-      await page.render({ canvasContext: ctx, viewport }).promise;
-
-      const raw = await runHebrewOcrOnCanvas({ canvas: ocrCanvas, lang: "heb" });
-      const scaleX = cssWidth / viewport.width;
-      const scaleY = cssHeight / viewport.height;
-
-      const mapped: OcrPageResult = {
-        text: raw.text,
-        words: raw.words.map((w) => ({
-          ...w,
-          x0: w.x0 * scaleX,
-          x1: w.x1 * scaleX,
-          y0: w.y0 * scaleY,
-          y1: w.y1 * scaleY,
-        })),
-      };
-
-      setOcrResult(mapped);
-      toast.success("OCR הסתיים – אפשר לבחור טקסט ולהדגיש");
-    } catch (e) {
-      console.error(e);
-      setOcrError("שגיאה בהרצת OCR. נסה שוב או החלף קובץ.");
-      toast.error("שגיאה בהרצת OCR");
-    } finally {
-      setIsOcrRunning(false);
-    }
-  }, [currentPage, syncOcrTarget]);
-
-  const addHighlightFromOcrSelection = useCallback(() => {
-    const overlay = overlayRef.current;
-    if (!overlay) return;
-
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
-
-    const range = selection.getRangeAt(0);
-    if (!overlay.contains(range.commonAncestorContainer)) return;
-
-    const overlayRect = overlay.getBoundingClientRect();
-    const rects = Array.from(range.getClientRects())
-      .map((r) => ({
-        x: r.left - overlayRect.left,
-        y: r.top - overlayRect.top,
-        w: r.width,
-        h: r.height,
-      }))
-      .filter((r) => r.w > 2 && r.h > 2);
-
-    if (rects.length === 0) return;
-
-    const contentText = selection.toString().trim();
-
-    const scaledRects: Scaled[] = rects.map((r) => ({
-      x1: r.x,
-      y1: r.y,
-      x2: r.x + r.w,
-      y2: r.y + r.h,
-      // Keep width/height as the rect size (matches our DB mapping).
-      width: r.w,
-      height: r.h,
-      pageNumber: currentPage,
-    }));
-
-    const minX1 = Math.min(...scaledRects.map((r) => r.x1));
-    const minY1 = Math.min(...scaledRects.map((r) => r.y1));
-    const maxX2 = Math.max(...scaledRects.map((r) => r.x2));
-    const maxY2 = Math.max(...scaledRects.map((r) => r.y2));
-
-    const boundingRect: Scaled = {
-      x1: minX1,
-      y1: minY1,
-      x2: maxX2,
-      y2: maxY2,
-      width: maxX2 - minX1,
-      height: maxY2 - minY1,
-      pageNumber: currentPage,
-    };
-
-    const newHighlight: CustomHighlight = {
-      id: `ocr-highlight-${Date.now()}`,
-      type: "text",
-      position: { boundingRect, rects: scaledRects },
-      content: { text: contentText },
-      color: ocrColor,
-      noteText: contentText ? `OCR: ${contentText}` : "OCR",
-      highlightText: contentText || undefined,
-    };
-
-    onAddHighlight(newHighlight);
-    selection.removeAllRanges();
-  }, [currentPage, ocrColor, onAddHighlight]);
-
   return (
     <div
       className={`w-full h-full relative ${nightMode ? "pdf-night-mode" : ""} ${className}`}
@@ -485,39 +322,7 @@ export const PDFHighlighterComponent = ({
         transform: `scale(${zoom / 100})`,
         transformOrigin: "top center",
       }}
-      ref={containerRef}
     >
-      {/* OCR toolbar (for scanned PDFs without selectable text) */}
-      <div className="absolute top-2 right-2 z-50">
-        <Card className="p-2 flex items-center gap-2" dir="rtl">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={runOcrForCurrentPage}
-            disabled={isOcrRunning}
-            className="gap-1"
-            title="OCR בעברית. בפעם הראשונה זה יכול לקחת זמן (מוריד מודל שפה)."
-          >
-            <Sparkles className="w-4 h-4" />
-            {isOcrRunning ? "מריץ OCR..." : "הרץ OCR"}
-          </Button>
-          <div className="flex items-center gap-1">
-            {HIGHLIGHT_COLORS.slice(0, 5).map((c) => (
-              <button
-                key={c.value}
-                onClick={() => setOcrColor(c.value)}
-                className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${
-                  ocrColor === c.value ? "border-foreground" : "border-transparent"
-                }`}
-                style={{ backgroundColor: c.value }}
-                title={`OCR highlight: ${c.label}`}
-              />
-            ))}
-          </div>
-        </Card>
-        {ocrError && <div className="mt-2 text-sm text-destructive">{ocrError}</div>}
-      </div>
-
       <PdfLoader
         document={fileUrl}
         workerSrc={pdfjsWorker}
@@ -541,16 +346,10 @@ export const PDFHighlighterComponent = ({
         )}
       >
         {(pdfDocument) => {
-          pdfDocumentRef.current = pdfDocument;
-
           if (!didNotifyLoadedRef.current) {
             didNotifyLoadedRef.current = true;
             onDocumentLoaded?.(pdfDocument.numPages);
           }
-
-          // Try to keep OCR overlay attached to the correct page as pages mount.
-          // (pdf.js viewer creates .page nodes lazily)
-          queueMicrotask(() => syncOcrTarget());
 
           return (
             <PdfHighlighter
@@ -571,50 +370,6 @@ export const PDFHighlighterComponent = ({
           );
         }}
       </PdfLoader>
-
-      {/* OCR invisible selectable text overlay (rendered into the current .page element) */}
-      {ocrResult && ocrTargetPageNode &&
-        createPortal(
-          <div
-            ref={overlayRef}
-            className="absolute top-0 left-0 select-text"
-            onMouseUp={addHighlightFromOcrSelection}
-            style={{
-              width: "100%",
-              height: "100%",
-              direction: "rtl",
-              unicodeBidi: "plaintext",
-              color: "transparent",
-              WebkitTextFillColor: "transparent",
-              zIndex: 30,
-            }}
-          >
-            {ocrResult.words.map((w, idx) => {
-              const width = Math.max(0, w.x1 - w.x0);
-              const height = Math.max(0, w.y1 - w.y0);
-              return (
-                <span
-                  key={idx}
-                  style={{
-                    position: "absolute",
-                    left: w.x0,
-                    top: w.y0,
-                    width,
-                    height,
-                    fontSize: Math.max(10, height * 0.9),
-                    lineHeight: `${Math.max(10, height)}px`,
-                    whiteSpace: "pre",
-                    userSelect: "text",
-                    pointerEvents: "auto",
-                  }}
-                >
-                  {w.text + " "}
-                </span>
-              );
-            })}
-          </div>,
-          ocrTargetPageNode
-        )}
 
       {/* Night mode overlay */}
       {nightMode && (

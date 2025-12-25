@@ -1,0 +1,28 @@
+/* Minimal styling for docx-preview output.
+   We keep it neutral and theme-friendly using existing CSS variables. */
+
+.docx-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.docx {
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* docx-preview usually renders pages as <section> elements */
+.docx section {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border: 1px solid hsl(var(--border));
+  margin: 12px auto;
+  overflow: hidden;
+}
+
+/* Images should not overflow page width */
+.docx img {
+  max-width: 100%;
+  height: auto;
+}

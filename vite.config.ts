@@ -17,6 +17,10 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       clientPort: 443,
     },
+    cors: {
+      origin: true,
+      credentials: true,
+    },
   },
   plugins: [
     react(),
@@ -52,6 +56,7 @@ export default defineConfig(({ mode }) => ({
         ]
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
         runtimeCaching: [
           {

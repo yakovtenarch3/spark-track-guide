@@ -13,8 +13,11 @@ import {
 } from "lucide-react";
 import { PDFUploader } from "./PDFUploader";
 import { LuxuryPDFReader } from "./LuxuryPDFReader";
+import { RichDocumentEditor } from "./RichDocumentEditor";
 import { useUserBooks, type UserBook } from "@/hooks/useUserBooks";
 import { toast } from "sonner";
+
+const stripKnownExtension = (name: string) => name.replace(/\.(pdf|docx|txt|html|htm)$/i, "");
 
 export const UserBooksSection = () => {
   const [showUploader, setShowUploader] = useState(false);
@@ -22,11 +25,11 @@ export const UserBooksSection = () => {
   const [bookTitle, setBookTitle] = useState("");
   const [selectedBook, setSelectedBook] = useState<UserBook | null>(null);
 
-  const { books, isLoading, addBook, updatePage, deleteBook } = useUserBooks();
+  const { books, isLoading, addBook, updatePage, updateBookFile, deleteBook } = useUserBooks();
 
   const handleUploadComplete = (fileUrl: string, fileName: string) => {
     setPendingFile({ url: fileUrl, name: fileName });
-    setBookTitle(fileName.replace('.pdf', ''));
+    setBookTitle(stripKnownExtension(fileName));
   };
 
   const handleSaveBook = () => {
@@ -76,11 +79,42 @@ export const UserBooksSection = () => {
   };
 
   if (selectedBook) {
+    const ext = selectedBook.file_name.split(".").pop()?.toLowerCase();
+    const isPdf = ext === "pdf";
+    if (!isPdf) {
+      return (
+        <RichDocumentEditor
+          bookId={selectedBook.id}
+          fileUrl={selectedBook.file_url}
+          fileName={selectedBook.file_name}
+          title={selectedBook.title}
+          onFileSaved={({ fileUrl, fileName }) => {
+            updateBookFile.mutate(
+              { bookId: selectedBook.id, fileUrl, fileName },
+              {
+                onSuccess: () => {
+                  setSelectedBook((prev) =>
+                    prev ? { ...prev, file_url: fileUrl, file_name: fileName } : prev
+                  );
+                  toast.success("המסמך נשמר בהצלחה");
+                },
+                onError: () => {
+                  toast.error("שגיאה בשמירת המסמך");
+                },
+              }
+            );
+          }}
+          onDelete={() => handleDeleteBook(selectedBook)}
+          onBack={() => setSelectedBook(null)}
+        />
+      );
+    }
+
     return (
       <LuxuryPDFReader
         bookId={selectedBook.id}
         fileUrl={selectedBook.file_url}
-        fileName={selectedBook.title}
+        fileName={selectedBook.file_name}
         currentPage={selectedBook.current_page || 1}
         totalPages={selectedBook.total_pages || 100}
         onPageChange={handlePageChange}

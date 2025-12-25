@@ -17,10 +17,7 @@ import Settings from "./pages/Settings";
 import Install from "./pages/Install";
 import BookReaderPage from "./pages/BookReader";
 import PDFTestPage from "./pages/PDFTest";
-import PDFEditorComparison from "./pages/PDFEditorComparison";
-import PDFDemo from "./pages/PDFDemo";
-import ProPDFViewer from "./pages/ProPDFViewer";
-import PDFHighlighterPage from "./pages/PDFHighlighter";
+import PDFHighlighterHebrew from "./pages/PDFHighlighterHebrew";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,10 +46,7 @@ const App = () => (
                 <Route path="/install" element={<Install />} />
                 <Route path="/book" element={<BookReaderPage />} />
                 <Route path="/pdf-test" element={<PDFTestPage />} />
-                <Route path="/pdf-editor" element={<PDFEditorComparison />} />
-                <Route path="/pdf-demo" element={<PDFDemo />} />
-                <Route path="/pdf-pro" element={<ProPDFViewer />} />
-                <Route path="/pdf-highlighter" element={<PDFHighlighterPage />} />
+                <Route path="/pdf-hebrew" element={<PDFHighlighterHebrew />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
