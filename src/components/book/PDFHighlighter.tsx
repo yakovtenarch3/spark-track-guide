@@ -235,6 +235,7 @@ interface PDFHighlighterComponentProps {
   zoom?: number;
   className?: string;
   onDocumentLoaded?: (totalPages: number) => void;
+  twoColumnMode?: boolean;
 }
 
 export const PDFHighlighterComponent = ({
@@ -249,6 +250,7 @@ export const PDFHighlighterComponent = ({
   zoom = 100,
   className = "",
   onDocumentLoaded,
+  twoColumnMode = false,
 }: PDFHighlighterComponentProps) => {
   const highlighterUtilsRef = useRef<PdfHighlighterUtils | null>(null);
   const didNotifyLoadedRef = useRef(false);

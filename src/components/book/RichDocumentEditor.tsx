@@ -291,6 +291,7 @@ export const RichDocumentEditor = ({
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [viewMode, setViewMode] = useState<"edit" | "word" | "canvas">("edit");
+  const [twoColumnMode, setTwoColumnMode] = useState(false);
 
   const [notes, setNotes] = useState<DocNote[]>([]);
   const [noteDraft, setNoteDraft] = useState("");
@@ -626,6 +627,15 @@ export const RichDocumentEditor = ({
             </div>
           )}
           <div className="flex items-center gap-1 border-l pl-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-xs h-8"
+              onClick={() => setTwoColumnMode(!twoColumnMode)}
+              title={twoColumnMode ? "טור יחיד" : "שני טורים"}
+            >
+              {twoColumnMode ? "📄" : "📰"} {twoColumnMode ? "1" : "2"} טורים
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -1205,7 +1215,16 @@ export const RichDocumentEditor = ({
                 </div>
               ) : (
                 <div className="p-4">
-                  <Card className="bg-white dark:bg-zinc-900 shadow-lg min-h-[600px]">
+                  <Card 
+                    className={`bg-white dark:bg-zinc-900 shadow-lg min-h-[600px] ${
+                      twoColumnMode 
+                        ? 'columns-2 gap-8 column-fill-auto' 
+                        : ''
+                    }`}
+                    style={twoColumnMode ? {
+                      columnRule: '1px solid #e5e7eb'
+                    } : {}}
+                  >
                     <EditorContent editor={editor} />
                   </Card>
                 </div>
