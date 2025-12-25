@@ -62,11 +62,12 @@ All colors MUST be HSL.
     --transition: all 0.2s ease;
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     
-    --gradient-primary: linear-gradient(135deg, hsl(210 30% 15%) 0%, hsl(210 25% 20%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(145 55% 45%) 0%, hsl(145 50% 55%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(210 25% 20%) 0%, hsl(210 30% 25%) 100%);
-    --gradient-glass: linear-gradient(135deg, hsl(40 40% 99% / 0.7) 0%, hsl(40 40% 99% / 0.5) 100%);
-    --gradient-shimmer: linear-gradient(90deg, transparent, hsl(210 30% 15% / 0.03), transparent);
+    /* Gradients disabled - using solid colors instead */
+    --gradient-primary: hsl(210 30% 15%);
+    --gradient-success: hsl(145 55% 45%);
+    --gradient-accent: hsl(210 25% 20%);
+    --gradient-glass: hsl(40 40% 99% / 0.7);
+    --gradient-shimmer: transparent;
     
     --glass-bg: hsl(40 40% 99% / 0.7);
     --glass-border: hsl(40 40% 99% / 0.2);
@@ -144,11 +145,12 @@ All colors MUST be HSL.
     --shadow-glow: 0 8px 24px -4px hsl(40 30% 88% / 0.15);
     --shadow-luxury: 0 20px 50px -10px hsl(40 30% 88% / 0.2);
     
-    --gradient-primary: linear-gradient(135deg, hsl(40 30% 88%) 0%, hsl(40 25% 92%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(145 50% 40%) 0%, hsl(145 45% 50%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(40 25% 82%) 0%, hsl(40 20% 87%) 100%);
-    --gradient-glass: linear-gradient(135deg, hsl(210 20% 12% / 0.5) 0%, hsl(210 20% 12% / 0.3) 100%);
-    --gradient-shimmer: linear-gradient(90deg, transparent, hsl(40 30% 88% / 0.05), transparent);
+    /* Gradients disabled - using solid colors instead */
+    --gradient-primary: hsl(40 30% 88%);
+    --gradient-success: hsl(145 50% 40%);
+    --gradient-accent: hsl(40 25% 82%);
+    --gradient-glass: hsl(210 20% 12% / 0.5);
+    --gradient-shimmer: transparent;
     
     --glass-bg: hsl(210 20% 12% / 0.5);
     --glass-border: hsl(210 20% 12% / 0.2);
