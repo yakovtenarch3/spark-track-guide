@@ -9,6 +9,7 @@ import { SidebarEdgeTrigger } from "@/components/SidebarEdgeTrigger";
 import { DevInspector } from "@/components/DevInspector";
 import Index from "./pages/Index";
 import Habits from "./pages/Habits";
+import Tasks from "./pages/Tasks";
 import WakeUp from "./pages/WakeUp";
 import DailyGoals from "./pages/DailyGoals";
 import AICoach from "./pages/AICoach";
@@ -39,6 +40,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/habits" element={<Habits />} />
+                <Route path="/tasks" element={<Tasks />} />
                 <Route path="/wake-up" element={<WakeUp />} />
                 <Route path="/daily-goals" element={<DailyGoals />} />
                 <Route path="/ai-coach" element={<AICoach />} />
