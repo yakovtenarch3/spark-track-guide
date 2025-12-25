@@ -7,8 +7,16 @@ import { VitePWA } from "vite-plugin-pwa";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
+    // Codespaces: expose dev server on the forwarded port and make HMR work over HTTPS.
+    host: true,
     port: 8080,
+    strictPort: true,
+    // Avoid host-check issues behind GitHub's port proxy.
+    allowedHosts: true,
+    // When opened via https://*.app.github.dev, the page is HTTPS, so HMR must use WSS.
+    hmr: {
+      clientPort: 443,
+    },
   },
   plugins: [
     react(),
