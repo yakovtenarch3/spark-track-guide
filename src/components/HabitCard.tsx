@@ -23,7 +23,7 @@ export const HabitCard = ({ habit, onToggle, onDelete, onUpdateReminder }: Habit
 
   return (
     <Card
-      className={`p-6 transition-[var(--transition)] hover:shadow-[var(--shadow-hover)] border-r-4 ${
+      className={`p-4 sm:p-6 transition-[var(--transition)] hover:shadow-[var(--shadow-hover)] border-r-4 ${
         habit.completedToday
           ? "bg-success/5 border-success/40 shadow-[var(--shadow-success)]"
           : "bg-card border-border"
@@ -31,14 +31,14 @@ export const HabitCard = ({ habit, onToggle, onDelete, onUpdateReminder }: Habit
       style={{ borderRightColor: habit.completedToday ? undefined : habit.color }}
       dir="rtl"
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3 sm:gap-4">
         {/* Checkbox */}
         <div className="flex-shrink-0 mt-1">
           <Checkbox
             id={habit.id}
             checked={habit.completedToday}
             onCheckedChange={handleToggle}
-            className="w-7 h-7 rounded-full border-2 data-[state=checked]:bg-success data-[state=checked]:border-success"
+            className="w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 data-[state=checked]:bg-success data-[state=checked]:border-success"
           />
         </div>
 
@@ -46,7 +46,7 @@ export const HabitCard = ({ habit, onToggle, onDelete, onUpdateReminder }: Habit
         <div className="flex-1 min-w-0">
           <label
             htmlFor={habit.id}
-            className={`block text-xl font-semibold cursor-pointer transition-all ${
+            className={`block text-lg sm:text-xl font-semibold cursor-pointer transition-all ${
               habit.completedToday
                 ? "text-success line-through"
                 : "text-foreground"
@@ -55,18 +55,18 @@ export const HabitCard = ({ habit, onToggle, onDelete, onUpdateReminder }: Habit
             {habit.title}
           </label>
           {habit.description && (
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               {habit.description}
             </p>
           )}
 
           {/* Meta Info */}
-          <div className="flex flex-wrap items-center gap-4 mt-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-3">
             {/* Streak */}
             {habit.streak > 0 && (
-              <div className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-primary" strokeWidth={1.5} />
-                <span className="text-sm font-medium text-primary">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-primary" strokeWidth={1.5} />
+                <span className="text-xs sm:text-sm font-medium text-primary">
                   {habit.streak} ימים רצופים
                 </span>
               </div>
@@ -74,9 +74,9 @@ export const HabitCard = ({ habit, onToggle, onDelete, onUpdateReminder }: Habit
 
             {/* Preferred Time */}
             {habit.preferred_time && (
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
+                <span className="text-xs sm:text-sm text-muted-foreground">
                   {habit.preferred_time}
                 </span>
               </div>
@@ -85,15 +85,15 @@ export const HabitCard = ({ habit, onToggle, onDelete, onUpdateReminder }: Habit
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
           <ReminderSettings habit={habit} onUpdate={onUpdateReminder} />
           <Button
             variant="ghost"
             size="icon"
             onClick={handleDelete}
-            className="hover:bg-destructive/10 hover:text-destructive"
+            className="hover:bg-destructive/10 hover:text-destructive h-8 w-8 sm:h-10 sm:w-10"
           >
-            <Trash2 className="w-5 h-5" />
+            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
         </div>
       </div>

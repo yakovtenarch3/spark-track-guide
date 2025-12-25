@@ -12,14 +12,14 @@ export default function Settings() {
   const { enabled, consoleEnabled, inspectorEnabled, toggleDevMode, toggleConsole, toggleInspector } = useDeveloperMode();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-6" dir="rtl">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center flex items-center justify-center gap-2">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6 overflow-x-hidden" dir="rtl">
+      <div className="max-w-4xl mx-auto w-full">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 md:mb-8 text-center flex items-center justify-center gap-2">
           <SettingsIcon className="h-8 w-8" />
           הגדרות
         </h1>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Developer Mode */}
           <Card className="border-2 border-orange-200 bg-orange-50/50">
             <CardHeader>

@@ -10,33 +10,33 @@ const Tasks = () => {
   const [activeTab, setActiveTab] = useState("board");
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen p-3 sm:p-4 md:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted/20 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 w-full">
         {/* Header */}
         <div className="text-center" dir="rtl">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-l from-purple-600 to-blue-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2 bg-gradient-to-l from-purple-600 to-blue-600 bg-clip-text text-transparent">
             לוח משימות חכם
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             נהל משימות עם ניתוח חכם והמלצות מותאמות אישית
           </p>
         </div>
 
         {/* Main Tabs */}
-        <Card className="p-6">
+        <Card className="p-3 sm:p-4 md:p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
-              <TabsTrigger value="board" className="flex items-center gap-2">
-                <LayoutGrid className="w-4 h-4" />
-                <span>לוח משימות</span>
+            <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6">
+              <TabsTrigger value="board" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <LayoutGrid className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">לוח משימות</span>
               </TabsTrigger>
-              <TabsTrigger value="calendar" className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span>לוח שנה</span>
+              <TabsTrigger value="calendar" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">לוח שנה</span>
               </TabsTrigger>
-              <TabsTrigger value="analytics" className="flex items-center gap-2">
-                <LineChart className="w-4 h-4" />
-                <span>ניתוח ותובנות</span>
+              <TabsTrigger value="analytics" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <LineChart className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">ניתוח ותובנות</span>
               </TabsTrigger>
             </TabsList>
 

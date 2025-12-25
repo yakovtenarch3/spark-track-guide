@@ -120,14 +120,14 @@ const Journal = () => {
   // Lock screen
   if (!isUnlocked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-        <Card className="w-full max-w-md p-8">
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-purple-100 rounded-full mb-4">
-              <Lock className="w-10 h-10 text-purple-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4">
+        <Card className="w-full max-w-md p-6 sm:p-8">
+          <div className="text-center mb-4 sm:mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-purple-100 rounded-full mb-3 sm:mb-4">
+              <Lock className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600" />
             </div>
-            <h1 className="text-3xl font-bold mb-2">היומן האישי שלי</h1>
-            <p className="text-muted-foreground">הזן סיסמא לגישה ליומן</p>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">היומן האישי שלי</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">הזן סיסמא לגישה ליומן</p>
           </div>
 
           <form onSubmit={handleUnlock} className="space-y-4" dir="rtl">
@@ -158,18 +158,18 @@ const Journal = () => {
 
   // Main journal view
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen p-3 sm:p-4 md:p-6 lg:p-8 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-x-hidden">
+      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 w-full">
         {/* Header */}
-        <Card className="p-6" dir="rtl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-purple-100 rounded-full">
-                <BookOpen className="w-6 h-6 text-purple-600" />
+        <Card className="p-4 sm:p-6" dir="rtl">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 bg-purple-100 rounded-full">
+                <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">היומן האישי שלי</h1>
-                <p className="text-sm text-muted-foreground">
+                <h1 className="text-xl sm:text-2xl font-bold">היומן האישי שלי</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {entries.length} רשומות
                 </p>
               </div>
@@ -178,9 +178,10 @@ const Journal = () => {
             <div className="flex gap-2">
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    רשומה חדשה
+                  <Button size="sm" className="text-xs sm:text-sm">
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden xs:inline">רשומה חדשה</span>
+                    <span className="xs:hidden">+</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl" dir="rtl">

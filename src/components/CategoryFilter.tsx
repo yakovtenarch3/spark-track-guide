@@ -19,17 +19,17 @@ interface CategoryFilterProps {
 
 export const CategoryFilter = ({ selectedCategory, onCategoryChange }: CategoryFilterProps) => {
   return (
-    <div className="flex flex-wrap gap-2 justify-center">
+    <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center px-2 overflow-x-hidden">
       {CATEGORIES.map((category) => (
         <Button
           key={category.value}
           variant={selectedCategory === category.value ? "default" : "outline"}
           size="sm"
           onClick={() => onCategoryChange(category.value)}
-          className="gap-2"
+          className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
         >
           <span>{category.icon}</span>
-          <span>{category.label}</span>
+          <span className="hidden xs:inline sm:inline">{category.label}</span>
         </Button>
       ))}
     </div>

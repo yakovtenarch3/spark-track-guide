@@ -65,11 +65,11 @@ export default function Habits() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-6" dir="rtl">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex justify-between items-center flex-wrap gap-4">
-          <h1 className="text-4xl font-bold">ההרגלים שלי</h1>
-          <div className="flex gap-3">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6 overflow-x-hidden" dir="rtl">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 md:space-y-8 w-full">
+        <div className="flex justify-between items-center flex-wrap gap-3 sm:gap-4">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">ההרגלים שלי</h1>
+          <div className="flex gap-2 sm:gap-3">
             <TemplateLibrary onAddHabitFromTemplate={handleAddHabitFromTemplate} />
             <AddHabitDialog onAddHabit={handleAddHabit}>
               <Button size="lg" className="gap-2">
@@ -88,15 +88,15 @@ export default function Habits() {
         />
 
         {filteredHabits.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground text-lg">
+          <div className="text-center py-8 sm:py-12">
+            <p className="text-muted-foreground text-base sm:text-lg px-4">
               {selectedCategory === "all"
                 ? "טרם נוספו הרגלים. התחל על ידי הוספת הרגל ראשון!"
                 : "אין הרגלים בקטגוריה זו"}
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredHabits.map((habit) => (
               <HabitCard
                 key={habit.id}

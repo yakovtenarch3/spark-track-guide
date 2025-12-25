@@ -69,14 +69,14 @@ export const CalendarView = () => {
 
   return (
     <Card className="glass-card">
-      <CardHeader>
-        <div className="flex items-center justify-between">
+      <CardHeader className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <Calendar className="w-6 h-6 text-primary" />
-              {getTitle()}
+            <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+              <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+              <span className="text-base sm:text-xl">{getTitle()}</span>
             </CardTitle>
-            <CardDescription>מעקב יומי אחר ההשלמות שלך</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">מעקב יומי אחר ההשלמות שלך</CardDescription>
           </div>
           
           <DropdownMenu>
@@ -104,11 +104,11 @@ export const CalendarView = () => {
           </DropdownMenu>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className={`grid gap-2 ${
+      <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6 pt-0 sm:pt-0">
+        <div className={`grid gap-1 sm:gap-2 ${
           viewMode === "day" ? "grid-cols-1" : 
           viewMode === "week" ? "grid-cols-7" : 
-          "grid-cols-10"
+          "grid-cols-6 sm:grid-cols-10"
         }`}>
           {days.map((day) => {
             const { completedCount, totalCount, percentage } = getCompletionInfo(day);
@@ -118,8 +118,8 @@ export const CalendarView = () => {
               <div
                 key={day.toISOString()}
                 className={`
-                  ${viewMode === "day" ? "h-32" : "aspect-square"} 
-                  rounded-xl p-2 text-center transition-all cursor-pointer
+                  ${viewMode === "day" ? "h-24 sm:h-32" : "aspect-square"} 
+                  rounded-lg sm:rounded-xl p-1 sm:p-2 text-center transition-all cursor-pointer
                   backdrop-blur-sm border
                   ${isToday ? "ring-2 ring-primary shadow-lg scale-105" : ""}
                   ${percentage === 100 ? "bg-success/20 hover:bg-success/30 border-success/30" : ""}
@@ -129,10 +129,10 @@ export const CalendarView = () => {
                 `}
                 title={`${format(day, "d בMMMM", { locale: he })} - ${completedCount}/${totalCount} הושלמו`}
               >
-                <div className={`${viewMode === "day" ? "text-lg" : "text-xs"} font-semibold text-foreground mb-1`}>
+                <div className={`${viewMode === "day" ? "text-sm sm:text-lg" : "text-[10px] sm:text-xs"} font-semibold text-foreground mb-0.5 sm:mb-1`}>
                   {viewMode === "day" ? format(day, "EEEE, d בMMMM", { locale: he }) : format(day, "d")}
                 </div>
-                <div className={`${viewMode === "day" ? "text-base" : "text-xs"} font-medium text-muted-foreground`}>
+                <div className={`${viewMode === "day" ? "text-xs sm:text-base" : "text-[9px] sm:text-xs"} font-medium text-muted-foreground`}>
                   {completedCount}/{totalCount}
                 </div>
               </div>
@@ -140,17 +140,17 @@ export const CalendarView = () => {
           })}
         </div>
         
-        <div className="flex flex-wrap items-center gap-4 pt-4 border-t text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-success/20 border border-success/30 rounded-md"></div>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 pt-3 sm:pt-4 border-t text-xs sm:text-sm">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-3 h-3 sm:w-4 sm:h-4 bg-success/20 border border-success/30 rounded-md"></div>
             <span className="text-muted-foreground">הושלמו כולם</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-primary/10 border border-primary/20 rounded-md"></div>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-3 h-3 sm:w-4 sm:h-4 bg-primary/10 border border-primary/20 rounded-md"></div>
             <span className="text-muted-foreground">הושלמו חלקית</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-muted/30 border border-muted/40 rounded-md"></div>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-3 h-3 sm:w-4 sm:h-4 bg-muted/30 border border-muted/40 rounded-md"></div>
             <span className="text-muted-foreground">לא הושלמו</span>
           </div>
         </div>

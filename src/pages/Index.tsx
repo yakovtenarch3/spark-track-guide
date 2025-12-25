@@ -12,17 +12,17 @@ import { LayoutDashboard, TrendingUp, Trophy, Brain, Flag } from "lucide-react";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 md:p-6" dir="rtl">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="text-center space-y-2 animate-fade-in">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6 overflow-x-hidden" dir="rtl">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 w-full">
+        <div className="text-center space-y-1 sm:space-y-2 animate-fade-in">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             לוח בקרה
           </h1>
-          <p className="text-muted-foreground text-lg">עקוב אחר ההתקדמות שלך וקבל תובנות מתקדמות</p>
+          <p className="text-muted-foreground text-sm sm:text-base md:text-lg">עקוב אחר ההתקדמות שלך וקבל תובנות מתקדמות</p>
         </div>
 
         <Tabs defaultValue="analytics" className="w-full" dir="rtl">
-          <TabsList className="grid w-full grid-cols-5 mb-6 glass-card p-1">
+          <TabsList className="grid w-full grid-cols-5 mb-4 sm:mb-6 glass-card p-1">
             <TabsTrigger value="overview" className="gap-2">
               <LayoutDashboard className="w-4 h-4" />
               <span className="hidden sm:inline">סקירה כללית</span>
@@ -45,39 +45,39 @@ const Index = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6 animate-fade-in">
-            <div className="grid gap-6 md:grid-cols-2">
+          <TabsContent value="overview" className="space-y-4 sm:space-y-6 animate-fade-in">
+            <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
               <QuoteOfTheDay />
               <DailyCoach />
             </div>
             <Statistics />
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
               <StreakChart />
               <CompletionTrendChart />
             </div>
           </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-6 animate-fade-in">
-            <div className="grid gap-6 md:grid-cols-2">
+          <TabsContent value="analytics" className="space-y-4 sm:space-y-6 animate-fade-in">
+            <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
               <CalendarView />
               <CategoryDistribution />
             </div>
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
               <StreakChart />
               <CompletionTrendChart />
             </div>
           </TabsContent>
 
-          <TabsContent value="achievements" className="space-y-6 animate-fade-in">
+          <TabsContent value="achievements" className="space-y-4 sm:space-y-6 animate-fade-in">
             <Statistics />
             <CategoryDistribution />
           </TabsContent>
 
-          <TabsContent value="ai" className="space-y-6 animate-fade-in">
+          <TabsContent value="ai" className="space-y-4 sm:space-y-6 animate-fade-in">
             <AIAnalysis />
           </TabsContent>
 
-          <TabsContent value="goals" className="space-y-6 animate-fade-in">
+          <TabsContent value="goals" className="space-y-4 sm:space-y-6 animate-fade-in">
             <GoalsTracking />
           </TabsContent>
         </Tabs>

@@ -153,45 +153,45 @@ const AICoach = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6" dir="rtl">
-      <div className="max-w-3xl mx-auto h-[calc(100vh-120px)] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6 overflow-x-hidden" dir="rtl">
+      <div className="max-w-3xl mx-auto h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] md:h-[calc(100vh-120px)] flex flex-col w-full">
         {/* Header */}
-        <div className="text-center space-y-2 mb-4">
+        <div className="text-center space-y-1 sm:space-y-2 mb-3 sm:mb-4">
           <div className="flex items-center justify-center gap-2">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
-              <Bot className="w-6 h-6 text-primary" />
+            <div className="p-1.5 sm:p-2 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
+              <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               מאמן AI אישי
             </h1>
           </div>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-xs sm:text-sm">
             עזרה עם מצב רוח, דחיינות, הרגלים ומוטיבציה
           </p>
         </div>
 
         {/* Chat Area */}
         <Card className="flex-1 flex flex-col glass-card overflow-hidden">
-          <CardHeader className="py-3 px-4 border-b flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
+          <CardHeader className="py-2 sm:py-3 px-3 sm:px-4 border-b flex-row items-center justify-between">
+            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
               שיחה
             </CardTitle>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={() => setSavedDialogOpen(true)}>
-                <History className="w-4 h-4 ml-1" />
-                שיחות שמורות
+            <div className="flex items-center gap-0.5 sm:gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setSavedDialogOpen(true)} className="h-7 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
+                <History className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
+                <span className="hidden sm:inline">שיחות שמורות</span>
               </Button>
               {messages.length >= 2 && (
-                <Button variant="ghost" size="sm" onClick={handleSaveConversation} disabled={saveConversation.isPending}>
-                  <Star className="w-4 h-4 ml-1" />
-                  שמור
+                <Button variant="ghost" size="sm" onClick={handleSaveConversation} disabled={saveConversation.isPending} className="h-7 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
+                  <Star className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
+                  <span className="hidden sm:inline">שמור</span>
                 </Button>
               )}
               {messages.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={clearChat}>
-                  <RefreshCw className="w-4 h-4 ml-1" />
-                  חדש
+                <Button variant="ghost" size="sm" onClick={clearChat} className="h-7 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
+                  <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
+                  <span className="hidden sm:inline">חדש</span>
                 </Button>
               )}
             </div>
