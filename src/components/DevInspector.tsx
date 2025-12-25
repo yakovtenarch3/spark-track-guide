@@ -3,6 +3,7 @@ import { Bug, Copy, X, CheckCircle2, Camera, MapPin, Terminal, Trash2 } from 'lu
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import html2canvas from 'html2canvas';
+import { useDeveloperMode } from '@/hooks/useDeveloperMode';
 
 interface InspectedElement {
   componentName: string;
@@ -23,6 +24,7 @@ interface InspectedElement {
 }
 
 export function DevInspector() {
+  const { enabled, consoleEnabled, inspectorEnabled } = useDeveloperMode();
   const [isActive, setIsActive] = useState(false);
   const [inspectedElement, setInspectedElement] = useState<InspectedElement | null>(null);
   const [hoveredElement, setHoveredElement] = useState<HTMLElement | null>(null);
@@ -30,6 +32,17 @@ export function DevInspector() {
   const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
   const [showConsole, setShowConsole] = useState(false);
   const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
+
+  // Auto-sync with developer mode settings
+  useEffect(() => {
+    setIsActive(inspectorEnabled);
+    setShowConsole(consoleEnabled);
+  }, [inspectorEnabled, consoleEnabled]);
+
+  // Don't render if dev mode is disabled
+  if (!enabled) {
+    return null;
+  }
 
   // הוספת לוג לקונסול
   const addLog = (message: string) => {
