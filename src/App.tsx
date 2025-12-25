@@ -20,6 +20,7 @@ import PDFTestPage from "./pages/PDFTest";
 import PDFEditorComparison from "./pages/PDFEditorComparison";
 import PDFDemo from "./pages/PDFDemo";
 import ProPDFViewer from "./pages/ProPDFViewer";
+import PDFHighlighterPage from "./pages/PDFHighlighter";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
                 <Route path="/pdf-editor" element={<PDFEditorComparison />} />
                 <Route path="/pdf-demo" element={<PDFDemo />} />
                 <Route path="/pdf-pro" element={<ProPDFViewer />} />
+                <Route path="/pdf-highlighter" element={<PDFHighlighterPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
