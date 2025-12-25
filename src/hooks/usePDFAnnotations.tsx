@@ -22,6 +22,23 @@ export interface PDFAnnotation {
   updated_at: string;
 }
 
+export interface PDFBookmark {
+  id: string;
+  book_id: string;
+  page_number: number;
+  title: string;
+  created_at: string;
+}
+
+export interface ReadingProgress {
+  book_id: string;
+  current_page: number;
+  total_pages: number;
+  last_read_at: string;
+  highlights_count: number;
+  notes_count: number;
+}
+
 export const usePDFAnnotations = (bookId: string | null) => {
   const queryClient = useQueryClient();
 
@@ -142,7 +159,112 @@ export const usePDFAnnotations = (bookId: string | null) => {
     return acc;
   }, {} as Record<number, number>);
 
+  // ========== BOOKMARKS ==========
+
+  // Fetch bookmarks
+  const { data: bookmarks = [] } = useQuery({
+    queryKey: ['pdf-bookmarks', bookId],
+    queryFn: async () => {
+      if (!bookId) return [];
+      
+      // First, try to get from pdf_annotations with is_bookmark flag
+      const { data, error } = await supabase
+        .from('pdf_annotations')
+        .select('*')
+        .eq('book_id', bookId)
+        .eq('note_text', 'BOOKMARK') // Using note_text as bookmark marker
+        .order('page_number', { ascending: true });
+      
+      if (error) throw error;
+      
+      return (data || []).map(item => ({
+        id: item.id,
+        book_id: item.book_id,
+        page_number: item.page_number,
+        title: item.highlight_text || `עמוד ${item.page_number}`,
+        created_at: item.created_at,
+      })) as PDFBookmark[];
+    },
+    enabled: !!bookId,
+  });
+
+  // Add bookmark
+  const addBookmark = useMutation({
+    mutationFn: async ({ 
+      bookId, 
+      pageNumber, 
+      title 
+    }: { 
+      bookId: string; 
+      pageNumber: number; 
+      title: string;
+    }) => {
+      const { error } = await supabase
+        .from('pdf_annotations')
+        .insert([{
+          book_id: bookId,
+          page_number: pageNumber,
+          note_text: 'BOOKMARK', // Marker for bookmark
+          highlight_text: title,
+          color: '#4CAF50', // Green color for bookmarks
+        }]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pdf-bookmarks', bookId] });
+    },
+  });
+
+  // Delete bookmark
+  const deleteBookmark = useMutation({
+    mutationFn: async ({ bookmarkId }: { bookmarkId: string }) => {
+      const { error } = await supabase
+        .from('pdf_annotations')
+        .delete()
+        .eq('id', bookmarkId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pdf-bookmarks', bookId] });
+    },
+  });
+
+  // ========== READING PROGRESS ==========
+
+  // Update reading progress
+  const updateProgress = useMutation({
+    mutationFn: async ({ 
+      bookId, 
+      currentPage, 
+      totalPages 
+    }: { 
+      bookId: string; 
+      currentPage: number; 
+      totalPages: number;
+    }) => {
+      // Count highlights and notes
+      const highlightsCount = annotations.filter(a => a.highlight_text).length;
+      const notesCount = annotations.filter(a => a.note_text && a.note_text !== 'BOOKMARK').length;
+
+      // Update user_books table
+      const { error } = await supabase
+        .from('user_books')
+        .update({
+          current_page: currentPage,
+          total_pages: totalPages,
+          last_read_at: new Date().toISOString(),
+        })
+        .eq('id', bookId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-books'] });
+    },
+  });
+
   return {
+    // Annotations
     annotations,
     isLoading,
     addAnnotation,
@@ -150,5 +272,13 @@ export const usePDFAnnotations = (bookId: string | null) => {
     deleteAnnotation,
     getPageAnnotations,
     annotationCountsByPage,
+    
+    // Bookmarks
+    bookmarks,
+    addBookmark,
+    deleteBookmark,
+    
+    // Progress
+    updateProgress,
   };
 };

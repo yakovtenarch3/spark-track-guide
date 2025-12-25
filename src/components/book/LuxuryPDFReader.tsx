@@ -48,6 +48,8 @@ import {
   PinOff,
   Columns,
   LayoutList,
+  Search,
+  Bookmark,
 } from "lucide-react";
 import { usePDFAnnotations, type PDFAnnotation } from "@/hooks/usePDFAnnotations";
 import { PDFFormOverlay } from "./PDFFormOverlay";
@@ -79,6 +81,8 @@ import {
   convertHighlightToAnnotation,
   HIGHLIGHT_COLORS,
 } from "./PDFHighlighter";
+import { PDFTableOfContents } from "./PDFTableOfContents";
+import { PDFSearchBar } from "./PDFSearchBar";
 
 interface LuxuryPDFReaderProps {
   bookId: string;
@@ -120,7 +124,7 @@ export const LuxuryPDFReader = ({
   const [zoom, setZoom] = useState(100);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [showSidePanel, setShowSidePanel] = useState(false);
-  const [sidePanel, setSidePanel] = useState<"index" | "progress" | "annotations" | "settings">("index");
+  const [sidePanel, setSidePanel] = useState<"index" | "progress" | "annotations" | "settings" | "toc" | "search">("index");
   const [showTableOfContents, setShowTableOfContents] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [indexViewMode, setIndexViewMode] = useState<"grid" | "list" | "compact" | "mini">("grid");
@@ -128,6 +132,7 @@ export const LuxuryPDFReader = ({
   const [sidePanelWidth, setSidePanelWidth] = useState<"normal" | "wide" | "narrow">("normal");
   const [pdfDisplayMode, setPdfDisplayMode] = useState<"single" | "fit" | "wide">("single");
   const [pdfFrameSize, setPdfFrameSize] = useState<"small" | "medium" | "large" | "full">("medium");
+  const [splitView, setSplitView] = useState(false);
 
   // Typography states
   const [fontSize, setFontSize] = useState(16);
@@ -166,6 +171,10 @@ export const LuxuryPDFReader = ({
     deleteAnnotation,
     getPageAnnotations,
     annotationCountsByPage,
+    bookmarks,
+    addBookmark,
+    deleteBookmark,
+    updateProgress,
   } = usePDFAnnotations(bookId);
   
   // Convert database annotations to library format
@@ -189,6 +198,21 @@ export const LuxuryPDFReader = ({
       setReadPages(prev => new Set(prev).add(currentPage));
     }
   }, [currentPage]);
+
+  // Update progress in database
+  useEffect(() => {
+    if (currentPage > 0 && numPages > 0) {
+      const debounce = setTimeout(() => {
+        updateProgress.mutate({
+          bookId,
+          currentPage,
+          totalPages: numPages,
+        });
+      }, 3000); // Update after 3 seconds of staying on the page
+      
+      return () => clearTimeout(debounce);
+    }
+  }, [currentPage, numPages, bookId, updateProgress]);
 
   // Handle highlight from new library
   const handleAddLibraryHighlight = useCallback((highlight: CustomHighlight) => {
@@ -459,6 +483,16 @@ export const LuxuryPDFReader = ({
             {nightMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
 
+          {/* Split View */}
+          <Button
+            variant={splitView ? "default" : "ghost"}
+            size="icon"
+            onClick={() => setSplitView(!splitView)}
+            title={splitView ? "תצוגה רגילה" : "תצוגת שני עמודים"}
+          >
+            <Columns className="w-4 h-4" />
+          </Button>
+
           {/* Zoom Controls */}
           <div className="hidden md:flex items-center gap-1 bg-muted rounded-lg p-1">
             <Button variant="ghost" size="icon" onClick={handleZoomOut} disabled={zoom <= 50} className="h-7 w-7">
@@ -578,8 +612,10 @@ export const LuxuryPDFReader = ({
             </div>
 
             {/* Panel Tabs */}
-            <div className="flex border-b border-border">
+            <div className="flex border-b border-border overflow-x-auto">
               {[
+                { id: "toc", icon: BookOpen, label: "תוכן" },
+                { id: "search", icon: Search, label: "חיפוש" },
                 { id: "index", icon: LayoutGrid, label: "אינדקס" },
                 { id: "annotations", icon: MessageSquare, label: "הדגשות" },
                 { id: "progress", icon: BookMarked, label: "מעקב" },
@@ -602,6 +638,40 @@ export const LuxuryPDFReader = ({
 
             <ScrollArea className="flex-1">
               <div className="p-2">
+                {/* Table of Contents Panel */}
+                {sidePanel === "toc" && (
+                  <PDFTableOfContents
+                    fileUrl={fileUrl}
+                    currentPage={currentPage}
+                    onPageChange={onPageChange}
+                    bookmarks={bookmarks.map(b => ({
+                      id: b.id,
+                      page: b.page_number,
+                      title: b.title,
+                    }))}
+                    onAddBookmark={(page, title) => {
+                      addBookmark.mutate({ bookId, pageNumber: page, title });
+                    }}
+                    onDeleteBookmark={(id) => {
+                      deleteBookmark.mutate({ bookmarkId: id });
+                    }}
+                  />
+                )}
+
+                {/* Search Panel */}
+                {sidePanel === "search" && (
+                  <div className="space-y-3">
+                    <PDFSearchBar
+                      fileUrl={fileUrl}
+                      currentPage={currentPage}
+                      onPageChange={onPageChange}
+                      onHighlightSearch={(results) => {
+                        toast.info(`נמצאו ${results.length} תוצאות`);
+                      }}
+                    />
+                  </div>
+                )}
+
                 {/* Index/Table of Contents Panel */}
                 {sidePanel === "index" && (
                   <div className="space-y-4">
@@ -628,12 +698,12 @@ export const LuxuryPDFReader = ({
                           <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                             <div 
                               className="h-full bg-primary transition-all duration-500"
-                              style={{ width: `${readPercentage}%` }}
+                              style={{ width: `${progressPercentage}%` }}
                             />
                           </div>
                           
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">{Math.round(readPercentage)}% הושלם</span>
+                            <span className="text-muted-foreground">{Math.round(progressPercentage)}% הושלם</span>
                             <span className="text-muted-foreground">{numPages - readCount} נותרו</span>
                           </div>
                         </div>
@@ -1061,22 +1131,59 @@ export const LuxuryPDFReader = ({
         {/* PDF Viewer with react-pdf-highlighter-extended */}
         <div 
           ref={containerRef} 
-          className={`flex-1 flex flex-col overflow-hidden transition-colors ${
+          className={`flex-1 flex ${splitView ? 'flex-row gap-2' : 'flex-col'} overflow-hidden transition-colors ${
             nightMode 
               ? "bg-gradient-to-b from-slate-800 to-slate-900" 
               : "bg-gradient-to-b from-muted/20 to-muted/40"
           }`}
         >
-          <PDFHighlighterComponent
-            fileUrl={fileUrl}
-            highlights={libraryHighlights}
-            onAddHighlight={handleAddLibraryHighlight}
-            onDeleteHighlight={handleDeleteLibraryHighlight}
-            onUpdateHighlight={handleUpdateLibraryHighlight}
-            nightMode={nightMode}
-            zoom={zoom}
-            className="flex-1"
-          />
+          {splitView ? (
+            <>
+              {/* Left page (current page) */}
+              <div className="flex-1 overflow-hidden">
+                <PDFHighlighterComponent
+                  fileUrl={fileUrl}
+                  highlights={libraryHighlights}
+                  onAddHighlight={handleAddLibraryHighlight}
+                  onDeleteHighlight={handleDeleteLibraryHighlight}
+                  onUpdateHighlight={handleUpdateLibraryHighlight}
+                  currentPage={currentPage}
+                  onPageChange={onPageChange}
+                  nightMode={nightMode}
+                  zoom={zoom}
+                  className="flex-1"
+                />
+              </div>
+              {/* Right page (next page) */}
+              {currentPage < numPages && (
+                <div className="flex-1 overflow-hidden border-r-2 border-primary/20">
+                  <PDFHighlighterComponent
+                    fileUrl={fileUrl}
+                    highlights={libraryHighlights}
+                    onAddHighlight={handleAddLibraryHighlight}
+                    onDeleteHighlight={handleDeleteLibraryHighlight}
+                    onUpdateHighlight={handleUpdateLibraryHighlight}
+                    currentPage={currentPage + 1}
+                    onPageChange={onPageChange}
+                    nightMode={nightMode}
+                    zoom={zoom}
+                    className="flex-1"
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <PDFHighlighterComponent
+              fileUrl={fileUrl}
+              highlights={libraryHighlights}
+              onAddHighlight={handleAddLibraryHighlight}
+              onDeleteHighlight={handleDeleteLibraryHighlight}
+              onUpdateHighlight={handleUpdateLibraryHighlight}
+              nightMode={nightMode}
+              zoom={zoom}
+              className="flex-1"
+            />
+          )}
         </div>
       </div>
 
