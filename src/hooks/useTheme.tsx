@@ -351,9 +351,19 @@ export const useTheme = () => {
 
   const allThemes = { ...themes, ...customThemes };
 
+  // Apply theme on mount and when theme changes
   useEffect(() => {
     const theme = allThemes[currentTheme];
-    if (!theme) return;
+    if (!theme) {
+      // Fallback to default if saved theme doesn't exist
+      const defaultTheme = themes.default;
+      const root = document.documentElement;
+      Object.entries(defaultTheme.colors).forEach(([key, value]) => {
+        const cssVar = key.replace(/([A-Z])/g, "-$1").toLowerCase();
+        root.style.setProperty(`--${cssVar}`, value);
+      });
+      return;
+    }
 
     const root = document.documentElement;
 
@@ -364,6 +374,14 @@ export const useTheme = () => {
 
     localStorage.setItem("app-theme", currentTheme);
   }, [currentTheme, allThemes]);
+
+  // Apply saved theme immediately on first render
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("app-theme");
+    if (savedTheme && savedTheme !== currentTheme) {
+      setCurrentTheme(savedTheme);
+    }
+  }, []);
 
   // Extended custom theme colors interface
   interface ExtendedThemeColors {
