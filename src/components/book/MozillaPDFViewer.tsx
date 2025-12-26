@@ -225,8 +225,8 @@ export const MozillaPDFViewer = ({
       if (rects.length === 0) return;
 
       // Find which page the selection is on
-      const pageWrapper = range.startContainer.parentElement?.closest(".pdf-page-wrapper");
-      const pageNumber = pageWrapper?.dataset.pageNumber
+      const pageWrapper = range.startContainer.parentElement?.closest(".pdf-page-wrapper") as HTMLElement | null;
+      const pageNumber = pageWrapper?.dataset?.pageNumber
         ? parseInt(pageWrapper.dataset.pageNumber)
         : currentPage;
 

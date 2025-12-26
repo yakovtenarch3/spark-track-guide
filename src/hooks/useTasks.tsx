@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // Types
@@ -64,6 +63,50 @@ export interface TaskFailure {
   created_at: string;
 }
 
+// Local storage helpers
+const TASKS_KEY = "local_tasks";
+const CATEGORIES_KEY = "local_task_categories";
+const COMPLETIONS_KEY = "local_task_completions";
+
+const getLocalTasks = (): Task[] => {
+  try {
+    const stored = localStorage.getItem(TASKS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalTasks = (tasks: Task[]) => {
+  localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+};
+
+const getLocalCategories = (): TaskCategory[] => {
+  try {
+    const stored = localStorage.getItem(CATEGORIES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalCategories = (categories: TaskCategory[]) => {
+  localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+};
+
+const getLocalCompletions = (): TaskCompletion[] => {
+  try {
+    const stored = localStorage.getItem(COMPLETIONS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalCompletions = (completions: TaskCompletion[]) => {
+  localStorage.setItem(COMPLETIONS_KEY, JSON.stringify(completions));
+};
+
 // ============================================
 // useTasks Hook
 // ============================================
@@ -74,39 +117,47 @@ export const useTasks = () => {
   // Fetch all tasks
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .order('order_index', { ascending: true })
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as Task[];
+    queryFn: async (): Promise<Task[]> => {
+      return getLocalTasks().sort((a, b) => a.order_index - b.order_index);
     },
   });
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ['task-categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('task_categories')
-        .select('*')
-        .order('order_index', { ascending: true });
-      
-      if (error) throw error;
-      return data as TaskCategory[];
+    queryFn: async (): Promise<TaskCategory[]> => {
+      return getLocalCategories().sort((a, b) => a.order_index - b.order_index);
     },
   });
 
   // Add task
   const addTask = useMutation({
     mutationFn: async (task: Partial<Task>) => {
-      const { error } = await supabase
-        .from('tasks')
-        .insert([task]);
-      if (error) throw error;
+      const tasks = getLocalTasks();
+      const newTask: Task = {
+        id: crypto.randomUUID(),
+        user_id: "local",
+        category_id: task.category_id || null,
+        title: task.title || "",
+        description: task.description || null,
+        due_date: task.due_date || null,
+        due_time: task.due_time || null,
+        estimated_duration: task.estimated_duration || null,
+        priority: task.priority || "medium",
+        status: task.status || "pending",
+        is_recurring: task.is_recurring || false,
+        recurrence_pattern: task.recurrence_pattern || null,
+        recurrence_days: task.recurrence_days || null,
+        started_at: task.started_at || null,
+        completed_at: task.completed_at || null,
+        actual_duration: task.actual_duration || null,
+        tags: task.tags || [],
+        order_index: task.order_index || tasks.length,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      tasks.push(newTask);
+      saveLocalTasks(tasks);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -118,11 +169,12 @@ export const useTasks = () => {
   // Update task
   const updateTask = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Task> }) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update(updates)
-        .eq('id', id);
-      if (error) throw error;
+      const tasks = getLocalTasks();
+      const index = tasks.findIndex(t => t.id === id);
+      if (index !== -1) {
+        tasks[index] = { ...tasks[index], ...updates, updated_at: new Date().toISOString() };
+        saveLocalTasks(tasks);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -133,11 +185,9 @@ export const useTasks = () => {
   // Delete task
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
+      const tasks = getLocalTasks();
+      const filtered = tasks.filter(t => t.id !== id);
+      saveLocalTasks(filtered);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -160,31 +210,38 @@ export const useTasks = () => {
       notes?: string;
     }) => {
       const now = new Date();
+      const tasks = getLocalTasks();
+      const index = tasks.findIndex(t => t.id === taskId);
       
-      // Update task status
-      const { error: taskError } = await supabase
-        .from('tasks')
-        .update({
+      if (index !== -1) {
+        tasks[index] = {
+          ...tasks[index],
           status: 'completed',
           completed_at: now.toISOString(),
-        })
-        .eq('id', taskId);
-      
-      if (taskError) throw taskError;
+          updated_at: now.toISOString(),
+        };
+        saveLocalTasks(tasks);
+      }
 
       // Add completion record
-      const { error: completionError } = await supabase
-        .from('task_completions')
-        .insert([{
-          task_id: taskId,
-          completed_date: now.toISOString().split('T')[0],
-          completed_time: now.toTimeString().split(' ')[0],
-          difficulty_rating: difficulty,
-          energy_level: energy,
-          notes,
-        }]);
-      
-      if (completionError) throw completionError;
+      const completions = getLocalCompletions();
+      const completion: TaskCompletion = {
+        id: crypto.randomUUID(),
+        task_id: taskId,
+        user_id: "local",
+        completed_date: now.toISOString().split('T')[0],
+        completed_time: now.toTimeString().split(' ')[0],
+        was_on_time: true,
+        actual_duration: null,
+        difficulty_rating: difficulty || null,
+        energy_level: energy || null,
+        day_of_week: now.getDay(),
+        hour_of_day: now.getHours(),
+        notes: notes || null,
+        created_at: now.toISOString(),
+      };
+      completions.push(completion);
+      saveLocalCompletions(completions);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -197,10 +254,19 @@ export const useTasks = () => {
   // Add category
   const addCategory = useMutation({
     mutationFn: async (category: Partial<TaskCategory>) => {
-      const { error } = await supabase
-        .from('task_categories')
-        .insert([category]);
-      if (error) throw error;
+      const categories = getLocalCategories();
+      const newCategory: TaskCategory = {
+        id: crypto.randomUUID(),
+        user_id: "local",
+        name: category.name || "",
+        parent_id: category.parent_id || null,
+        color: category.color || "#6366f1",
+        icon: category.icon || "folder",
+        order_index: category.order_index || categories.length,
+        created_at: new Date().toISOString(),
+      };
+      categories.push(newCategory);
+      saveLocalCategories(categories);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-categories'] });
