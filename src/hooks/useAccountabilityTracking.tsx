@@ -1,6 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 interface UserSession {
@@ -54,168 +52,40 @@ interface EngagementAnalytics {
   recommendations: string[];
 }
 
+// Stub implementation - tables don't exist in schema
 export const useAccountabilityTracking = () => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
-  // Start a new session when component mounts
+  // No-op effect since tables don't exist
   useEffect(() => {
-    startSession();
-    
-    // End session on unmount
-    return () => {
-      if (currentSessionId) {
-        endSession(currentSessionId);
-      }
-    };
+    // Session tracking disabled - tables not in schema
   }, []);
 
-  // Track page visits
-  useEffect(() => {
-    const trackPageView = () => {
-      if (currentSessionId) {
-        trackActivity({
-          activity_type: "page_view",
-          activity_category: "navigation",
-          metadata: { page: window.location.pathname },
-        });
-      }
-    };
-
-    trackPageView();
-    window.addEventListener("popstate", trackPageView);
-    
-    return () => {
-      window.removeEventListener("popstate", trackPageView);
-    };
-  }, [currentSessionId]);
-
-  // Start new session
-  const startSession = async () => {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
-
-      const { data, error } = await supabase
-        .from("user_sessions")
-        .insert({
-          user_id: userData.user.id,
-          pages_visited: [window.location.pathname],
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      setCurrentSessionId(data.id);
-
-      // Update today's engagement metrics
-      const today = new Date().toISOString().split("T")[0];
-      await supabase
-        .from("engagement_metrics")
-        .upsert({
-          user_id: userData.user.id,
-          date: today,
-          logged_in: true,
-          login_time: new Date().toISOString(),
-        }, { onConflict: "user_id,date" });
-    } catch (error) {
-      console.error("Error starting session:", error);
-    }
-  };
-
-  // End session
-  const endSession = async (sessionId: string) => {
-    try {
-      const { data: session } = await supabase
-        .from("user_sessions")
-        .select("*")
-        .eq("id", sessionId)
-        .single();
-
-      if (!session) return;
-
-      const duration = Math.floor(
-        (new Date().getTime() - new Date(session.session_start).getTime()) / 60000
-      );
-
-      await supabase
-        .from("user_sessions")
-        .update({
-          session_end: new Date().toISOString(),
-          duration_minutes: duration,
-        })
-        .eq("id", sessionId);
-
-      // Update today's metrics
-      const today = new Date().toISOString().split("T")[0];
-      await supabase.rpc("update_session_duration", {
-        p_user_id: session.user_id,
-        p_date: today,
-        p_additional_minutes: duration,
-      });
-    } catch (error) {
-      console.error("Error ending session:", error);
-    }
-  };
-
-  // Track activity
-  const trackActivity = async (activity: {
+  // Track activity (no-op)
+  const trackActivity = async (_activity: {
     activity_type: string;
     activity_category: string;
     activity_id?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }) => {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
-
-      await supabase.from("activity_tracking").insert({
-        user_id: userData.user.id,
-        session_id: currentSessionId,
-        ...activity,
-      });
-    } catch (error) {
-      console.error("Error tracking activity:", error);
-    }
+    // No-op - tables don't exist
   };
 
-  // Get engagement metrics
+  // Get engagement metrics (empty data)
   const { data: metrics = [], isLoading: metricsLoading } = useQuery({
     queryKey: ["engagement-metrics"],
-    queryFn: async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return [];
-
-      const { data, error } = await supabase
-        .from("engagement_metrics")
-        .select("*")
-        .eq("user_id", userData.user.id)
-        .order("date", { ascending: false })
-        .limit(30);
-
-      if (error) throw error;
-      return data as EngagementMetrics[];
+    queryFn: async (): Promise<EngagementMetrics[]> => {
+      // Return empty - tables don't exist
+      return [];
     },
   });
 
-  // Get sessions
+  // Get sessions (empty data)
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
     queryKey: ["user-sessions"],
-    queryFn: async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return [];
-
-      const { data, error } = await supabase
-        .from("user_sessions")
-        .select("*")
-        .eq("user_id", userData.user.id)
-        .order("session_start", { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      return data as UserSession[];
+    queryFn: async (): Promise<UserSession[]> => {
+      // Return empty - tables don't exist
+      return [];
     },
   });
 

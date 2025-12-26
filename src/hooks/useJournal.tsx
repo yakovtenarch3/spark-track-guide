@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 
@@ -17,6 +16,22 @@ interface JournalEntry {
 
 const JOURNAL_PASSWORD = "הצלחה";
 const STORAGE_KEY = "journal_unlocked";
+const LOCAL_ENTRIES_KEY = "journal_entries_local";
+
+// Helper to get entries from localStorage
+const getLocalEntries = (): JournalEntry[] => {
+  try {
+    const stored = localStorage.getItem(LOCAL_ENTRIES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+// Helper to save entries to localStorage
+const saveLocalEntries = (entries: JournalEntry[]) => {
+  localStorage.setItem(LOCAL_ENTRIES_KEY, JSON.stringify(entries));
+};
 
 export const useJournal = () => {
   const { toast } = useToast();
@@ -61,36 +76,25 @@ export const useJournal = () => {
     });
   };
 
-  // Fetch all journal entries
+  // Fetch all journal entries (from localStorage since table doesn't exist)
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["journal-entries"],
-    queryFn: async () => {
+    queryFn: async (): Promise<JournalEntry[]> => {
       if (!isUnlocked) return [];
-
-      const { data, error } = await supabase
-        .from("journal_entries")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data as JournalEntry[];
+      return getLocalEntries();
     },
     enabled: isUnlocked,
   });
 
   // Get entries by date range
-  const getEntriesByDateRange = async (startDate: string, endDate: string) => {
+  const getEntriesByDateRange = async (startDate: string, endDate: string): Promise<JournalEntry[]> => {
     if (!isUnlocked) return [];
-
-    const { data, error } = await supabase
-      .from("journal_entries")
-      .select("*")
-      .gte("created_at", startDate)
-      .lte("created_at", endDate)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-    return data as JournalEntry[];
+    
+    const allEntries = getLocalEntries();
+    return allEntries.filter(entry => {
+      const entryDate = entry.created_at;
+      return entryDate >= startDate && entryDate <= endDate;
+    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   };
 
   // Add new entry
@@ -100,33 +104,26 @@ export const useJournal = () => {
       content: string;
       mood?: string;
       tags?: string[];
-    }) => {
+    }): Promise<JournalEntry> => {
       if (!isUnlocked) throw new Error("Journal is locked");
 
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error("Not authenticated");
+      const newEntry: JournalEntry = {
+        id: crypto.randomUUID(),
+        user_id: "local",
+        title: entry.title,
+        content: entry.content,
+        mood: entry.mood as JournalEntry["mood"],
+        tags: entry.tags,
+        is_encrypted: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-      const { data, error } = await supabase
-        .from("journal_entries")
-        .insert({
-          user_id: userData.user.id,
-          ...entry,
-        })
-        .select()
-        .single();
+      const entries = getLocalEntries();
+      entries.unshift(newEntry);
+      saveLocalEntries(entries);
 
-      if (error) throw error;
-
-      // Track activity
-      await supabase.from("activity_tracking").insert({
-        user_id: userData.user.id,
-        activity_type: "journal_entry",
-        activity_category: "journal",
-        activity_id: data.id,
-        metadata: { mood: entry.mood, tags: entry.tags },
-      });
-
-      return data;
+      return newEntry;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
@@ -149,18 +146,21 @@ export const useJournal = () => {
     mutationFn: async ({
       id,
       ...updates
-    }: Partial<JournalEntry> & { id: string }) => {
+    }: Partial<JournalEntry> & { id: string }): Promise<JournalEntry> => {
       if (!isUnlocked) throw new Error("Journal is locked");
 
-      const { data, error } = await supabase
-        .from("journal_entries")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
+      const entries = getLocalEntries();
+      const index = entries.findIndex(e => e.id === id);
+      if (index === -1) throw new Error("Entry not found");
 
-      if (error) throw error;
-      return data;
+      entries[index] = {
+        ...entries[index],
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+      saveLocalEntries(entries);
+
+      return entries[index];
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
@@ -180,15 +180,12 @@ export const useJournal = () => {
 
   // Delete entry
   const deleteEntry = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: string): Promise<void> => {
       if (!isUnlocked) throw new Error("Journal is locked");
 
-      const { error } = await supabase
-        .from("journal_entries")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
+      const entries = getLocalEntries();
+      const filtered = entries.filter(e => e.id !== id);
+      saveLocalEntries(filtered);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
@@ -207,45 +204,33 @@ export const useJournal = () => {
   });
 
   // Search entries
-  const searchEntries = async (query: string) => {
+  const searchEntries = async (query: string): Promise<JournalEntry[]> => {
     if (!isUnlocked) return [];
 
-    const { data, error } = await supabase
-      .from("journal_entries")
-      .select("*")
-      .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-    return data as JournalEntry[];
+    const entries = getLocalEntries();
+    const lowerQuery = query.toLowerCase();
+    return entries.filter(entry => 
+      entry.title?.toLowerCase().includes(lowerQuery) ||
+      entry.content.toLowerCase().includes(lowerQuery)
+    ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   };
 
   // Get entries by mood
-  const getEntriesByMood = async (mood: string) => {
+  const getEntriesByMood = async (mood: string): Promise<JournalEntry[]> => {
     if (!isUnlocked) return [];
 
-    const { data, error } = await supabase
-      .from("journal_entries")
-      .select("*")
-      .eq("mood", mood)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-    return data as JournalEntry[];
+    const entries = getLocalEntries();
+    return entries.filter(entry => entry.mood === mood)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   };
 
   // Get entries by tag
-  const getEntriesByTag = async (tag: string) => {
+  const getEntriesByTag = async (tag: string): Promise<JournalEntry[]> => {
     if (!isUnlocked) return [];
 
-    const { data, error } = await supabase
-      .from("journal_entries")
-      .select("*")
-      .contains("tags", [tag])
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-    return data as JournalEntry[];
+    const entries = getLocalEntries();
+    return entries.filter(entry => entry.tags?.includes(tag))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   };
 
   return {

@@ -19,15 +19,15 @@ const DEFAULT_SETTINGS: TypographySettings = {
 };
 
 export const FONT_OPTIONS = [
-  { value: "system-ui", label: "ברירת מחדל" },
-  { value: "'Rubik', sans-serif", label: "Rubik" },
-  { value: "'Heebo', sans-serif", label: "Heebo" },
-  { value: "'Assistant', sans-serif", label: "Assistant" },
-  { value: "'Alef', sans-serif", label: "Alef" },
-  { value: "'Secular One', sans-serif", label: "Secular One" },
-  { value: "'Frank Ruhl Libre', serif", label: "Frank Ruhl Libre" },
-  { value: "'David Libre', serif", label: "David Libre" },
-  { value: "'Miriam Libre', sans-serif", label: "Miriam Libre" },
+  { value: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", label: "ברירת מחדל" },
+  { value: "'Rubik', system-ui, sans-serif", label: "Rubik" },
+  { value: "'Heebo', system-ui, sans-serif", label: "Heebo" },
+  { value: "'Assistant', system-ui, sans-serif", label: "Assistant" },
+  { value: "'Alef', system-ui, sans-serif", label: "Alef" },
+  { value: "'Secular One', 'Heebo', system-ui, sans-serif", label: "Secular One" },
+  { value: "'Frank Ruhl Libre', 'David Libre', serif", label: "Frank Ruhl Libre" },
+  { value: "'David Libre', 'Frank Ruhl Libre', serif", label: "David Libre" },
+  { value: "'Miriam Libre', system-ui, sans-serif", label: "Miriam Libre" },
 ];
 
 export const useTypography = () => {

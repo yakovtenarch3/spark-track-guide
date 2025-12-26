@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import type { TaskCompletion, TaskFailure } from "./useTasks";
 
 interface DayPattern {
@@ -44,29 +43,33 @@ interface Analytics {
 }
 
 const DAYS_HE = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+const COMPLETIONS_KEY = "local_task_completions";
+const FAILURES_KEY = "local_task_failures";
+
+const getLocalCompletions = (): TaskCompletion[] => {
+  try {
+    const stored = localStorage.getItem(COMPLETIONS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const getLocalFailures = (): TaskFailure[] => {
+  try {
+    const stored = localStorage.getItem(FAILURES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
 
 export const useTaskAnalytics = () => {
   const { data: analytics, isLoading } = useQuery({
     queryKey: ['task-analytics'],
     queryFn: async (): Promise<Analytics> => {
-      // Fetch completions
-      const { data: completions, error: compError } = await supabase
-        .from('task_completions')
-        .select('*')
-        .order('completed_date', { ascending: false });
-      
-      if (compError) throw compError;
-
-      // Fetch failures
-      const { data: failures, error: failError } = await supabase
-        .from('task_failures')
-        .select('*')
-        .order('failed_date', { ascending: false });
-      
-      if (failError) throw failError;
-
-      const completionData = (completions || []) as TaskCompletion[];
-      const failureData = (failures || []) as TaskFailure[];
+      const completionData = getLocalCompletions();
+      const failureData = getLocalFailures();
 
       // Calculate day patterns
       const dayStats: Record<number, {
