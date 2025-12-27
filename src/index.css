@@ -7,10 +7,6 @@ All colors MUST be HSL.
 */
 
 @layer base {
-  * {
-    @apply overflow-x-hidden;
-  }
-  
   html, body {
     @apply overflow-x-hidden;
     max-width: 100vw;
