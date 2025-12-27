@@ -33,43 +33,18 @@ export function DevInspector() {
   const [showConsole, setShowConsole] = useState(false);
   const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
 
-  // Auto-sync with developer mode settings
-  useEffect(() => {
-    setIsActive(inspectorEnabled);
-    setShowConsole(consoleEnabled);
-  }, [inspectorEnabled, consoleEnabled]);
-
-  // Don't render if dev mode is disabled
-  if (!enabled) {
-    return null;
-  }
-
   // הוספת לוג לקונסול
-  const addLog = (message: string) => {
+  const addLog = useCallback((message: string) => {
     const timestamp = new Date().toLocaleTimeString('he-IL');
-    console.log(`[DevInspector] ${message}`); // גם לקונסול הרגיל
+    console.log(`[DevInspector] ${message}`);
     setConsoleLogs(prev => [...prev, `[${timestamp}] ${message}`]);
-  };
+  }, []);
 
   // ניקוי הקונסול
-  const clearConsole = () => {
+  const clearConsole = useCallback(() => {
     console.log('[DevInspector] מנקה קונסול');
     setConsoleLogs([]);
-    addLog('🗑️ הקונסול נוקה');
-  };
-
-  // העתקת כל תוכן הקונסול
-  const copyConsoleLogs = async () => {
-    console.log('[DevInspector] מעתיק את כל הלוגים');
-    const allLogs = consoleLogs.join('\n');
-    try {
-      await navigator.clipboard.writeText(allLogs);
-      addLog('✅ כל הלוגים הועתקו ללוח');
-    } catch (err) {
-      addLog('❌ שגיאה בהעתקה');
-      console.error('[DevInspector] שגיאה בהעתקת לוגים:', err);
-    }
-  };
+  }, []);
 
   // פונקציה שמזהה את הקומפוננטה מתוך ה-React Fiber
   const getComponentInfo = useCallback((element: HTMLElement): InspectedElement | null => {
@@ -183,7 +158,6 @@ export function DevInspector() {
             if (typeof val === 'function') {
               acc[key] = '[Function]';
             } else if (typeof val === 'object' && val !== null) {
-              // מטפל באובייקטים מורכבים - לא שומר הפניות מעגליות
               try {
                 acc[key] = '[Object]';
               } catch {
@@ -227,12 +201,12 @@ export function DevInspector() {
     // בדיקה אם לחצנו על UI של הכלי עצמו
     if (target.closest('.dev-inspector-ui')) {
       console.log('[DevInspector] לחיצה על UI של DevInspector - מתעלם');
-      return; // לא עוצרים את האירוע, נותנים לו לעבור
+      return;
     }
     
     e.preventDefault();
     e.stopPropagation();
-    e.stopImmediatePropagation(); // עוצר גם handlers אחרים
+    e.stopImmediatePropagation();
     
     console.log('[DevInspector] אלמנט נלחץ');
     if (target) {
@@ -249,17 +223,34 @@ export function DevInspector() {
     }
     
     return false;
-  }, [isActive, getComponentInfo]);
+  }, [isActive, getComponentInfo, addLog]);
+
+  // Auto-sync with developer mode settings
+  useEffect(() => {
+    setIsActive(inspectorEnabled);
+    setShowConsole(consoleEnabled);
+  }, [inspectorEnabled, consoleEnabled]);
+
+  // העתקת כל תוכן הקונסול
+  const copyConsoleLogs = async () => {
+    console.log('[DevInspector] מעתיק את כל הלוגים');
+    const allLogs = consoleLogs.join('\n');
+    try {
+      await navigator.clipboard.writeText(allLogs);
+      addLog('✅ כל הלוגים הועתקו ללוח');
+    } catch (err) {
+      addLog('❌ שגיאה בהעתקה');
+      console.error('[DevInspector] שגיאה בהעתקת לוגים:', err);
+    }
+  };
 
   // הוספת/הסרת event listeners
   useEffect(() => {
     if (isActive) {
-      // משתמש ב-capture phase כדי לתפוס אירועים לפני handlers אחרים
-      // אבל רק עבור אלמנטים שאינם חלק מה-UI
       document.addEventListener('mousemove', handleMouseMove, true);
       document.addEventListener('click', handleClick, true);
-      document.addEventListener('mousedown', handleClick, true); // גם mousedown
-      document.addEventListener('mouseup', handleClick, true); // גם mouseup
+      document.addEventListener('mousedown', handleClick, true);
+      document.addEventListener('mouseup', handleClick, true);
       document.body.style.cursor = 'crosshair';
     } else {
       document.removeEventListener('mousemove', handleMouseMove, true);
@@ -481,6 +472,11 @@ ${Object.entries(inspectedElement.props).map(([key, value]) =>
 
   // רק בסביבת פיתוח
   if (import.meta.env.PROD) {
+    return null;
+  }
+
+  // Don't render if dev mode is disabled
+  if (!enabled) {
     return null;
   }
 
