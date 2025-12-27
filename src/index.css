@@ -264,21 +264,28 @@ All colors MUST be HSL.
     background-color: hsl(48 100% 50% / 0.6) !important;
   }
   
-  /* Make the text layer spans easier to select */
-  .react-pdf__Page__textContent {
+  /* PDF Text Layer - Hide text completely but allow selection */
+  .react-pdf__Page__textContent,
+  .textLayer {
     z-index: 5 !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
   }
   
-  .react-pdf__Page__textContent span {
-    opacity: 0.2 !important;
-    transition: opacity 0.15s ease;
-  }
-  
-  .react-pdf__Page__textContent span:hover {
-    opacity: 0.4 !important;
-  }
-  
-  .react-pdf__Page__textContent span::selection {
+  .react-pdf__Page__textContent span,
+  .textLayer span {
+    color: transparent !important;
     opacity: 1 !important;
+    cursor: text !important;
+  }
+  
+  .react-pdf__Page__textContent span::selection,
+  .textLayer span::selection {
+    background-color: hsl(48 100% 50% / 0.5) !important;
+  }
+  
+  .react-pdf__Page__textContent span::-moz-selection,
+  .textLayer span::-moz-selection {
+    background-color: hsl(48 100% 50% / 0.5) !important;
   }
 }
