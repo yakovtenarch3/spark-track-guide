@@ -32,7 +32,16 @@ export const FONT_OPTIONS = [
 export const useTypography = () => {
   const [settings, setSettings] = useState<TypographySettings>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Reset if using Secular One (removed font)
+      if (parsed.fontFamily?.includes("Secular One") || parsed.headingFontFamily?.includes("Secular One")) {
+        localStorage.removeItem(STORAGE_KEY);
+        return DEFAULT_SETTINGS;
+      }
+      return { ...DEFAULT_SETTINGS, ...parsed };
+    }
+    return DEFAULT_SETTINGS;
   });
 
   useEffect(() => {
