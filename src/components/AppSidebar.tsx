@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Home, Target, Trophy, Archive, Settings, Sun, ListChecks, MessageCircle, Pin, PinOff, BookOpen, CheckSquare, BookMarked, Activity } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { useSidebarPin } from "@/hooks/useSidebarPin";
 import { Button } from "@/components/ui/button";
@@ -57,13 +57,22 @@ const items = [{
 }];
 
 export function AppSidebar() {
-  const { state, isMobile } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const { pinned, togglePinned } = useSidebarPin();
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
   const isActive = (path: string) => currentPath === path;
   const isCollapsed = state === "collapsed";
   const [isHovered, setIsHovered] = useState(false);
+
+  // Handler for menu item click - closes sidebar on mobile
+  const handleMenuClick = (url: string) => {
+    navigate(url);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar 
@@ -102,14 +111,12 @@ export function AppSidebar() {
               {items.map(item => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
-                    asChild 
                     isActive={isActive(item.url)} 
-                    className="text-[hsl(var(--sidebar-foreground,var(--foreground)))] hover:bg-[hsl(var(--sidebar-accent,var(--accent)))] data-[active=true]:bg-primary data-[active=true]:text-primary-foreground rounded-xl"
+                    className="text-[hsl(var(--sidebar-foreground,var(--foreground)))] hover:bg-[hsl(var(--sidebar-accent,var(--accent)))] data-[active=true]:bg-primary data-[active=true]:text-primary-foreground rounded-xl cursor-pointer"
+                    onClick={() => handleMenuClick(item.url)}
                   >
-                    <NavLink to={item.url} end>
-                      <item.icon className="ml-2 h-4 w-4" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
+                    <item.icon className="ml-2 h-4 w-4" />
+                    {!isCollapsed && <span>{item.title}</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
