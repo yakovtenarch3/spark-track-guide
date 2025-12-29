@@ -39,7 +39,7 @@ export const WakeUpAnalytics = ({ logs, targetTime = "06:00" }: WakeUpAnalyticsP
       
       if (log?.actual_time) {
         actualMinutes = timeToMinutes(log.actual_time);
-        diff = actualMinutes - targetMinutesFromMidnight;
+        diff = circularDiffMinutes(targetMinutesFromMidnight, actualMinutes);
       }
       
       data.push({
@@ -73,7 +73,7 @@ export const WakeUpAnalytics = ({ logs, targetTime = "06:00" }: WakeUpAnalyticsP
       if (log.actual_time) {
         const targetMins = timeToMinutes(log.target_time || targetTime);
         const actualMins = timeToMinutes(log.actual_time);
-        stats[dayOfWeek].diffs.push(actualMins - targetMins);
+        stats[dayOfWeek].diffs.push(circularDiffMinutes(targetMins, actualMins));
       }
     });
     
@@ -141,7 +141,7 @@ export const WakeUpAnalytics = ({ logs, targetTime = "06:00" }: WakeUpAnalyticsP
     const diffs = logsWithTime.map(l => {
       const targetMins = timeToMinutes(l.target_time || targetTime);
       const actualMins = timeToMinutes(l.actual_time!);
-      return actualMins - targetMins;
+      return circularDiffMinutes(targetMins, actualMins);
     });
     
     const avgDiff = Math.round(diffs.reduce((a, b) => a + b, 0) / diffs.length);
@@ -366,6 +366,18 @@ export const WakeUpAnalytics = ({ logs, targetTime = "06:00" }: WakeUpAnalyticsP
 function timeToMinutes(time: string): number {
   const [hours, minutes] = time.split(":").map(Number);
   return hours * 60 + minutes;
+}
+
+// Calculates the signed difference (actual - target) while handling midnight wrap.
+// Example: target 23:00, actual 01:00 => +120 (not -1320)
+function circularDiffMinutes(targetMinutes: number, actualMinutes: number): number {
+  let diff = actualMinutes - targetMinutes;
+
+  // Normalize into a sensible range around the target (±12h)
+  if (diff <= -720) diff += 1440;
+  else if (diff > 720) diff -= 1440;
+
+  return diff;
 }
 
 function minutesToTime(minutes: number): string {
