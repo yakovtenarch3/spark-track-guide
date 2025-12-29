@@ -277,14 +277,16 @@ export const WakeUpAnalytics = ({ logs, targetTime = "06:00" }: WakeUpAnalyticsP
         <CardContent>
           <div className="h-64" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={last30DaysData}>
+              <BarChart data={[...last30DaysData].reverse()}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis 
                   dataKey="dateLabel" 
                   tick={{ fontSize: 10 }}
                   interval={2}
+                  reversed
                 />
                 <YAxis 
+                  orientation="right"
                   tick={{ fontSize: 10 }}
                   tickFormatter={(value) => `${value > 0 ? '+' : ''}${value}`}
                 />
@@ -294,7 +296,7 @@ export const WakeUpAnalytics = ({ logs, targetTime = "06:00" }: WakeUpAnalyticsP
                   dataKey="diff" 
                   radius={[4, 4, 0, 0]}
                 >
-                  {last30DaysData.map((entry, index) => (
+                  {[...last30DaysData].reverse().map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`}
                       fill={entry.diff === null ? "hsl(var(--muted))" : entry.diff <= 0 ? "hsl(var(--success))" : "hsl(var(--destructive))"}
@@ -318,7 +320,7 @@ export const WakeUpAnalytics = ({ logs, targetTime = "06:00" }: WakeUpAnalyticsP
           <CardDescription>באיזה ימים הכי קל לקום בזמן?</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-2" dir="rtl">
             {dayOfWeekStats.map((day) => (
               <div 
                 key={day.day}
