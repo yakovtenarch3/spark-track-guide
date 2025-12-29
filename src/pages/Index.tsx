@@ -12,8 +12,8 @@ import { LayoutDashboard, TrendingUp, Trophy, Brain, Flag } from "lucide-react";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6 overflow-x-hidden" dir="rtl">
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 w-full">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-2 sm:p-4 md:p-6 overflow-x-hidden" dir="rtl">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 w-full overflow-hidden">
         <div className="text-center space-y-1 sm:space-y-2 animate-fade-in">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             לוח בקרה
@@ -22,25 +22,25 @@ const Index = () => {
         </div>
 
         <Tabs defaultValue="analytics" className="w-full" dir="rtl">
-          <TabsList className="grid w-full grid-cols-5 mb-4 sm:mb-6 glass-card p-1">
-            <TabsTrigger value="overview" className="gap-2">
-              <LayoutDashboard className="w-4 h-4" />
+          <TabsList className="grid w-full grid-cols-5 mb-4 sm:mb-6 glass-card p-1 h-auto">
+            <TabsTrigger value="overview" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-1 sm:px-3">
+              <LayoutDashboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
               <span className="hidden sm:inline">סקירה כללית</span>
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="gap-2">
-              <TrendingUp className="w-4 h-4" />
+            <TabsTrigger value="analytics" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-1 sm:px-3">
+              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
               <span className="hidden sm:inline">ניתוחים</span>
             </TabsTrigger>
-            <TabsTrigger value="achievements" className="gap-2">
-              <Trophy className="w-4 h-4" />
+            <TabsTrigger value="achievements" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-1 sm:px-3">
+              <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
               <span className="hidden sm:inline">הישגים</span>
             </TabsTrigger>
-            <TabsTrigger value="ai" className="gap-2">
-              <Brain className="w-4 h-4" />
+            <TabsTrigger value="ai" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-1 sm:px-3">
+              <Brain className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
               <span className="hidden sm:inline">ניתוח AI</span>
             </TabsTrigger>
-            <TabsTrigger value="goals" className="gap-2">
-              <Flag className="w-4 h-4" />
+            <TabsTrigger value="goals" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-1 sm:px-3">
+              <Flag className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
               <span className="hidden sm:inline">יעדים</span>
             </TabsTrigger>
           </TabsList>
