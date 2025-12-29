@@ -320,21 +320,21 @@ export const WakeUpAnalytics = ({ logs, targetTime = "06:00" }: WakeUpAnalyticsP
           <CardDescription>באיזה ימים הכי קל לקום בזמן?</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-7 gap-2" dir="rtl">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2" dir="rtl">
             {dayOfWeekStats.map((day) => (
               <div 
                 key={day.day}
                 className={cn(
-                  "text-center p-3 rounded-xl border transition-all",
+                  "text-center p-1.5 sm:p-3 rounded-lg sm:rounded-xl border transition-all min-w-0",
                   day.successRate >= 70 ? "bg-success/10 border-success/30" :
                   day.successRate >= 40 ? "bg-warning/10 border-warning/30" :
                   day.total > 0 ? "bg-destructive/10 border-destructive/30" :
                   "bg-muted/30 border-muted/50"
                 )}
               >
-                <p className="font-semibold text-sm">{day.day}</p>
+                <p className="font-semibold text-xs sm:text-sm">{day.day}</p>
                 <p className={cn(
-                  "text-lg font-bold",
+                  "text-sm sm:text-lg font-bold",
                   day.successRate >= 70 ? "text-success" :
                   day.successRate >= 40 ? "text-warning" :
                   day.total > 0 ? "text-destructive" : "text-muted-foreground"
@@ -345,7 +345,7 @@ export const WakeUpAnalytics = ({ logs, targetTime = "06:00" }: WakeUpAnalyticsP
                   <Badge 
                     variant="secondary" 
                     className={cn(
-                      "text-[10px] mt-1",
+                      "text-[8px] sm:text-[10px] mt-0.5 sm:mt-1 px-1 sm:px-2",
                       day.avgDiff < 0 ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
                     )}
                   >
