@@ -437,9 +437,9 @@ export const WakeUpTracker = () => {
           <CardDescription className="text-xs sm:text-sm">לחץ על יום כדי לסמן אם קמת בבוקר</CardDescription>
         </CardHeader>
         <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0">
-          {/* Week days header - reversed for RTL */}
-          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-4">
-            {[...weekDays].reverse().map((day) => (
+          {/* Week days header - RTL with Sunday on the right */}
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-4" dir="rtl">
+            {weekDays.map((day) => (
               <div
                 key={day}
                 className="text-center text-xs sm:text-sm font-medium text-muted-foreground py-1 sm:py-2"
@@ -449,10 +449,10 @@ export const WakeUpTracker = () => {
             ))}
           </div>
 
-          {/* Calendar grid - reversed for RTL */}
+          {/* Calendar grid - RTL with Sunday on the right */}
           <TooltipProvider>
-            <div className="grid grid-cols-7 gap-1 sm:gap-2" style={{ direction: 'rtl' }}>
-              {[...paddedDays].reverse().map((day, index) => {
+            <div className="grid grid-cols-7 gap-1 sm:gap-2" dir="rtl">
+              {paddedDays.map((day, index) => {
                 if (!day) {
                   return <div key={`empty-${index}`} className="aspect-square" />;
                 }
