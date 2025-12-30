@@ -18,8 +18,8 @@ export const StreakChart = () => {
 
   if (data.length === 0) {
     return (
-      <Card className="p-6 royal-card animate-fade-in">
-        <h3 className="text-lg font-semibold mb-4 text-accent gold-underline">רצפים פעילים</h3>
+      <Card className="p-6 royal-card animate-fade-in" dir="rtl">
+        <h3 className="text-lg font-semibold mb-4 text-accent gold-underline text-right">רצפים פעילים</h3>
         <div className="flex items-center justify-center h-[200px] text-muted-foreground">
           התחל להשלים הרגלים כדי לראות רצפים
         </div>
@@ -28,8 +28,8 @@ export const StreakChart = () => {
   }
 
   return (
-    <Card className="p-6 royal-card animate-fade-in">
-      <h3 className="text-lg font-semibold mb-4 text-accent gold-underline">רצפים פעילים</h3>
+    <Card className="p-6 royal-card animate-fade-in" dir="rtl">
+      <h3 className="text-lg font-semibold mb-4 text-accent gold-underline text-right">רצפים פעילים</h3>
       <div className="h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical">
