@@ -27,7 +27,7 @@ export const Statistics = () => {
   const totalPoints = profile?.total_points ?? 0;
 
   return (
-    <section aria-label="סטטיסטיקות" className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+    <section aria-label="סטטיסטיקות" className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3" dir="rtl">
       <Card className="p-3 sm:p-4 royal-card">
         <div className="flex flex-row-reverse items-start justify-between gap-3 sm:gap-4">
           <div className="min-w-0 text-right">
