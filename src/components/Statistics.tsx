@@ -29,44 +29,44 @@ export const Statistics = () => {
   return (
     <section aria-label="סטטיסטיקות" className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3" dir="rtl">
       <Card className="p-3 sm:p-4 royal-card">
-        <div className="flex flex-row-reverse items-start justify-between gap-3 sm:gap-4">
-          <div className="min-w-0 text-right">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
+          <div className="shrink-0 rounded-lg bg-primary/10 p-1.5 sm:p-2">
+            <Target className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+          </div>
+          <div className="min-w-0 text-right flex-1">
             <p className="text-xs sm:text-sm text-muted-foreground">היום</p>
             <p className="text-xl sm:text-2xl font-bold text-foreground">
               {completedToday} / {totalHabits}
             </p>
             <p className="text-xs sm:text-sm text-muted-foreground">אחוז השלמה: {completionRate}%</p>
           </div>
-          <div className="shrink-0 rounded-lg bg-primary/10 p-1.5 sm:p-2">
-            <Target className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-          </div>
         </div>
       </Card>
 
       <Card className="p-3 sm:p-4 royal-card">
-        <div className="flex flex-row-reverse items-start justify-between gap-3 sm:gap-4">
-          <div className="min-w-0 text-right">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
+          <div className="shrink-0 rounded-lg bg-accent/10 p-1.5 sm:p-2">
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
+          </div>
+          <div className="min-w-0 text-right flex-1">
             <p className="text-xs sm:text-sm text-muted-foreground">שבוע אחרון</p>
             <p className="text-xl sm:text-2xl font-bold text-foreground">{weeklyAverage}</p>
             <p className="text-xs sm:text-sm text-muted-foreground">ממוצע השלמות ליום</p>
-          </div>
-          <div className="shrink-0 rounded-lg bg-accent/10 p-1.5 sm:p-2">
-            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
           </div>
         </div>
       </Card>
 
       <Card className="p-3 sm:p-4 royal-card sm:col-span-2 md:col-span-1">
-        <div className="flex flex-row-reverse items-start justify-between gap-3 sm:gap-4">
-          <div className="min-w-0 text-right">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
+          <div className="shrink-0 rounded-lg bg-warning/10 p-1.5 sm:p-2">
+            <Award className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
+          </div>
+          <div className="min-w-0 text-right flex-1">
             <p className="text-xs sm:text-sm text-muted-foreground">התקדמות</p>
             <p className="text-xl sm:text-2xl font-bold text-foreground">רמה {level}</p>
             <p className="text-xs sm:text-sm text-muted-foreground">
               {totalPoints.toLocaleString("he-IL")} נקודות • רצף שיא: {longestStreak}
             </p>
-          </div>
-          <div className="shrink-0 rounded-lg bg-warning/10 p-1.5 sm:p-2">
-            <Award className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
           </div>
         </div>
       </Card>
