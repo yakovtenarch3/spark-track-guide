@@ -12,25 +12,88 @@ import {
   CheckCircle2,
   XCircle,
   Sunrise,
+  Bell,
+  BellOff,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isAfter, startOfDay } from "date-fns";
 import { he } from "date-fns/locale";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useNotifications } from "@/hooks/useNotifications";
+import { toast } from "sonner";
+import { getMissedDayMessage, checkAndNotifyMissedDays } from "@/utils/missedDaysNotifier";
 
 const Accountability = () => {
   const { analytics, metrics, isLoading } = useAccountabilityTracking();
+  const { permission, requestPermission } = useNotifications();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedFilters, setSelectedFilters] = useState({
     habits: true,
     goals: true,
     wakeUp: true,
   });
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    return localStorage.getItem("missedDaysNotificationsEnabled") === "true";
+  });
+
+  // Toggle missed days notifications
+  const toggleNotifications = async () => {
+    if (!notificationsEnabled) {
+      if (permission !== "granted") {
+        const granted = await requestPermission();
+        if (!granted) return;
+      }
+      setNotificationsEnabled(true);
+      localStorage.setItem("missedDaysNotificationsEnabled", "true");
+      toast.success("התראות על ימים שפספסת הופעלו!");
+    } else {
+      setNotificationsEnabled(false);
+      localStorage.setItem("missedDaysNotificationsEnabled", "false");
+      toast.info("התראות על ימים שפספסת כובו");
+    }
+  };
+
+  // Test notification
+  const sendTestNotification = async () => {
+    if (permission !== "granted") {
+      const granted = await requestPermission();
+      if (!granted) {
+        toast.error("יש לאשר הרשאות התראות קודם");
+        return;
+      }
+    }
+
+    // Calculate missed days from metrics
+    let missedCount = 0;
+    for (let i = 0; i < metrics.length; i++) {
+      if (!metrics[i].logged_in) {
+        missedCount++;
+      } else {
+        break;
+      }
+    }
+
+    if (missedCount === 0) {
+      toast.success("מעולה! אין לך ימים שפספסת!");
+      return;
+    }
+
+    const { title, body, quote } = getMissedDayMessage(missedCount);
+    const fullBody = `${body}\n\n💡 "${quote.text}"\n- ${quote.author}`;
+    
+    new Notification(`⚠️ ${title}`, {
+      body: fullBody,
+      icon: "/favicon.ico",
+      badge: "/favicon.ico",
+    });
+    
+    toast.success("התראה נשלחה!");
+  };
 
   // Filter metrics based on selected filters
   const filteredMetrics = useMemo(() => {
@@ -118,6 +181,40 @@ const Accountability = () => {
           <p className="text-muted-foreground text-sm sm:text-base">
             באילו ימים סימנת פעילות ובאילו פספסת
           </p>
+          
+          {/* Notification Controls */}
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-3 sm:mt-4">
+            <Button
+              variant={notificationsEnabled ? "default" : "outline"}
+              size="sm"
+              onClick={toggleNotifications}
+              className="gap-2"
+            >
+              {notificationsEnabled ? (
+                <>
+                  <Bell className="w-4 h-4" />
+                  התראות מופעלות
+                </>
+              ) : (
+                <>
+                  <BellOff className="w-4 h-4" />
+                  הפעל התראות
+                </>
+              )}
+            </Button>
+            
+            {incompleteDays > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={sendTestNotification}
+                className="gap-2"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                שלח התראה על {incompleteDays} ימים שפספסתי
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Main Stats Card */}
