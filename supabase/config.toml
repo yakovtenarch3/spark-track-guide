@@ -2,3 +2,24 @@ project_id = "glyfocljsiilqyxpssmn"
 
 [functions.ai-coach-chat]
 verify_jwt = false
+
+[functions.analyze-book-tip]
+verify_jwt = false
+
+[functions.analyze-daily-goals]
+verify_jwt = false
+
+[functions.analyze-habits]
+verify_jwt = false
+
+[functions.check-accountability]
+verify_jwt = false
+
+[functions.smart-reminders]
+verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = false
+
+[functions.smart-notifications]
+verify_jwt = false

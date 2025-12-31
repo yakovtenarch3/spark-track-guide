@@ -2,12 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { QuoteManagement } from "@/components/QuoteManagement";
 import { TypographySettings } from "@/components/TypographySettings";
+import { NotificationSettings } from "@/components/NotificationSettings";
 import { Settings as SettingsIcon, Code2, Terminal, Inspect } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useDeveloperMode } from "@/hooks/useDeveloperMode";
 import { Badge } from "@/components/ui/badge";
-
 export default function Settings() {
   const { enabled, consoleEnabled, inspectorEnabled, toggleDevMode, toggleConsole, toggleInspector } = useDeveloperMode();
 
@@ -116,6 +116,8 @@ export default function Settings() {
           </Card>
 
           <TypographySettings />
+
+          <NotificationSettings />
 
           <Card>
             <CardHeader>
