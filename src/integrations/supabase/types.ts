@@ -453,6 +453,96 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_logs: {
+        Row: {
+          channel: string
+          error_message: string | null
+          id: string
+          message: string
+          notification_type: string
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          channel: string
+          error_message?: string | null
+          id?: string
+          message: string
+          notification_type: string
+          sent_at?: string
+          status?: string
+        }
+        Update: {
+          channel?: string
+          error_message?: string | null
+          id?: string
+          message?: string
+          notification_type?: string
+          sent_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          custom_triggers: Json | null
+          email: string | null
+          email_enabled: boolean
+          id: string
+          notify_on_low_engagement: boolean
+          notify_on_milestones: boolean
+          notify_on_missed_login: boolean
+          notify_on_streak_break: boolean
+          phone: string | null
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          reminder_frequency: number
+          sms_enabled: boolean
+          updated_at: string
+          whatsapp_enabled: boolean
+          whatsapp_number: string | null
+        }
+        Insert: {
+          created_at?: string
+          custom_triggers?: Json | null
+          email?: string | null
+          email_enabled?: boolean
+          id?: string
+          notify_on_low_engagement?: boolean
+          notify_on_milestones?: boolean
+          notify_on_missed_login?: boolean
+          notify_on_streak_break?: boolean
+          phone?: string | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          reminder_frequency?: number
+          sms_enabled?: boolean
+          updated_at?: string
+          whatsapp_enabled?: boolean
+          whatsapp_number?: string | null
+        }
+        Update: {
+          created_at?: string
+          custom_triggers?: Json | null
+          email?: string | null
+          email_enabled?: boolean
+          id?: string
+          notify_on_low_engagement?: boolean
+          notify_on_milestones?: boolean
+          notify_on_missed_login?: boolean
+          notify_on_streak_break?: boolean
+          phone?: string | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          reminder_frequency?: number
+          sms_enabled?: boolean
+          updated_at?: string
+          whatsapp_enabled?: boolean
+          whatsapp_number?: string | null
+        }
+        Relationships: []
+      }
       pdf_annotations: {
         Row: {
           book_id: string
