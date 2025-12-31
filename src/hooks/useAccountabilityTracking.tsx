@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { format, subDays, eachDayOfInterval, isSameDay, startOfDay } from "date-fns";
+import { checkAndNotifyMissedDays } from "@/utils/missedDaysNotifier";
 
 interface DayMetric {
   date: string;
@@ -231,6 +232,13 @@ export const useAccountabilityTracking = () => {
       recommendations: generateRecommendations(metrics, currentStreak),
     };
   }, [metrics, habitCompletions, goalLogs, wakeUpLogs, currentStreak, longestStreak]);
+
+  // Check for missed days and notify
+  useEffect(() => {
+    if (metrics.length > 0 && !habitsLoading && !goalsLoading && !wakeUpLoading) {
+      checkAndNotifyMissedDays(metrics);
+    }
+  }, [metrics, habitsLoading, goalsLoading, wakeUpLoading]);
 
   return {
     metrics,
