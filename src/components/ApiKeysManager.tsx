@@ -4,12 +4,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Eye, EyeOff, Trash2, Plus, Key, Lock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Eye, EyeOff, Trash2, Plus, Key, Lock, Mail, Phone, Bot, CreditCard, Cloud, Database, Webhook, Zap } from "lucide-react";
 import { toast } from "sonner";
+
+// Predefined services with icons and colors
+const PREDEFINED_SERVICES = [
+  { id: "resend", name: "Resend", icon: Mail, color: "#000000", description: "שליחת אימיילים" },
+  { id: "twilio", name: "Twilio", icon: Phone, color: "#F22F46", description: "SMS ו-WhatsApp" },
+  { id: "openai", name: "OpenAI", icon: Bot, color: "#10A37F", description: "GPT ו-AI" },
+  { id: "stripe", name: "Stripe", icon: CreditCard, color: "#635BFF", description: "תשלומים" },
+  { id: "supabase", name: "Supabase", icon: Database, color: "#3ECF8E", description: "בסיס נתונים" },
+  { id: "cloudinary", name: "Cloudinary", icon: Cloud, color: "#3448C5", description: "תמונות ומדיה" },
+  { id: "sendgrid", name: "SendGrid", icon: Mail, color: "#1A82E2", description: "אימיילים" },
+  { id: "firebase", name: "Firebase", icon: Database, color: "#FFCA28", description: "Google Cloud" },
+  { id: "webhook", name: "Webhook", icon: Webhook, color: "#FF6B6B", description: "התראות" },
+  { id: "zapier", name: "Zapier", icon: Zap, color: "#FF4A00", description: "אוטומציה" },
+  { id: "custom", name: "שירות מותאם אישית", icon: Key, color: "#6B7280", description: "" },
+];
 
 interface ApiKey {
   id: string;
   serviceName: string;
+  serviceId: string;
   keyValue: string;
   createdAt: string;
 }
@@ -26,7 +43,8 @@ export function ApiKeysManager({ open, onOpenChange }: ApiKeysManagerProps) {
   const [pin, setPin] = useState("");
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
-  const [newServiceName, setNewServiceName] = useState("");
+  const [selectedService, setSelectedService] = useState("");
+  const [customServiceName, setCustomServiceName] = useState("");
   const [newKeyValue, setNewKeyValue] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
@@ -64,7 +82,8 @@ export function ApiKeysManager({ open, onOpenChange }: ApiKeysManagerProps) {
     setPin("");
     setVisibleKeys(new Set());
     setIsAdding(false);
-    setNewServiceName("");
+    setSelectedService("");
+    setCustomServiceName("");
     setNewKeyValue("");
     onOpenChange(false);
   };
@@ -80,20 +99,30 @@ export function ApiKeysManager({ open, onOpenChange }: ApiKeysManagerProps) {
   };
 
   const addApiKey = () => {
-    if (!newServiceName.trim() || !newKeyValue.trim()) {
-      toast.error("יש למלא את כל השדות");
+    if (!selectedService || !newKeyValue.trim()) {
+      toast.error("יש לבחור שירות ולהזין מפתח");
       return;
     }
 
+    if (selectedService === "custom" && !customServiceName.trim()) {
+      toast.error("יש להזין שם לשירות המותאם אישית");
+      return;
+    }
+
+    const service = PREDEFINED_SERVICES.find(s => s.id === selectedService);
+    const serviceName = selectedService === "custom" ? customServiceName.trim() : service?.name || selectedService;
+
     const newKey: ApiKey = {
       id: crypto.randomUUID(),
-      serviceName: newServiceName.trim(),
+      serviceName: serviceName,
+      serviceId: selectedService,
       keyValue: newKeyValue.trim(),
       createdAt: new Date().toISOString(),
     };
 
     saveApiKeys([...apiKeys, newKey]);
-    setNewServiceName("");
+    setSelectedService("");
+    setCustomServiceName("");
     setNewKeyValue("");
     setIsAdding(false);
     toast.success("מפתח נוסף בהצלחה");
@@ -108,6 +137,15 @@ export function ApiKeysManager({ open, onOpenChange }: ApiKeysManagerProps) {
   const maskKey = (key: string) => {
     if (key.length <= 8) return "••••••••";
     return key.slice(0, 4) + "••••••••" + key.slice(-4);
+  };
+
+  const getServiceIcon = (serviceId: string) => {
+    const service = PREDEFINED_SERVICES.find(s => s.id === serviceId);
+    if (service) {
+      const Icon = service.icon;
+      return <Icon className="h-4 w-4" style={{ color: service.color }} />;
+    }
+    return <Key className="h-4 w-4 text-muted-foreground" />;
   };
 
   return (
@@ -160,13 +198,43 @@ export function ApiKeysManager({ open, onOpenChange }: ApiKeysManagerProps) {
               {isAdding ? (
                 <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
                   <div className="space-y-2">
-                    <Label>שם השירות</Label>
-                    <Input
-                      placeholder="לדוגמה: OpenAI, Stripe..."
-                      value={newServiceName}
-                      onChange={(e) => setNewServiceName(e.target.value)}
-                    />
+                    <Label>בחר שירות</Label>
+                    <Select value={selectedService} onValueChange={setSelectedService}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="בחר שירות..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PREDEFINED_SERVICES.map((service) => {
+                          const Icon = service.icon;
+                          return (
+                            <SelectItem key={service.id} value={service.id}>
+                              <div className="flex items-center gap-2">
+                                <Icon className="h-4 w-4" style={{ color: service.color }} />
+                                <span>{service.name}</span>
+                                {service.description && (
+                                  <span className="text-muted-foreground text-xs">
+                                    ({service.description})
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {selectedService === "custom" && (
+                    <div className="space-y-2">
+                      <Label>שם השירות</Label>
+                      <Input
+                        placeholder="הזן שם לשירות..."
+                        value={customServiceName}
+                        onChange={(e) => setCustomServiceName(e.target.value)}
+                      />
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label>מפתח API</Label>
                     <Input
@@ -185,7 +253,8 @@ export function ApiKeysManager({ open, onOpenChange }: ApiKeysManagerProps) {
                       size="sm"
                       onClick={() => {
                         setIsAdding(false);
-                        setNewServiceName("");
+                        setSelectedService("");
+                        setCustomServiceName("");
                         setNewKeyValue("");
                       }}
                     >
@@ -216,7 +285,10 @@ export function ApiKeysManager({ open, onOpenChange }: ApiKeysManagerProps) {
                       {apiKeys.map((apiKey) => (
                         <TableRow key={apiKey.id}>
                           <TableCell className="font-medium">
-                            {apiKey.serviceName}
+                            <div className="flex items-center gap-2">
+                              {getServiceIcon(apiKey.serviceId)}
+                              {apiKey.serviceName}
+                            </div>
                           </TableCell>
                           <TableCell className="font-mono text-sm">
                             {visibleKeys.has(apiKey.id)
