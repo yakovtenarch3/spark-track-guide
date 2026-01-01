@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, EyeOff, Trash2, Plus, Key, Lock, Mail, Phone, Bot, CreditCard, Cloud, Database, Webhook, Zap } from "lucide-react";
+import { Eye, EyeOff, Trash2, Plus, Key, Lock, Mail, Phone, Bot, CreditCard, Cloud, Database, Webhook, Zap, Globe, Server, Shield, Github, Brain, Layers, Code, MessageSquare, Search, MapPin, Video, Music, ShoppingCart, BarChart, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 // Predefined services with icons and colors
@@ -13,11 +13,28 @@ const PREDEFINED_SERVICES = [
   { id: "resend", name: "Resend", icon: Mail, color: "#000000", description: "שליחת אימיילים" },
   { id: "twilio", name: "Twilio", icon: Phone, color: "#F22F46", description: "SMS ו-WhatsApp" },
   { id: "openai", name: "OpenAI", icon: Bot, color: "#10A37F", description: "GPT ו-AI" },
+  { id: "anthropic", name: "Anthropic", icon: Brain, color: "#D4A574", description: "Claude AI" },
+  { id: "google", name: "Google APIs", icon: Globe, color: "#4285F4", description: "שירותי גוגל" },
+  { id: "aws", name: "AWS", icon: Server, color: "#FF9900", description: "Amazon Web Services" },
+  { id: "azure", name: "Azure", icon: Shield, color: "#0078D4", description: "Microsoft Azure" },
   { id: "stripe", name: "Stripe", icon: CreditCard, color: "#635BFF", description: "תשלומים" },
   { id: "supabase", name: "Supabase", icon: Database, color: "#3ECF8E", description: "בסיס נתונים" },
   { id: "cloudinary", name: "Cloudinary", icon: Cloud, color: "#3448C5", description: "תמונות ומדיה" },
   { id: "sendgrid", name: "SendGrid", icon: Mail, color: "#1A82E2", description: "אימיילים" },
   { id: "firebase", name: "Firebase", icon: Database, color: "#FFCA28", description: "Google Cloud" },
+  { id: "github", name: "GitHub", icon: Github, color: "#181717", description: "קוד וגרסאות" },
+  { id: "vercel", name: "Vercel", icon: Layers, color: "#000000", description: "אירוח ופריסה" },
+  { id: "netlify", name: "Netlify", icon: Code, color: "#00C7B7", description: "אירוח ופריסה" },
+  { id: "slack", name: "Slack", icon: MessageSquare, color: "#4A154B", description: "הודעות צוות" },
+  { id: "discord", name: "Discord", icon: MessageSquare, color: "#5865F2", description: "צ'אט קהילתי" },
+  { id: "algolia", name: "Algolia", icon: Search, color: "#5468FF", description: "חיפוש" },
+  { id: "mapbox", name: "Mapbox", icon: MapPin, color: "#4264FB", description: "מפות" },
+  { id: "googlemaps", name: "Google Maps", icon: MapPin, color: "#34A853", description: "מפות גוגל" },
+  { id: "youtube", name: "YouTube API", icon: Video, color: "#FF0000", description: "וידאו" },
+  { id: "spotify", name: "Spotify", icon: Music, color: "#1DB954", description: "מוזיקה" },
+  { id: "shopify", name: "Shopify", icon: ShoppingCart, color: "#7AB55C", description: "חנות אונליין" },
+  { id: "mixpanel", name: "Mixpanel", icon: BarChart, color: "#7856FF", description: "אנליטיקס" },
+  { id: "notion", name: "Notion", icon: FileText, color: "#000000", description: "ניהול מסמכים" },
   { id: "webhook", name: "Webhook", icon: Webhook, color: "#FF6B6B", description: "התראות" },
   { id: "zapier", name: "Zapier", icon: Zap, color: "#FF4A00", description: "אוטומציה" },
   { id: "custom", name: "שירות מותאם אישית", icon: Key, color: "#6B7280", description: "" },
