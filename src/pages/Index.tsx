@@ -7,13 +7,16 @@ import { QuoteOfTheDay } from "@/components/QuoteOfTheDay";
 import { Statistics } from "@/components/Statistics";
 import { AIAnalysis } from "@/components/AIAnalysis";
 import { GoalsTracking } from "@/components/GoalsTracking";
+import { LastActivityReminder } from "@/components/LastActivityReminder";
 import DailyCoach from "@/components/DailyCoach";
 import { LayoutDashboard, TrendingUp, Trophy, Brain, Flag } from "lucide-react";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-2 sm:p-4 md:p-6 overflow-x-hidden" dir="rtl">
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 w-full overflow-hidden">
+    <>
+      <LastActivityReminder />
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-2 sm:p-4 md:p-6 overflow-x-hidden" dir="rtl">
+        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 w-full overflow-hidden">
         <div className="text-center space-y-1 sm:space-y-2 animate-fade-in">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             לוח בקרה
@@ -81,8 +84,9 @@ const Index = () => {
             <GoalsTracking />
           </TabsContent>
         </Tabs>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
