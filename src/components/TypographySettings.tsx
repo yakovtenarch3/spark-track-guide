@@ -35,11 +35,12 @@ export const TypographySettings = () => {
             max={150}
             step={5}
             className="w-full"
+            dir="ltr"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>קטן</span>
-            <span>רגיל</span>
             <span>גדול</span>
+            <span>רגיל</span>
+            <span>קטן</span>
           </div>
         </div>
 
@@ -105,11 +106,12 @@ export const TypographySettings = () => {
             max={200}
             step={10}
             className="w-full"
+            dir="ltr"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>צפוף</span>
-            <span>רגיל</span>
             <span>מרווח</span>
+            <span>רגיל</span>
+            <span>צפוף</span>
           </div>
         </div>
 
@@ -129,19 +131,20 @@ export const TypographySettings = () => {
             max={20}
             step={1}
             className="w-full"
+            dir="ltr"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>צפוף</span>
-            <span>רגיל</span>
             <span>מרווח</span>
+            <span>רגיל</span>
+            <span>צפוף</span>
           </div>
         </div>
 
         {/* Preview */}
         <div className="p-4 rounded-lg border bg-muted/30 space-y-2">
           <p className="text-sm text-muted-foreground">תצוגה מקדימה:</p>
-          <h3 
-            className="text-xl font-bold" 
+          <h3
+            className="text-xl font-bold"
             style={{ fontFamily: settings.headingFontFamily }}
           >
             כותרת לדוגמה

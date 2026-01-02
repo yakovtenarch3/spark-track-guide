@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useCallback } from "react";
 import { format, subDays, eachDayOfInterval, isSameDay, startOfDay } from "date-fns";
 import { checkAndNotifyMissedDays } from "@/utils/missedDaysNotifier";
 
@@ -32,6 +32,8 @@ interface EngagementAnalytics {
 }
 
 export const useAccountabilityTracking = () => {
+  const queryClient = useQueryClient();
+
   // Fetch habit completions for last 60 days
   const { data: habitCompletions = [], isLoading: habitsLoading } = useQuery({
     queryKey: ["accountability-habits"],
@@ -240,11 +242,21 @@ export const useAccountabilityTracking = () => {
     }
   }, [metrics, habitsLoading, goalsLoading, wakeUpLoading]);
 
+  // Refetch function
+  const refetch = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["accountability-habits"] });
+    queryClient.invalidateQueries({ queryKey: ["accountability-goals"] });
+    queryClient.invalidateQueries({ queryKey: ["accountability-wakeup"] });
+    queryClient.invalidateQueries({ queryKey: ["accountability-habits-list"] });
+    queryClient.invalidateQueries({ queryKey: ["accountability-daily-goals-list"] });
+  }, [queryClient]);
+
   return {
     metrics,
     sessions: [],
     analytics,
     isLoading: habitsLoading || goalsLoading || wakeUpLoading,
+    refetch,
   };
 };
 

@@ -14,7 +14,42 @@ import {
   Sunrise,
   Bell,
   BellOff,
+  RotateCcw,
+  Download,
+  Upload,
+  Eye,
+  EyeOff,
+  Settings2,
+  Database,
+  Trash2,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isAfter, startOfDay } from "date-fns";
 import { he } from "date-fns/locale";
 import { useState, useMemo, useEffect } from "react";
@@ -29,9 +64,185 @@ import { toast } from "sonner";
 import { getMissedDayMessage, checkAndNotifyMissedDays } from "@/utils/missedDaysNotifier";
 
 const Accountability = () => {
-  const { analytics, metrics, isLoading } = useAccountabilityTracking();
+  const { analytics, metrics, isLoading, refetch } = useAccountabilityTracking();
   const { permission, requestPermission } = useNotifications();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Component visibility state
+  const [hiddenComponents, setHiddenComponents] = useState<string[]>(() => {
+    const saved = localStorage.getItem('accountability-hidden-components');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Dialog states
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [showBackupDialog, setShowBackupDialog] = useState(false);
+  const [resetType, setResetType] = useState<'habits' | 'goals' | 'wakeup' | 'all'>('all');
+  const [isResetting, setIsResetting] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  // Toggle component visibility
+  const toggleComponentVisibility = (componentId: string) => {
+    setHiddenComponents(prev => {
+      const newHidden = prev.includes(componentId)
+        ? prev.filter(id => id !== componentId)
+        : [...prev, componentId];
+      localStorage.setItem('accountability-hidden-components', JSON.stringify(newHidden));
+      return newHidden;
+    });
+  };
+
+  // Reset days function
+  const handleResetDays = async () => {
+    setIsResetting(true);
+    try {
+      if (resetType === 'habits' || resetType === 'all') {
+        await supabase.from('habit_completions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+      if (resetType === 'goals' || resetType === 'all') {
+        await supabase.from('daily_goal_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+      if (resetType === 'wakeup' || resetType === 'all') {
+        await supabase.from('wake_up_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+      toast.success('הנתונים אופסו בהצלחה!');
+      refetch();
+    } catch (error) {
+      toast.error('שגיאה באיפוס הנתונים');
+      console.error(error);
+    } finally {
+      setIsResetting(false);
+      setShowResetDialog(false);
+    }
+  };
+
+  // Backup all data
+  const handleBackupData = async () => {
+    setIsBackingUp(true);
+    try {
+      const [habits, habitCompletions, dailyGoals, dailyGoalLogs, wakeUpLogs, tasks, journalEntries, timerSessions, timerTopics] = await Promise.all([
+        supabase.from('habits').select('*'),
+        supabase.from('habit_completions').select('*'),
+        supabase.from('daily_goals').select('*'),
+        supabase.from('daily_goal_logs').select('*'),
+        supabase.from('wake_up_logs').select('*'),
+        supabase.from('tasks').select('*'),
+        supabase.from('journal_entries').select('*'),
+        supabase.from('timer_sessions').select('*'),
+        supabase.from('timer_topics').select('*'),
+      ]);
+
+      const backupData = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        data: {
+          habits: habits.data || [],
+          habitCompletions: habitCompletions.data || [],
+          dailyGoals: dailyGoals.data || [],
+          dailyGoalLogs: dailyGoalLogs.data || [],
+          wakeUpLogs: wakeUpLogs.data || [],
+          tasks: tasks.data || [],
+          journalEntries: journalEntries.data || [],
+          timerSessions: timerSessions.data || [],
+          timerTopics: timerTopics.data || [],
+        }
+      };
+
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `spark-track-backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('הגיבוי הורד בהצלחה!');
+    } catch (error) {
+      toast.error('שגיאה ביצירת הגיבוי');
+      console.error(error);
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  // Restore from backup
+  const handleRestoreData = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsRestoring(true);
+    try {
+      const text = await file.text();
+      const backupData = JSON.parse(text);
+
+      if (!backupData.version || !backupData.data) {
+        throw new Error('Invalid backup file format');
+      }
+
+      // Restore each table
+      const { data: dataToRestore } = backupData;
+
+      if (dataToRestore.habits?.length) {
+        for (const habit of dataToRestore.habits) {
+          await supabase.from('habits').upsert(habit, { onConflict: 'id' });
+        }
+      }
+      if (dataToRestore.habitCompletions?.length) {
+        for (const completion of dataToRestore.habitCompletions) {
+          await supabase.from('habit_completions').upsert(completion, { onConflict: 'id' });
+        }
+      }
+      if (dataToRestore.dailyGoals?.length) {
+        for (const goal of dataToRestore.dailyGoals) {
+          await supabase.from('daily_goals').upsert(goal, { onConflict: 'id' });
+        }
+      }
+      if (dataToRestore.dailyGoalLogs?.length) {
+        for (const log of dataToRestore.dailyGoalLogs) {
+          await supabase.from('daily_goal_logs').upsert(log, { onConflict: 'id' });
+        }
+      }
+      if (dataToRestore.wakeUpLogs?.length) {
+        for (const log of dataToRestore.wakeUpLogs) {
+          await supabase.from('wake_up_logs').upsert(log, { onConflict: 'id' });
+        }
+      }
+      if (dataToRestore.tasks?.length) {
+        for (const task of dataToRestore.tasks) {
+          await supabase.from('tasks').upsert(task, { onConflict: 'id' });
+        }
+      }
+      if (dataToRestore.journalEntries?.length) {
+        for (const entry of dataToRestore.journalEntries) {
+          await supabase.from('journal_entries').upsert(entry, { onConflict: 'id' });
+        }
+      }
+      if (dataToRestore.timerSessions?.length) {
+        for (const session of dataToRestore.timerSessions) {
+          await supabase.from('timer_sessions').upsert(session, { onConflict: 'id' });
+        }
+      }
+      if (dataToRestore.timerTopics?.length) {
+        for (const topic of dataToRestore.timerTopics) {
+          await supabase.from('timer_topics').upsert(topic, { onConflict: 'id' });
+        }
+      }
+
+      toast.success('הנתונים שוחזרו בהצלחה!');
+      refetch();
+      setShowBackupDialog(false);
+    } catch (error) {
+      toast.error('שגיאה בשחזור הנתונים - בדוק שהקובץ תקין');
+      console.error(error);
+    } finally {
+      setIsRestoring(false);
+      event.target.value = '';
+    }
+  };
+
   const [selectedFilters, setSelectedFilters] = useState({
     habits: true,
     goals: true,
@@ -85,13 +296,13 @@ const Accountability = () => {
 
     const { title, body, quote } = getMissedDayMessage(missedCount);
     const fullBody = `${body}\n\n💡 "${quote.text}"\n- ${quote.author}`;
-    
+
     new Notification(`⚠️ ${title}`, {
       body: fullBody,
       icon: "/favicon.ico",
       badge: "/favicon.ico",
     });
-    
+
     toast.success("התראה נשלחה!");
   };
 
@@ -147,11 +358,11 @@ const Accountability = () => {
   const getDayData = (day: Date) => {
     const dateStr = format(day, "yyyy-MM-dd");
     const metric = filteredMetrics.find((m) => m.date === dateStr);
-    
+
     if (isAfter(day, today)) {
       return { status: "future", metric: null };
     }
-    
+
     if (!metric || !metric.logged_in) {
       return { status: "missed", metric };
     }
@@ -177,11 +388,71 @@ const Accountability = () => {
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 w-full">
         {/* Header */}
         <div className="text-center" dir="rtl">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2">בדיקת מעקב</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            באילו ימים סימנת פעילות ובאילו פספסת
-          </p>
-          
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-10" /> {/* Spacer */}
+            <div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2">בדיקת מעקב</h1>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                באילו ימים סימנת פעילות ובאילו פספסת
+              </p>
+            </div>
+
+            {/* Settings Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Settings2 className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56" dir="rtl">
+                <DropdownMenuLabel>ניהול מעקב</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                {/* Reset Options */}
+                <DropdownMenuItem onClick={() => { setResetType('all'); setShowResetDialog(true); }}>
+                  <RotateCcw className="w-4 h-4 ml-2" />
+                  איפוס כל הימים
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setResetType('habits'); setShowResetDialog(true); }}>
+                  <RotateCcw className="w-4 h-4 ml-2" />
+                  איפוס הרגלים
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setResetType('goals'); setShowResetDialog(true); }}>
+                  <RotateCcw className="w-4 h-4 ml-2" />
+                  איפוס יעדים
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setResetType('wakeup'); setShowResetDialog(true); }}>
+                  <RotateCcw className="w-4 h-4 ml-2" />
+                  איפוס קימות
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                {/* Backup Options */}
+                <DropdownMenuItem onClick={() => setShowBackupDialog(true)}>
+                  <Database className="w-4 h-4 ml-2" />
+                  גיבוי ושחזור
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>הצג/הסתר רכיבים</DropdownMenuLabel>
+
+                <DropdownMenuItem onClick={() => toggleComponentVisibility('stats')}>
+                  {hiddenComponents.includes('stats') ? <Eye className="w-4 h-4 ml-2" /> : <EyeOff className="w-4 h-4 ml-2" />}
+                  {hiddenComponents.includes('stats') ? 'הצג סטטיסטיקות' : 'הסתר סטטיסטיקות'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toggleComponentVisibility('calendar')}>
+                  {hiddenComponents.includes('calendar') ? <Eye className="w-4 h-4 ml-2" /> : <EyeOff className="w-4 h-4 ml-2" />}
+                  {hiddenComponents.includes('calendar') ? 'הצג לוח שנה' : 'הסתר לוח שנה'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toggleComponentVisibility('summary')}>
+                  {hiddenComponents.includes('summary') ? <Eye className="w-4 h-4 ml-2" /> : <EyeOff className="w-4 h-4 ml-2" />}
+                  {hiddenComponents.includes('summary') ? 'הצג סיכום' : 'הסתר סיכום'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           {/* Notification Controls */}
           <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-3 sm:mt-4">
             <Button
@@ -202,7 +473,7 @@ const Accountability = () => {
                 </>
               )}
             </Button>
-            
+
             {incompleteDays > 0 && (
               <Button
                 variant="destructive"
@@ -218,326 +489,445 @@ const Accountability = () => {
         </div>
 
         {/* Main Stats Card */}
-        <Card className="p-4 sm:p-6 md:p-8 text-center" dir="rtl">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-4">
-            <div className="relative">
-              <div className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full border-4 sm:border-6 md:border-8 border-primary/20 flex items-center justify-center">
-                <Target className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 text-primary" />
+        {!hiddenComponents.includes('stats') && (
+          <>
+            <Card className="p-4 sm:p-6 md:p-8 text-center" dir="rtl">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-4">
+                <div className="relative">
+                  <div className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full border-4 sm:border-6 md:border-8 border-primary/20 flex items-center justify-center">
+                    <Target className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 text-primary" />
+                  </div>
+                </div>
+                <div className="text-center sm:text-right">
+                  <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-success">{completedDays}</div>
+                  <div className="text-2xl sm:text-3xl md:text-4xl text-muted-foreground">/ {totalDays}</div>
+                </div>
               </div>
-            </div>
-            <div className="text-center sm:text-right">
-              <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-success">{completedDays}</div>
-              <div className="text-2xl sm:text-3xl md:text-4xl text-muted-foreground">/ {totalDays}</div>
-            </div>
-          </div>
-          <p className="text-sm sm:text-base md:text-lg text-muted-foreground px-2">
-            ימים שסימנת פעילות מתוך 60 הימים האחרונים
-          </p>
-          <div className="mt-4">
-            <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-              <div
-                className="bg-success h-3 rounded-full transition-all"
-                style={{ width: `${totalDays > 0 ? (completedDays / totalDays) * 100 : 0}%` }}
-              />
-            </div>
-          </div>
-        </Card>
+              <p className="text-sm sm:text-base md:text-lg text-muted-foreground px-2">
+                ימים שסימנת פעילות מתוך 60 הימים האחרונים
+              </p>
+              <div className="mt-4">
+                <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                  <div
+                    className="bg-success h-3 rounded-full transition-all"
+                    style={{ width: `${totalDays > 0 ? (completedDays / totalDays) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+            </Card>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" dir="rtl">
-          <Card className="p-3 sm:p-4 md:p-6">
-            <div className="flex items-start justify-between">
-              <CheckCircle2 className="w-5 h-5 text-success" />
-              <div className="text-right">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-success">{completedDays}</div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1">ימים מלאים</div>
-              </div>
-            </div>
-          </Card>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" dir="rtl">
+              <Card className="p-3 sm:p-4 md:p-6">
+                <div className="flex items-start justify-between">
+                  <CheckCircle2 className="w-5 h-5 text-success" />
+                  <div className="text-right">
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-success">{completedDays}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground mt-1">ימים מלאים</div>
+                  </div>
+                </div>
+              </Card>
 
-          <Card className="p-3 sm:p-4 md:p-6">
-            <div className="flex items-start justify-between">
-              <XCircle className="w-5 h-5 text-destructive" />
-              <div className="text-right">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-destructive">{incompleteDays}</div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1">ימים שפספסת</div>
-              </div>
-            </div>
-          </Card>
+              <Card className="p-3 sm:p-4 md:p-6">
+                <div className="flex items-start justify-between">
+                  <XCircle className="w-5 h-5 text-destructive" />
+                  <div className="text-right">
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-destructive">{incompleteDays}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground mt-1">ימים שפספסת</div>
+                  </div>
+                </div>
+              </Card>
 
-          <Card className="p-3 sm:p-4 md:p-6">
-            <div className="flex items-start justify-between">
-              <Target className="w-5 h-5 text-primary" />
-              <div className="text-right">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-primary">{currentStreak}</div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1">רצף נוכחי</div>
-              </div>
-            </div>
-          </Card>
+              <Card className="p-3 sm:p-4 md:p-6">
+                <div className="flex items-start justify-between">
+                  <Target className="w-5 h-5 text-primary" />
+                  <div className="text-right">
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-primary">{currentStreak}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground mt-1">רצף נוכחי</div>
+                  </div>
+                </div>
+              </Card>
 
-          <Card className="p-3 sm:p-4 md:p-6">
-            <div className="flex items-start justify-between">
-              <AlertTriangle className="w-5 h-5 text-warning" />
-              <div className="text-right">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-warning">{longestStreak}</div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1">רצף שיא</div>
-              </div>
+              <Card className="p-3 sm:p-4 md:p-6">
+                <div className="flex items-start justify-between">
+                  <AlertTriangle className="w-5 h-5 text-warning" />
+                  <div className="text-right">
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-warning">{longestStreak}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground mt-1">רצף שיא</div>
+                  </div>
+                </div>
+              </Card>
             </div>
-          </Card>
-        </div>
+          </>
+        )}
 
         {/* Calendar and Filters */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Calendar */}
-          <Card className="lg:col-span-2 p-3 sm:p-4 md:p-6" dir="rtl">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h3 className="text-base sm:text-lg md:text-xl font-bold">
-                {format(currentMonth, "MMMM yyyy", { locale: he })}
-              </h3>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={prevMonth}>
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-                <Button variant="outline" size="sm" onClick={nextMonth}>
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Calendar Grid */}
-            <TooltipProvider>
-              <div className="grid grid-cols-7 gap-1 sm:gap-2">
-                {/* Headers */}
-                {["א", "ב", "ג", "ד", "ה", "ו", "ש"].map((day) => (
-                  <div key={day} className="text-center font-bold text-xs sm:text-sm p-1 sm:p-2">
-                    {day}
-                  </div>
-                ))}
-
-                {/* Days */}
-                {daysInMonth.map((day) => {
-                  const { status, metric } = getDayData(day);
-                  const isToday = isSameDay(day, today);
-                  
-                  const bgColor =
-                    status === "future"
-                      ? "bg-muted/30"
-                      : status === "completed"
-                      ? "bg-success text-success-foreground"
-                      : status === "partial"
-                      ? "bg-warning/80 text-warning-foreground"
-                      : status === "low"
-                      ? "bg-warning/50"
-                      : status === "missed"
-                      ? "bg-destructive/70 text-destructive-foreground"
-                      : "bg-muted";
-
-                  const content = (
-                    <div
-                      className={`aspect-square flex flex-col items-center justify-center rounded-md sm:rounded-lg ${bgColor} text-xs sm:text-sm font-medium transition-all hover:scale-105 cursor-pointer ${isToday ? "ring-2 ring-primary ring-offset-1" : ""}`}
-                    >
-                      <span>{format(day, "d")}</span>
-                      {metric && status !== "future" && (
-                        <div className="flex gap-0.5 mt-0.5">
-                          {metric.habits_completed > 0 && selectedFilters.habits && (
-                            <div className="w-1 h-1 rounded-full bg-purple-600" />
-                          )}
-                          {metric.goals_logged > 0 && selectedFilters.goals && (
-                            <div className="w-1 h-1 rounded-full bg-green-600" />
-                          )}
-                          {metric.wake_up_logged && selectedFilters.wakeUp && (
-                            <div className="w-1 h-1 rounded-full bg-blue-600" />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-
-                  if (status === "future") {
-                    return <div key={day.toISOString()}>{content}</div>;
-                  }
-
-                  return (
-                    <Tooltip key={day.toISOString()}>
-                      <TooltipTrigger asChild>{content}</TooltipTrigger>
-                      <TooltipContent side="top" className="text-right" dir="rtl">
-                        <div className="text-sm font-medium mb-1">
-                          {format(day, "EEEE, d MMMM", { locale: he })}
-                        </div>
-                        {metric ? (
-                          <div className="space-y-1 text-xs">
-                            {selectedFilters.habits && (
-                              <div className="flex items-center gap-1 justify-end">
-                                <span>הרגלים: {metric.habits_completed}</span>
-                                <div className="w-2 h-2 rounded-full bg-purple-500" />
-                              </div>
-                            )}
-                            {selectedFilters.goals && (
-                              <div className="flex items-center gap-1 justify-end">
-                                <span>יעדים: {metric.goals_logged}</span>
-                                <div className="w-2 h-2 rounded-full bg-green-500" />
-                              </div>
-                            )}
-                            {selectedFilters.wakeUp && (
-                              <div className="flex items-center gap-1 justify-end">
-                                <span>{metric.wake_up_logged ? "נרשמה קימה ✓" : "לא נרשמה קימה"}</span>
-                                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                              </div>
-                            )}
-                            <div className="border-t pt-1 mt-1">
-                              ציון: {metric.engagement_score}%
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-xs text-destructive">לא נרשמה פעילות</div>
-                        )}
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-              </div>
-            </TooltipProvider>
-
-            {/* Legend */}
-            <div className="flex flex-wrap gap-2 sm:gap-4 mt-4 sm:mt-6 justify-center text-xs sm:text-sm">
-              <div className="flex items-center gap-1 sm:gap-2">
-                <div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-success" />
-                <span>מלא (70%+)</span>
-              </div>
-              <div className="flex items-center gap-1 sm:gap-2">
-                <div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-warning/80" />
-                <span>חלקי (40-70%)</span>
-              </div>
-              <div className="flex items-center gap-1 sm:gap-2">
-                <div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-destructive/70" />
-                <span>החמצה</span>
-              </div>
-            </div>
-          </Card>
-
-          {/* Filters */}
-          <Card className="p-4 sm:p-6" dir="rtl">
-            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-right">מה נמצא בבדיקה</h3>
-            <div className="space-y-3 sm:space-y-4">
-              <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
-                <Checkbox
-                  id="habits"
-                  checked={selectedFilters.habits}
-                  onCheckedChange={(checked) =>
-                    setSelectedFilters({ ...selectedFilters, habits: !!checked })
-                  }
-                />
-                <label htmlFor="habits" className="flex-1 cursor-pointer text-right">
-                  <div className="font-medium text-sm sm:text-base">הרגלים</div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">השלמות הרגלים יומיות</div>
-                </label>
-                <Badge variant="secondary" className="text-xs">{totalHabitsLogged}</Badge>
+        {!hiddenComponents.includes('calendar') && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            {/* Calendar */}
+            <Card className="lg:col-span-2 p-3 sm:p-4 md:p-6" dir="rtl">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className="text-base sm:text-lg md:text-xl font-bold">
+                  {format(currentMonth, "MMMM yyyy", { locale: he })}
+                </h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={prevMonth}>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={nextMonth}>
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-green-500/10 rounded-lg border border-green-500/20">
-                <Checkbox
-                  id="goals"
-                  checked={selectedFilters.goals}
-                  onCheckedChange={(checked) =>
-                    setSelectedFilters({ ...selectedFilters, goals: !!checked })
-                  }
-                />
-                <label htmlFor="goals" className="flex-1 cursor-pointer text-right">
-                  <div className="font-medium text-sm sm:text-base">יעדים יומיים</div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">רישום הצלחה/כישלון</div>
-                </label>
-                <Badge variant="secondary" className="text-xs">{totalGoalsLogged}</Badge>
-              </div>
-
-              <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                <Checkbox
-                  id="wake-up"
-                  checked={selectedFilters.wakeUp}
-                  onCheckedChange={(checked) =>
-                    setSelectedFilters({ ...selectedFilters, wakeUp: !!checked })
-                  }
-                />
-                <label htmlFor="wake-up" className="flex-1 cursor-pointer text-right">
-                  <div className="font-medium text-sm sm:text-base">קימה בבוקר</div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">מעקב זמני קימה</div>
-                </label>
-                <Badge variant="secondary" className="text-xs">{totalWakeUpsLogged}</Badge>
-              </div>
-            </div>
-
-            {/* Recommendations */}
-            {analytics.recommendations.length > 0 && (
-              <div className="mt-6 pt-4 border-t">
-                <h4 className="font-medium mb-3 text-right">המלצות</h4>
-                <div className="space-y-2">
-                  {analytics.recommendations.slice(0, 3).map((rec, i) => (
-                    <div key={i} className="text-sm text-muted-foreground text-right p-2 bg-muted/50 rounded">
-                      {rec}
+              {/* Calendar Grid */}
+              <TooltipProvider>
+                <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                  {/* Headers */}
+                  {["א", "ב", "ג", "ד", "ה", "ו", "ש"].map((day) => (
+                    <div key={day} className="text-center font-bold text-xs sm:text-sm p-1 sm:p-2">
+                      {day}
                     </div>
                   ))}
+
+                  {/* Days */}
+                  {daysInMonth.map((day) => {
+                    const { status, metric } = getDayData(day);
+                    const isToday = isSameDay(day, today);
+
+                    const bgColor =
+                      status === "future"
+                        ? "bg-muted/30"
+                        : status === "completed"
+                          ? "bg-success text-success-foreground"
+                          : status === "partial"
+                            ? "bg-warning/80 text-warning-foreground"
+                            : status === "low"
+                              ? "bg-warning/50"
+                              : status === "missed"
+                                ? "bg-destructive/70 text-destructive-foreground"
+                                : "bg-muted";
+
+                    const content = (
+                      <div
+                        className={`aspect-square flex flex-col items-center justify-center rounded-md sm:rounded-lg ${bgColor} text-xs sm:text-sm font-medium transition-all hover:scale-105 cursor-pointer ${isToday ? "ring-2 ring-primary ring-offset-1" : ""}`}
+                      >
+                        <span>{format(day, "d")}</span>
+                        {metric && status !== "future" && (
+                          <div className="flex gap-0.5 mt-0.5">
+                            {metric.habits_completed > 0 && selectedFilters.habits && (
+                              <div className="w-1 h-1 rounded-full bg-purple-600" />
+                            )}
+                            {metric.goals_logged > 0 && selectedFilters.goals && (
+                              <div className="w-1 h-1 rounded-full bg-green-600" />
+                            )}
+                            {metric.wake_up_logged && selectedFilters.wakeUp && (
+                              <div className="w-1 h-1 rounded-full bg-blue-600" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+
+                    if (status === "future") {
+                      return <div key={day.toISOString()}>{content}</div>;
+                    }
+
+                    return (
+                      <Tooltip key={day.toISOString()}>
+                        <TooltipTrigger asChild>{content}</TooltipTrigger>
+                        <TooltipContent side="top" className="text-right" dir="rtl">
+                          <div className="text-sm font-medium mb-1">
+                            {format(day, "EEEE, d MMMM", { locale: he })}
+                          </div>
+                          {metric ? (
+                            <div className="space-y-1 text-xs">
+                              {selectedFilters.habits && (
+                                <div className="flex items-center gap-1 justify-end">
+                                  <span>הרגלים: {metric.habits_completed}</span>
+                                  <div className="w-2 h-2 rounded-full bg-purple-500" />
+                                </div>
+                              )}
+                              {selectedFilters.goals && (
+                                <div className="flex items-center gap-1 justify-end">
+                                  <span>יעדים: {metric.goals_logged}</span>
+                                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                                </div>
+                              )}
+                              {selectedFilters.wakeUp && (
+                                <div className="flex items-center gap-1 justify-end">
+                                  <span>{metric.wake_up_logged ? "נרשמה קימה ✓" : "לא נרשמה קימה"}</span>
+                                  <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                </div>
+                              )}
+                              <div className="border-t pt-1 mt-1">
+                                ציון: {metric.engagement_score}%
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-destructive">לא נרשמה פעילות</div>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              </TooltipProvider>
+
+              {/* Legend */}
+              <div className="flex flex-wrap gap-2 sm:gap-4 mt-4 sm:mt-6 justify-center text-xs sm:text-sm">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-success" />
+                  <span>מלא (70%+)</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-warning/80" />
+                  <span>חלקי (40-70%)</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-destructive/70" />
+                  <span>החמצה</span>
                 </div>
               </div>
-            )}
-          </Card>
-        </div>
+            </Card>
+
+            {/* Filters */}
+            <Card className="p-4 sm:p-6" dir="rtl">
+              <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-right">מה נמצא בבדיקה</h3>
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                  <Checkbox
+                    id="habits"
+                    checked={selectedFilters.habits}
+                    onCheckedChange={(checked) =>
+                      setSelectedFilters({ ...selectedFilters, habits: !!checked })
+                    }
+                  />
+                  <label htmlFor="habits" className="flex-1 cursor-pointer text-right">
+                    <div className="font-medium text-sm sm:text-base">הרגלים</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">השלמות הרגלים יומיות</div>
+                  </label>
+                  <Badge variant="secondary" className="text-xs">{totalHabitsLogged}</Badge>
+                </div>
+
+                <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                  <Checkbox
+                    id="goals"
+                    checked={selectedFilters.goals}
+                    onCheckedChange={(checked) =>
+                      setSelectedFilters({ ...selectedFilters, goals: !!checked })
+                    }
+                  />
+                  <label htmlFor="goals" className="flex-1 cursor-pointer text-right">
+                    <div className="font-medium text-sm sm:text-base">יעדים יומיים</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">רישום הצלחה/כישלון</div>
+                  </label>
+                  <Badge variant="secondary" className="text-xs">{totalGoalsLogged}</Badge>
+                </div>
+
+                <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <Checkbox
+                    id="wake-up"
+                    checked={selectedFilters.wakeUp}
+                    onCheckedChange={(checked) =>
+                      setSelectedFilters({ ...selectedFilters, wakeUp: !!checked })
+                    }
+                  />
+                  <label htmlFor="wake-up" className="flex-1 cursor-pointer text-right">
+                    <div className="font-medium text-sm sm:text-base">קימה בבוקר</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">מעקב זמני קימה</div>
+                  </label>
+                  <Badge variant="secondary" className="text-xs">{totalWakeUpsLogged}</Badge>
+                </div>
+              </div>
+
+              {/* Recommendations */}
+              {analytics.recommendations.length > 0 && (
+                <div className="mt-6 pt-4 border-t">
+                  <h4 className="font-medium mb-3 text-right">המלצות</h4>
+                  <div className="space-y-2">
+                    {analytics.recommendations.slice(0, 3).map((rec, i) => (
+                      <div key={i} className="text-sm text-muted-foreground text-right p-2 bg-muted/50 rounded">
+                        {rec}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
 
         {/* Summary Section */}
-        <Card className="p-4 sm:p-6" dir="rtl">
-          <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-right">סיכום 60 ימים אחרונים</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-            {/* Progress Circle */}
-            <div className="flex flex-col items-center justify-center">
-              <div className="relative w-28 h-28 sm:w-36 sm:h-36">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 128 128">
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    fill="none"
-                    stroke="hsl(var(--muted))"
-                    strokeWidth="10"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    fill="none"
-                    stroke="hsl(var(--success))"
-                    strokeWidth="10"
-                    strokeDasharray={`${totalDays > 0 ? (completedDays / totalDays) * 352 : 0} 352`}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl sm:text-3xl font-bold">
-                    {totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0}%
-                  </span>
+        {!hiddenComponents.includes('summary') && (
+          <Card className="p-4 sm:p-6" dir="rtl">
+            <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-right">סיכום 60 ימים אחרונים</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+              {/* Progress Circle */}
+              <div className="flex flex-col items-center justify-center">
+                <div className="relative w-28 h-28 sm:w-36 sm:h-36">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 128 128">
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r="56"
+                      fill="none"
+                      stroke="hsl(var(--muted))"
+                      strokeWidth="10"
+                    />
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r="56"
+                      fill="none"
+                      stroke="hsl(var(--success))"
+                      strokeWidth="10"
+                      strokeDasharray={`${totalDays > 0 ? (completedDays / totalDays) * 352 : 0} 352`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-2xl sm:text-3xl font-bold">
+                      {totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0}%
+                    </span>
+                  </div>
+                </div>
+                <div className="text-sm text-muted-foreground mt-2">אחוז הצלחה כללי</div>
+              </div>
+
+              {/* Stats */}
+              <div className="space-y-3 sm:col-span-2">
+                <div className="flex items-center justify-between p-3 bg-success/10 rounded-lg">
+                  <Badge className="bg-success">{completedDays}</Badge>
+                  <span className="font-medium">ימים מלאים</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-warning/10 rounded-lg">
+                  <Badge className="bg-warning">{partialDays}</Badge>
+                  <span className="font-medium">ימים חלקיים</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-destructive/10 rounded-lg">
+                  <Badge className="bg-destructive">{incompleteDays}</Badge>
+                  <span className="font-medium">ימים שפספסת</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
+                  <Badge className="bg-primary">{longestStreak}</Badge>
+                  <span className="font-medium">רצף הכי ארוך</span>
                 </div>
               </div>
-              <div className="text-sm text-muted-foreground mt-2">אחוז הצלחה כללי</div>
+            </div>
+          </Card>
+        )}
+
+        {/* Reset Dialog */}
+        <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-destructive" />
+                איפוס נתונים
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {resetType === 'all' && 'האם אתה בטוח שברצונך לאפס את כל הנתונים? פעולה זו תמחק את כל ההרגלים, היעדים והקימות שנרשמו.'}
+                {resetType === 'habits' && 'האם אתה בטוח שברצונך לאפס את כל השלמות ההרגלים?'}
+                {resetType === 'goals' && 'האם אתה בטוח שברצונך לאפס את כל רישומי היעדים?'}
+                {resetType === 'wakeup' && 'האם אתה בטוח שברצונך לאפס את כל רישומי הקימות?'}
+                <br />
+                <strong className="text-destructive">פעולה זו אינה ניתנת לביטול!</strong>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex gap-2">
+              <AlertDialogCancel>ביטול</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleResetDays}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={isResetting}
+              >
+                {isResetting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Trash2 className="w-4 h-4 ml-2" />}
+                אפס עכשיו
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Backup Dialog */}
+        <Dialog open={showBackupDialog} onOpenChange={setShowBackupDialog}>
+          <DialogContent dir="rtl" className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Database className="w-5 h-5 text-primary" />
+                גיבוי ושחזור נתונים
+              </DialogTitle>
+              <DialogDescription>
+                ייצא את כל הנתונים שלך לגיבוי או שחזר מגיבוי קודם
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Export Button */}
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <Download className="w-4 h-4" />
+                  ייצוא גיבוי
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  הורד קובץ JSON עם כל הנתונים שלך: הרגלים, יעדים, משימות, יומן ועוד
+                </p>
+                <Button onClick={handleBackupData} disabled={isBackingUp} className="w-full">
+                  {isBackingUp ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin ml-2" />
+                      מייצא...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 ml-2" />
+                      הורד גיבוי
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Import Button */}
+              <div className="p-4 rounded-lg bg-muted/50 border">
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  שחזור מגיבוי
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  העלה קובץ גיבוי כדי לשחזר את הנתונים שלך
+                </p>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleRestoreData}
+                    disabled={isRestoring}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <Button variant="outline" className="w-full" disabled={isRestoring}>
+                    {isRestoring ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin ml-2" />
+                        משחזר...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 ml-2" />
+                        בחר קובץ גיבוי
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            {/* Stats */}
-            <div className="space-y-3 sm:col-span-2">
-              <div className="flex items-center justify-between p-3 bg-success/10 rounded-lg">
-                <Badge className="bg-success">{completedDays}</Badge>
-                <span className="font-medium">ימים מלאים</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-warning/10 rounded-lg">
-                <Badge className="bg-warning">{partialDays}</Badge>
-                <span className="font-medium">ימים חלקיים</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-destructive/10 rounded-lg">
-                <Badge className="bg-destructive">{incompleteDays}</Badge>
-                <span className="font-medium">ימים שפספסת</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
-                <Badge className="bg-primary">{longestStreak}</Badge>
-                <span className="font-medium">רצף הכי ארוך</span>
-              </div>
-            </div>
-          </div>
-        </Card>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowBackupDialog(false)}>
+                סגור
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
