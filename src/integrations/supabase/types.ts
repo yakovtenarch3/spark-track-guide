@@ -599,6 +599,74 @@ export type Database = {
           },
         ]
       }
+      timer_sessions: {
+        Row: {
+          created_at: string
+          duration_seconds: number
+          ended_at: string
+          id: string
+          notes: string | null
+          started_at: string
+          title: string | null
+          topic_id: string | null
+          topic_name: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds: number
+          ended_at?: string
+          id?: string
+          notes?: string | null
+          started_at: string
+          title?: string | null
+          topic_id?: string | null
+          topic_name: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number
+          ended_at?: string
+          id?: string
+          notes?: string | null
+          started_at?: string
+          title?: string | null
+          topic_id?: string | null
+          topic_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timer_sessions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "timer_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timer_topics: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       user_achievements: {
         Row: {
           achievement_id: string
