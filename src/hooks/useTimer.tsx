@@ -29,6 +29,9 @@ export interface TimerState {
   elapsedSeconds: number;
   currentTopic: TimerTopic | null;
   startedAt: Date | null;
+  isCountdown: boolean;
+  countdownDuration: number;
+  remainingSeconds: number;
 }
 
 export function useTimer() {
@@ -39,6 +42,9 @@ export function useTimer() {
     elapsedSeconds: 0,
     currentTopic: null,
     startedAt: null,
+    isCountdown: false,
+    countdownDuration: 0,
+    remainingSeconds: 0,
   });
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -152,13 +158,16 @@ export function useTimer() {
   });
 
   // Timer controls
-  const startTimer = useCallback((topic: TimerTopic) => {
+  const startTimer = useCallback((topic: TimerTopic, countdownSeconds?: number) => {
     setTimerState({
       isRunning: true,
       isPaused: false,
       elapsedSeconds: 0,
       currentTopic: topic,
       startedAt: new Date(),
+      isCountdown: !!countdownSeconds,
+      countdownDuration: countdownSeconds || 0,
+      remainingSeconds: countdownSeconds || 0,
     });
   }, []);
 
@@ -182,6 +191,9 @@ export function useTimer() {
       elapsedSeconds: 0,
       currentTopic: null,
       startedAt: null,
+      isCountdown: false,
+      countdownDuration: 0,
+      remainingSeconds: 0,
     });
     return finalState;
   }, [timerState]);
@@ -197,17 +209,48 @@ export function useTimer() {
       elapsedSeconds: 0,
       currentTopic: null,
       startedAt: null,
+      isCountdown: false,
+      countdownDuration: 0,
+      remainingSeconds: 0,
     });
+  }, []);
+
+  // Countdown complete callback ref
+  const onCountdownCompleteRef = useRef<(() => void) | null>(null);
+
+  const setOnCountdownComplete = useCallback((callback: (() => void) | null) => {
+    onCountdownCompleteRef.current = callback;
   }, []);
 
   // Timer tick effect
   useEffect(() => {
     if (timerState.isRunning && !timerState.isPaused) {
       intervalRef.current = setInterval(() => {
-        setTimerState(prev => ({
-          ...prev,
-          elapsedSeconds: prev.elapsedSeconds + 1,
-        }));
+        setTimerState(prev => {
+          if (prev.isCountdown) {
+            const newRemaining = prev.remainingSeconds - 1;
+            if (newRemaining <= 0) {
+              // Countdown complete - trigger notification
+              if (onCountdownCompleteRef.current) {
+                onCountdownCompleteRef.current();
+              }
+              return {
+                ...prev,
+                elapsedSeconds: prev.elapsedSeconds + 1,
+                remainingSeconds: 0,
+              };
+            }
+            return {
+              ...prev,
+              elapsedSeconds: prev.elapsedSeconds + 1,
+              remainingSeconds: newRemaining,
+            };
+          }
+          return {
+            ...prev,
+            elapsedSeconds: prev.elapsedSeconds + 1,
+          };
+        });
       }, 1000);
     } else if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -226,7 +269,7 @@ export function useTimer() {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hrs > 0) {
       return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
@@ -249,5 +292,6 @@ export function useTimer() {
     saveSession: saveSessionMutation.mutate,
     deleteSession: deleteSessionMutation.mutate,
     formatTime,
+    setOnCountdownComplete,
   };
 }
