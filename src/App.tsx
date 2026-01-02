@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { TopBar } from "@/components/TopBar";
 import { SidebarEdgeTrigger } from "@/components/SidebarEdgeTrigger";
 import { DevInspector } from "@/components/DevInspector";
+import { FloatingTimer } from "@/components/FloatingTimer";
 import Index from "./pages/Index";
 import Habits from "./pages/Habits";
 import Tasks from "./pages/Tasks";
@@ -22,6 +23,7 @@ import Install from "./pages/Install";
 import BookReaderPage from "./pages/BookReader";
 import PDFTestPage from "./pages/PDFTest";
 import PDFHighlighterHebrew from "./pages/PDFHighlighterHebrew";
+import Timer from "./pages/Timer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,8 +57,10 @@ const App = () => (
                 <Route path="/book" element={<BookReaderPage />} />
                 <Route path="/pdf-test" element={<PDFTestPage />} />
                 <Route path="/pdf-hebrew" element={<PDFHighlighterHebrew />} />
+                <Route path="/timer" element={<Timer />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <FloatingTimer />
             </main>
           </div>
         </div>
