@@ -42,9 +42,10 @@ interface CustomThemeDialogProps {
   editTheme?: Theme | null;
   onEditComplete?: () => void;
   trigger?: React.ReactNode;
+  defaultValues?: { name: string; colors: ExtendedThemeColors };
 }
 
-export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trigger }: CustomThemeDialogProps) => {
+export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trigger, defaultValues }: CustomThemeDialogProps) => {
   const [open, setOpen] = useState(false);
   const [themeName, setThemeName] = useState("");
   
@@ -156,6 +157,27 @@ export const CustomThemeDialog = ({ onSaveTheme, editTheme, onEditComplete, trig
       setSidebarBorderColor(hslToHex(editTheme.colors.sidebarBorder || editTheme.colors.border));
     }
   }, [editTheme, open]);
+
+  // Load default values for built-in themes (create copy)
+  useEffect(() => {
+    if (defaultValues && open && !editTheme) {
+      setThemeName(defaultValues.name);
+      setBackgroundColor(hslToHex(defaultValues.colors.background));
+      setPrimaryColor(hslToHex(defaultValues.colors.primary));
+      setSecondaryColor(hslToHex(defaultValues.colors.secondary));
+      if (defaultValues.colors.fontColor) setFontColor(hslToHex(defaultValues.colors.fontColor));
+      if (defaultValues.colors.headingColor) setHeadingColor(hslToHex(defaultValues.colors.headingColor));
+      if (defaultValues.colors.card) setCardColor(hslToHex(defaultValues.colors.card));
+      if (defaultValues.colors.cardBorder) setCardBorderColor(hslToHex(defaultValues.colors.cardBorder));
+      if (defaultValues.colors.borderColor) setBorderColor(hslToHex(defaultValues.colors.borderColor));
+      if (defaultValues.colors.buttonBg) setButtonBgColor(hslToHex(defaultValues.colors.buttonBg));
+      if (defaultValues.colors.buttonText) setButtonTextColor(hslToHex(defaultValues.colors.buttonText));
+      if (defaultValues.colors.accent) setAccentColor(hslToHex(defaultValues.colors.accent));
+      if (defaultValues.colors.sidebarBackground) setSidebarBgColor(hslToHex(defaultValues.colors.sidebarBackground));
+      if (defaultValues.colors.sidebarForeground) setSidebarTextColor(hslToHex(defaultValues.colors.sidebarForeground));
+      if (defaultValues.colors.sidebarBorder) setSidebarBorderColor(hslToHex(defaultValues.colors.sidebarBorder));
+    }
+  }, [defaultValues, open, editTheme]);
 
   const hexToHSL = (hex: string): string => {
     hex = hex.replace(/^#/, "");

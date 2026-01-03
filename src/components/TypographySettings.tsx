@@ -35,7 +35,7 @@ export const TypographySettings = () => {
             max={150}
             step={5}
             className="w-full"
-            dir="ltr"
+            dir="rtl"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>גדול</span>
@@ -106,7 +106,7 @@ export const TypographySettings = () => {
             max={200}
             step={10}
             className="w-full"
-            dir="ltr"
+            dir="rtl"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>מרווח</span>
@@ -131,7 +131,7 @@ export const TypographySettings = () => {
             max={20}
             step={1}
             className="w-full"
-            dir="ltr"
+            dir="rtl"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>מרווח</span>

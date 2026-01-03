@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -32,9 +34,12 @@ import {
   Calendar,
   Flame,
   FolderPlus,
+  Repeat,
+  Target,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Task, TaskCategory } from "@/hooks/useTasks";
+import { FocusMode } from "./FocusMode";
 
 const PRIORITY_CONFIG = {
   low: { label: "נמוכה", color: "bg-blue-500", icon: Circle },
@@ -67,6 +72,7 @@ export const TaskBoard = () => {
   const [showNewTaskDialog, setShowNewTaskDialog] = useState(false);
   const [showNewCategoryDialog, setShowNewCategoryDialog] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [focusTask, setFocusTask] = useState<Task | null>(null);
 
   // New task form
   const [newTask, setNewTask] = useState({
@@ -78,7 +84,28 @@ export const TaskBoard = () => {
     due_time: "",
     estimated_duration: "",
     tags: [] as string[],
+    is_recurring: false,
+    recurrence_pattern: "" as string,
+    recurrence_days: [] as number[],
   });
+
+  // Recurrence patterns
+  const RECURRENCE_PATTERNS = [
+    { value: "daily", label: "יומי" },
+    { value: "weekly", label: "שבועי" },
+    { value: "monthly", label: "חודשי" },
+    { value: "custom", label: "מותאם אישית" },
+  ];
+
+  const WEEKDAYS = [
+    { value: 0, label: "א'" },
+    { value: 1, label: "ב'" },
+    { value: 2, label: "ג'" },
+    { value: 3, label: "ד'" },
+    { value: 4, label: "ה'" },
+    { value: 5, label: "ו'" },
+    { value: 6, label: "ש'" },
+  ];
 
   // New category form
   const [newCategory, setNewCategory] = useState({
@@ -109,6 +136,9 @@ export const TaskBoard = () => {
       due_time: "",
       estimated_duration: "",
       tags: [],
+      is_recurring: false,
+      recurrence_pattern: "",
+      recurrence_days: [],
     });
     setShowNewTaskDialog(false);
   };
@@ -208,6 +238,15 @@ export const TaskBoard = () => {
                 {task.estimated_duration}דק'
               </Badge>
             )}
+
+            {task.is_recurring && (
+              <Badge variant="outline" className="gap-1 text-purple-600 border-purple-300">
+                <Repeat className="w-3 h-3" />
+                {task.recurrence_pattern === "daily" ? "יומי" : 
+                 task.recurrence_pattern === "weekly" ? "שבועי" : 
+                 task.recurrence_pattern === "monthly" ? "חודשי" : "חוזר"}
+              </Badge>
+            )}
           </div>
 
           {/* Tags */}
@@ -258,6 +297,20 @@ export const TaskBoard = () => {
               </Button>
             )}
 
+            {/* Focus Mode Button */}
+            {task.status !== "completed" && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-100"
+                onClick={() => setFocusTask(task)}
+                title="מצב מיקוד (פומודורו)"
+              >
+                <Target className="w-3 h-3 mr-1" />
+                מיקוד
+              </Button>
+            )}
+
             <Button
               size="sm"
               variant="ghost"
@@ -274,6 +327,18 @@ export const TaskBoard = () => {
 
   return (
     <div className="space-y-6" dir="rtl">
+      {/* Focus Mode Overlay */}
+      {focusTask && (
+        <FocusMode
+          task={focusTask}
+          onClose={() => setFocusTask(null)}
+          onComplete={() => {
+            handleCompleteTask(focusTask.id);
+            setFocusTask(null);
+          }}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -417,6 +482,75 @@ export const TaskBoard = () => {
                     value={newTask.estimated_duration}
                     onChange={(e) => setNewTask({ ...newTask, estimated_duration: e.target.value })}
                   />
+
+                  {/* Recurring Task Settings */}
+                  <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Repeat className="w-4 h-4 text-primary" />
+                        <Label htmlFor="recurring">משימה חוזרת</Label>
+                      </div>
+                      <Switch
+                        id="recurring"
+                        checked={newTask.is_recurring}
+                        onCheckedChange={(checked) => 
+                          setNewTask({ ...newTask, is_recurring: checked, recurrence_pattern: checked ? "daily" : "" })
+                        }
+                      />
+                    </div>
+
+                    {newTask.is_recurring && (
+                      <div className="space-y-3">
+                        <Select
+                          value={newTask.recurrence_pattern}
+                          onValueChange={(v) => setNewTask({ ...newTask, recurrence_pattern: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="תדירות" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {RECURRENCE_PATTERNS.map((pattern) => (
+                              <SelectItem key={pattern.value} value={pattern.value}>
+                                {pattern.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        {(newTask.recurrence_pattern === "weekly" || newTask.recurrence_pattern === "custom") && (
+                          <div className="space-y-2">
+                            <Label className="text-sm">ימים בשבוע:</Label>
+                            <div className="flex gap-1 flex-wrap">
+                              {WEEKDAYS.map((day) => (
+                                <Button
+                                  key={day.value}
+                                  type="button"
+                                  variant={newTask.recurrence_days.includes(day.value) ? "default" : "outline"}
+                                  size="sm"
+                                  className="w-9 h-9 p-0"
+                                  onClick={() => {
+                                    const days = newTask.recurrence_days.includes(day.value)
+                                      ? newTask.recurrence_days.filter((d) => d !== day.value)
+                                      : [...newTask.recurrence_days, day.value];
+                                    setNewTask({ ...newTask, recurrence_days: days });
+                                  }}
+                                >
+                                  {day.label}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <p className="text-xs text-muted-foreground">
+                          {newTask.recurrence_pattern === "daily" && "המשימה תחזור כל יום"}
+                          {newTask.recurrence_pattern === "weekly" && newTask.recurrence_days.length > 0 && 
+                            `המשימה תחזור בימים: ${newTask.recurrence_days.map(d => WEEKDAYS[d].label).join(", ")}`}
+                          {newTask.recurrence_pattern === "monthly" && "המשימה תחזור כל חודש באותו תאריך"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
 
                   <Button onClick={handleAddTask} className="w-full" disabled={addTask.isPending}>
                     {addTask.isPending ? "מוסיף..." : "הוסף משימה"}

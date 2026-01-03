@@ -1,9 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Bug, Copy, X, CheckCircle2, Camera, MapPin, Terminal, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Bug, Copy, X, CheckCircle2, Camera, MapPin, Terminal, Trash2, RefreshCw, AlertCircle, Info, AlertTriangle, Search, ExternalLink } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import html2canvas from 'html2canvas';
 import { useDeveloperMode } from '@/hooks/useDeveloperMode';
+
+interface LogEntry {
+  id: number;
+  timestamp: string;
+  type: 'log' | 'info' | 'warn' | 'error' | 'debug';
+  message: string;
+  source?: string;
+  stack?: string;
+}
 
 interface InspectedElement {
   componentName: string;
@@ -23,28 +32,306 @@ interface InspectedElement {
   textContent?: string;
 }
 
+// תרגום סוגי לוגים לעברית
+const LOG_TYPE_LABELS: Record<string, string> = {
+  all: '🔍 הכל',
+  error: '❌ שגיאות',
+  warn: '⚠️ אזהרות',
+  info: 'ℹ️ מידע',
+  log: '📝 לוגים',
+  debug: '🐛 דיבאג',
+};
+
 export function DevInspector() {
-  const { enabled, consoleEnabled, inspectorEnabled } = useDeveloperMode();
+  const { enabled, consoleEnabled, inspectorEnabled, hardRefresh, consoleAutoScroll, consoleFilter } = useDeveloperMode();
   const [isActive, setIsActive] = useState(false);
   const [inspectedElement, setInspectedElement] = useState<InspectedElement | null>(null);
   const [hoveredElement, setHoveredElement] = useState<HTMLElement | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedForCopilot, setCopiedForCopilot] = useState(false);
   const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
   const [showConsole, setShowConsole] = useState(false);
-  const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
+  const [consoleLogs, setConsoleLogs] = useState<LogEntry[]>([]);
+  const [filter, setFilter] = useState<'all' | 'error' | 'warn' | 'info' | 'log'>(consoleFilter || 'all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [inspectionHistory, setInspectionHistory] = useState<InspectedElement[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const logIdRef = useRef(0);
+  const originalConsoleRef = useRef<{
+    log: typeof console.log;
+    info: typeof console.info;
+    warn: typeof console.warn;
+    error: typeof console.error;
+    debug: typeof console.debug;
+  } | null>(null);
+
+  // יירוט console ואיסוף לוגים
+  useEffect(() => {
+    if (!enabled) return;
+
+    // שמירת פונקציות המקוריות
+    if (!originalConsoleRef.current) {
+      originalConsoleRef.current = {
+        log: console.log.bind(console),
+        info: console.info.bind(console),
+        warn: console.warn.bind(console),
+        error: console.error.bind(console),
+        debug: console.debug.bind(console),
+      };
+    }
+
+    const createLogEntry = (type: LogEntry['type'], args: any[]): LogEntry => {
+      const timestamp = new Date().toLocaleTimeString('he-IL', { hour12: false });
+      const message = args.map(arg => {
+        if (typeof arg === 'object') {
+          try {
+            return JSON.stringify(arg, null, 2);
+          } catch {
+            return String(arg);
+          }
+        }
+        return String(arg);
+      }).join(' ');
+
+      return {
+        id: ++logIdRef.current,
+        timestamp,
+        type,
+        message,
+      };
+    };
+
+    // יירוט console.log
+    console.log = (...args) => {
+      originalConsoleRef.current?.log(...args);
+      setConsoleLogs(prev => [...prev.slice(-500), createLogEntry('log', args)]);
+    };
+
+    // יירוט console.info
+    console.info = (...args) => {
+      originalConsoleRef.current?.info(...args);
+      setConsoleLogs(prev => [...prev.slice(-500), createLogEntry('info', args)]);
+    };
+
+    // יירוט console.warn
+    console.warn = (...args) => {
+      originalConsoleRef.current?.warn(...args);
+      setConsoleLogs(prev => [...prev.slice(-500), createLogEntry('warn', args)]);
+    };
+
+    // יירוט console.error
+    console.error = (...args) => {
+      originalConsoleRef.current?.error(...args);
+      setConsoleLogs(prev => [...prev.slice(-500), createLogEntry('error', args)]);
+    };
+
+    // יירוט console.debug
+    console.debug = (...args) => {
+      originalConsoleRef.current?.debug(...args);
+      setConsoleLogs(prev => [...prev.slice(-500), createLogEntry('debug', args)]);
+    };
+
+    // יירוט שגיאות גלובליות
+    const handleError = (event: ErrorEvent) => {
+      const entry: LogEntry = {
+        id: ++logIdRef.current,
+        timestamp: new Date().toLocaleTimeString('he-IL', { hour12: false }),
+        type: 'error',
+        message: event.message,
+        source: `${event.filename}:${event.lineno}:${event.colno}`,
+        stack: event.error?.stack,
+      };
+      setConsoleLogs(prev => [...prev.slice(-500), entry]);
+    };
+
+    // יירוט Promise rejections
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const entry: LogEntry = {
+        id: ++logIdRef.current,
+        timestamp: new Date().toLocaleTimeString('he-IL', { hour12: false }),
+        type: 'error',
+        message: `Unhandled Promise Rejection: ${event.reason}`,
+        stack: event.reason?.stack,
+      };
+      setConsoleLogs(prev => [...prev.slice(-500), entry]);
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      // החזרת הפונקציות המקוריות
+      if (originalConsoleRef.current) {
+        console.log = originalConsoleRef.current.log;
+        console.info = originalConsoleRef.current.info;
+        console.warn = originalConsoleRef.current.warn;
+        console.error = originalConsoleRef.current.error;
+        console.debug = originalConsoleRef.current.debug;
+      }
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, [enabled]);
 
   // הוספת לוג לקונסול
-  const addLog = useCallback((message: string) => {
-    const timestamp = new Date().toLocaleTimeString('he-IL');
-    console.log(`[DevInspector] ${message}`);
-    setConsoleLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+  const addLog = useCallback((message: string, type: LogEntry['type'] = 'info') => {
+    const entry: LogEntry = {
+      id: ++logIdRef.current,
+      timestamp: new Date().toLocaleTimeString('he-IL', { hour12: false }),
+      type,
+      message,
+    };
+    setConsoleLogs(prev => [...prev.slice(-500), entry]);
   }, []);
 
   // ניקוי הקונסול
   const clearConsole = useCallback(() => {
-    console.log('[DevInspector] מנקה קונסול');
     setConsoleLogs([]);
+    addLog('🧹 הקונסול נוקה', 'info');
+  }, [addLog]);
+
+  // ניקוי קאש עמוק
+  const handleHardRefresh = async () => {
+    setIsRefreshing(true);
+    addLog('🔄 מבצע ניקוי קאש עמוק...', 'info');
+    await hardRefresh();
+  };
+
+  // הוספה להיסטוריה
+  const addToHistory = useCallback((element: InspectedElement) => {
+    setInspectionHistory(prev => {
+      // מניעת כפילויות לפי מיקום
+      const exists = prev.some(
+        e => e.componentName === element.componentName && 
+             e.position.x === element.position.x && 
+             e.position.y === element.position.y
+      );
+      if (exists) return prev;
+      // שמירת עד 20 אלמנטים אחרונים
+      return [element, ...prev].slice(0, 20);
+    });
   }, []);
+
+  // פתיחת Copilot Chat ב-VS Code עם המידע
+  const openInCopilot = async (element: InspectedElement) => {
+    const copilotFormat = `🔍 אלמנט לבדיקה:
+קומפוננטה: ${element.componentName}
+מיקום קובץ: ${element.filePath}
+עמוד: ${element.page}
+תג HTML: ${element.htmlTag}
+Class: ${element.className || 'אין'}
+מיקום על המסך: X=${element.position.x}, Y=${element.position.y}
+גודל: ${element.position.width}x${element.position.height}px
+${element.textContent ? `תוכן טקסט: "${element.textContent}"` : ''}
+
+Props:
+${Object.entries(element.props).map(([key, value]) => `  ${key}: ${typeof value === 'object' ? '[Object]' : value}`).join('\n')}`;
+
+    try {
+      // העתקה ל-clipboard כגיבוי
+      await navigator.clipboard.writeText(copilotFormat);
+      
+      // יצירת prompt מקוצר ל-URL (מוגבל ב-2000 תווים)
+      const shortPrompt = `בדוק את הקומפוננטה ${element.componentName} בקובץ ${element.filePath}. תג: ${element.htmlTag}${element.className ? `, class: ${element.className}` : ''}${element.textContent ? `, טקסט: "${element.textContent.slice(0, 50)}"` : ''}`;
+      
+      // פתיחת VS Code עם Copilot Chat
+      const vscodeUrl = `vscode://GitHub.copilot-chat/chat?prompt=${encodeURIComponent(shortPrompt)}`;
+      
+      // ניסיון לפתוח
+      const link = document.createElement('a');
+      link.href = vscodeUrl;
+      link.click();
+      
+      setCopiedForCopilot(true);
+      addLog('🚀 נפתח ב-Copilot Chat! (המידע המלא הועתק ל-clipboard)', 'info');
+      setTimeout(() => setCopiedForCopilot(false), 3000);
+    } catch (err) {
+      addLog('❌ שגיאה בפתיחת Copilot', 'error');
+    }
+  };
+
+  // העתקה בפורמט אופטימלי ל-Copilot (ללא פתיחת VS Code)
+  const copyForCopilot = async (element: InspectedElement) => {
+    const copilotFormat = `🔍 אלמנט לבדיקה:
+קומפוננטה: ${element.componentName}
+מיקום קובץ: ${element.filePath}
+עמוד: ${element.page}
+תג HTML: ${element.htmlTag}
+Class: ${element.className || 'אין'}
+מיקום על המסך: X=${element.position.x}, Y=${element.position.y}
+גודל: ${element.position.width}x${element.position.height}px
+${element.textContent ? `תוכן טקסט: "${element.textContent}"` : ''}
+
+Props:
+${Object.entries(element.props).map(([key, value]) => `  ${key}: ${typeof value === 'object' ? '[Object]' : value}`).join('\n')}`;
+
+    try {
+      await navigator.clipboard.writeText(copilotFormat);
+      setCopiedForCopilot(true);
+      addLog('📋 הועתק! הדבק ב-Copilot Chat', 'info');
+      setTimeout(() => setCopiedForCopilot(false), 2000);
+    } catch (err) {
+      addLog('❌ שגיאה בהעתקה', 'error');
+    }
+  };
+
+  // צילום מסך עם שמירה
+  const captureAndSave = async (element: InspectedElement) => {
+    setIsCapturingScreenshot(true);
+    try {
+      const elements = document.querySelectorAll(element.htmlTag);
+      let targetElement: HTMLElement | null = null;
+
+      elements.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        if (
+          Math.abs(rect.left + globalThis.scrollX - element.position.x) < 5 &&
+          Math.abs(rect.top + globalThis.scrollY - element.position.y) < 5
+        ) {
+          targetElement = el as HTMLElement;
+        }
+      });
+
+      if (targetElement) {
+        const canvas = await html2canvas(targetElement, {
+          backgroundColor: null,
+          scale: 2,
+          logging: false,
+          useCORS: true
+        });
+
+        const screenshot = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `${element.componentName}-${new Date().toISOString().slice(0,10)}.png`;
+        link.href = screenshot;
+        link.click();
+        addLog(`📸 צילום מסך נשמר: ${element.componentName}`, 'info');
+      }
+    } catch (error) {
+      addLog('❌ שגיאה בצילום מסך', 'error');
+    } finally {
+      setIsCapturingScreenshot(false);
+    }
+  };
+
+  // סינון לוגים לפי סוג וחיפוש
+  const filteredLogs = consoleLogs.filter(log => {
+    // סינון לפי סוג
+    if (filter !== 'all' && log.type !== filter) return false;
+    // סינון לפי חיפוש
+    if (searchQuery && !log.message.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
+
+  // ספירת לוגים לפי סוג
+  const logCounts = {
+    all: consoleLogs.length,
+    error: consoleLogs.filter(l => l.type === 'error').length,
+    warn: consoleLogs.filter(l => l.type === 'warn').length,
+    info: consoleLogs.filter(l => l.type === 'info').length,
+    log: consoleLogs.filter(l => l.type === 'log').length,
+  };
 
   // פונקציה שמזהה את הקומפוננטה מתוך ה-React Fiber
   const getComponentInfo = useCallback((element: HTMLElement): InspectedElement | null => {
@@ -199,8 +486,16 @@ export function DevInspector() {
     const target = e.target as HTMLElement;
     
     // בדיקה אם לחצנו על UI של הכלי עצמו
-    if (target.closest('.dev-inspector-ui')) {
-      console.log('[DevInspector] לחיצה על UI של DevInspector - מתעלם');
+    const isDevInspectorUI = target.closest('.dev-inspector-ui');
+    
+    // אם לוחצים Ctrl+Click - מאפשר פעולה רגילה (גם על כפתורי UI)
+    if (e.ctrlKey || e.metaKey) {
+      // לא חוסם את האירוע - מאפשר לחיצה רגילה
+      return;
+    }
+    
+    // אם זה UI של הכלי וללא Ctrl - מאפשר פעולה רגילה על הכפתורים
+    if (isDevInspectorUI) {
       return;
     }
     
@@ -208,22 +503,19 @@ export function DevInspector() {
     e.stopPropagation();
     e.stopImmediatePropagation();
     
-    console.log('[DevInspector] אלמנט נלחץ');
     if (target) {
-      console.log('[DevInspector] מזהה את האלמנט...');
       const info = getComponentInfo(target);
       if (info) {
-        console.log('[DevInspector] מידע נמצא:', info.componentName);
         addLog(`🔍 נבדק: ${info.componentName} ב-${info.page}`);
         setInspectedElement(info);
+        addToHistory(info);
       } else {
-        console.log('[DevInspector] לא נמצא מידע');
         addLog('❌ לא ניתן לזהות את האלמנט');
       }
     }
     
     return false;
-  }, [isActive, getComponentInfo, addLog]);
+  }, [isActive, getComponentInfo, addLog, addToHistory]);
 
   // Auto-sync with developer mode settings
   useEffect(() => {
@@ -233,14 +525,14 @@ export function DevInspector() {
 
   // העתקת כל תוכן הקונסול
   const copyConsoleLogs = async () => {
-    console.log('[DevInspector] מעתיק את כל הלוגים');
-    const allLogs = consoleLogs.join('\n');
+    const allLogs = filteredLogs.map(log => 
+      `[${log.timestamp}] [${log.type.toUpperCase()}] ${log.message}${log.source ? ` (${log.source})` : ''}${log.stack ? `\n${log.stack}` : ''}`
+    ).join('\n');
     try {
       await navigator.clipboard.writeText(allLogs);
-      addLog('✅ כל הלוגים הועתקו ללוח');
+      addLog('✅ כל הלוגים הועתקו ללוח', 'info');
     } catch (err) {
-      addLog('❌ שגיאה בהעתקה');
-      console.error('[DevInspector] שגיאה בהעתקת לוגים:', err);
+      addLog('❌ שגיאה בהעתקה', 'error');
     }
   };
 
@@ -491,21 +783,17 @@ ${Object.entries(inspectedElement.props).map(([key, value]) =>
           className={`rounded-full shadow-lg transition-all ${
             isActive ? 'bg-blue-600 hover:bg-blue-700' : ''
           }`}
-          title="Dev Inspector (לחץ ESC לסגירה)"
+          title="זיהוי אלמנטים (לחץ ESC לסגירה)"
         >
           <Bug className="h-5 w-5" />
         </Button>
         
         <Button
           onClick={() => {
-            console.log('[DevInspector] כפתור קונסול נלחץ, מצב נוכחי:', showConsole);
             const newState = !showConsole;
             setShowConsole(newState);
             if (newState) {
-              console.log('[DevInspector] פותח קונסול');
-              addLog('🟢 הקונסול נפתח - DevInspector מוכן!');
-            } else {
-              console.log('[DevInspector] סוגר קונסול');
+              addLog('🟢 הקונסול נפתח - אוסף לוגים ושגיאות', 'info');
             }
           }}
           size="icon"
@@ -513,31 +801,135 @@ ${Object.entries(inspectedElement.props).map(([key, value]) =>
           className={`rounded-full shadow-lg transition-all ${
             showConsole ? 'bg-green-600 hover:bg-green-700' : ''
           }`}
-          title="Console Logs (לחץ ESC לסגירה)"
+          title="קונסול (לחץ ESC לסגירה)"
         >
           <Terminal className="h-5 w-5" />
         </Button>
+        
+        {/* כפתור ניקוי קאש עמוק */}
+        <Button
+          onClick={handleHardRefresh}
+          size="icon"
+          variant="outline"
+          disabled={isRefreshing}
+          className={`rounded-full shadow-lg transition-all hover:bg-red-100 ${
+            isRefreshing ? 'animate-spin' : ''
+          }`}
+          title="ניקוי קאש עמוק וריענון"
+        >
+          <RefreshCw className={`h-5 w-5 text-red-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </Button>
+        
+        {/* כפתור היסטוריה */}
+        {inspectionHistory.length > 0 && (
+          <Button
+            onClick={() => setShowHistory(!showHistory)}
+            size="icon"
+            variant={showHistory ? "default" : "outline"}
+            className={`rounded-full shadow-lg transition-all relative ${
+              showHistory ? 'bg-purple-600 hover:bg-purple-700' : ''
+            }`}
+            title="היסטוריית בדיקות"
+          >
+            <MapPin className="h-5 w-5" />
+            <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+              {inspectionHistory.length}
+            </span>
+          </Button>
+        )}
       </div>
+
+      {/* חלון היסטוריה */}
+      {showHistory && inspectionHistory.length > 0 && (
+        <Card className="dev-inspector-ui fixed bottom-20 start-4 z-[9999] w-[400px] max-w-[calc(100vw-2rem)] max-h-[400px] overflow-hidden shadow-2xl border-2 border-purple-500" dir="rtl">
+          <div className="p-3 bg-gradient-to-r from-purple-50 to-violet-50 border-b border-purple-200 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-purple-600" />
+              <h3 className="text-sm font-bold text-purple-900">📜 היסטוריית בדיקות</h3>
+              <span className="text-xs text-gray-500">({inspectionHistory.length})</span>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6"
+                onClick={() => setInspectionHistory([])}
+                title="נקה היסטוריה"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6"
+                onClick={() => setShowHistory(false)}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+          <div className="overflow-y-auto max-h-[340px]">
+            {inspectionHistory.map((item, index) => (
+              <div
+                key={index}
+                className="p-3 border-b hover:bg-purple-50 cursor-pointer transition-colors"
+                onClick={() => {
+                  setInspectedElement(item);
+                  setShowHistory(false);
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-bold text-sm text-purple-700">{item.componentName}</span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyForCopilot(item);
+                    }}
+                    title="שתף עם Copilot"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="text-xs text-gray-500 truncate">{item.filePath}</div>
+                {item.textContent && (
+                  <div className="text-xs text-gray-400 truncate mt-1">"{item.textContent}"</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* קונסול לוגים */}
       {showConsole && (
-        <Card className="dev-inspector-ui fixed bottom-20 start-4 z-[9999] w-[500px] max-w-[calc(100vw-2rem)] h-[400px] max-h-[calc(100vh-8rem)] shadow-2xl border-2 border-green-500">
+        <Card className="dev-inspector-ui fixed bottom-20 start-4 z-[9999] w-[650px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-8rem)] shadow-2xl border-2 border-green-500" dir="rtl">
           <div className="flex flex-col h-full">
+            {/* כותרת */}
             <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
               <div className="flex items-center gap-2">
                 <Terminal className="h-4 w-4 text-green-600" />
-                <h3 className="text-sm font-bold text-green-900">Console Logs</h3>
-                <span className="text-xs text-gray-500">({consoleLogs.length} הודעות)</span>
+                <h3 className="text-sm font-bold text-green-900">🖥️ קונסול מפתחים</h3>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1 items-center">
+                {/* ספירת שגיאות */}
+                {logCounts.error > 0 && (
+                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {logCounts.error} שגיאות
+                  </span>
+                )}
+                {logCounts.warn > 0 && (
+                  <span className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {logCounts.warn} אזהרות
+                  </span>
+                )}
                 <Button
                   size="icon"
                   variant="ghost"
                   className="h-7 w-7"
-                  onClick={() => {
-                    console.log('[DevInspector] כפתור העתקת לוגים נלחץ');
-                    copyConsoleLogs();
-                  }}
+                  onClick={copyConsoleLogs}
                   title="העתק כל הלוגים"
                 >
                   <Copy className="h-3 w-3" />
@@ -546,10 +938,7 @@ ${Object.entries(inspectedElement.props).map(([key, value]) =>
                   size="icon"
                   variant="ghost"
                   className="h-7 w-7"
-                  onClick={() => {
-                    console.log('[DevInspector] כפתור ניקוי נלחץ');
-                    clearConsole();
-                  }}
+                  onClick={clearConsole}
                   title="נקה קונסול"
                 >
                   <Trash2 className="h-3 w-3" />
@@ -558,10 +947,7 @@ ${Object.entries(inspectedElement.props).map(([key, value]) =>
                   size="icon"
                   variant="ghost"
                   className="h-7 w-7"
-                  onClick={() => {
-                    console.log('[DevInspector] סוגר קונסול');
-                    setShowConsole(false);
-                  }}
+                  onClick={() => setShowConsole(false)}
                   title="סגור"
                 >
                   <X className="h-3 w-3" />
@@ -569,84 +955,185 @@ ${Object.entries(inspectedElement.props).map(([key, value]) =>
               </div>
             </div>
             
+            {/* סרגל כלים */}
+            <div className="flex items-center gap-2 p-2 bg-gray-100 border-b">
+              {/* חיפוש */}
+              <div className="relative flex-1">
+                <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="חפש בלוגים..."
+                  className="w-full text-xs border rounded pr-7 pl-2 py-1 bg-white"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              
+              {/* פילטרים */}
+              <select 
+                className="text-xs border rounded px-2 py-1 bg-white"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as any)}
+                title="סנן לפי סוג"
+                aria-label="סנן לוגים לפי סוג"
+              >
+                <option value="all">🔍 הכל ({logCounts.all})</option>
+                <option value="error">❌ שגיאות ({logCounts.error})</option>
+                <option value="warn">⚠️ אזהרות ({logCounts.warn})</option>
+                <option value="info">ℹ️ מידע ({logCounts.info})</option>
+                <option value="log">📝 לוגים ({logCounts.log})</option>
+              </select>
+              
+              <span className="text-xs text-gray-500">
+                {filteredLogs.length} / {consoleLogs.length}
+              </span>
+            </div>
+            
             <div 
               className="flex-1 overflow-y-auto p-3 bg-gray-900 font-mono text-xs"
+              dir="ltr"
               ref={(el) => {
-                if (el && consoleLogs.length > 0) {
+                if (el && filteredLogs.length > 0 && consoleAutoScroll) {
                   el.scrollTop = el.scrollHeight;
                 }
               }}
             >
-              {consoleLogs.length === 0 ? (
-                <div className="text-gray-500 text-center py-8">
-                  אין לוגים להצגה
-                  <br />
-                  <span className="text-xs">נסה לבצע פעולות כדי לראות לוגים כאן</span>
+              {filteredLogs.length === 0 ? (
+                <div className="text-gray-500 text-center py-8" dir="rtl">
+                  {searchQuery ? (
+                    <>
+                      לא נמצאו תוצאות עבור "{searchQuery}"
+                      <br />
+                      <button 
+                        className="text-blue-400 underline mt-2"
+                        onClick={() => setSearchQuery('')}
+                      >
+                        נקה חיפוש
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      אין לוגים להצגה
+                      <br />
+                      <span className="text-xs">נסה לבצע פעולות כדי לראות לוגים כאן</span>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {consoleLogs.map((log, index) => (
-                    <div 
-                      key={index} 
-                      className="text-green-400 hover:bg-gray-800 px-2 py-1 rounded break-all"
-                    >
-                      {log}
-                    </div>
-                  ))}
+                  {filteredLogs.map((log) => {
+                    const getLogStyle = () => {
+                      switch (log.type) {
+                        case 'error': return 'text-red-400 bg-red-900/20 border-r-2 border-red-500';
+                        case 'warn': return 'text-yellow-400 bg-yellow-900/20 border-r-2 border-yellow-500';
+                        case 'info': return 'text-blue-400';
+                        case 'debug': return 'text-purple-400';
+                        default: return 'text-green-400';
+                      }
+                    };
+                    
+                    const getIcon = () => {
+                      switch (log.type) {
+                        case 'error': return <AlertCircle className="h-3 w-3 text-red-400 flex-shrink-0" />;
+                        case 'warn': return <AlertTriangle className="h-3 w-3 text-yellow-400 flex-shrink-0" />;
+                        case 'info': return <Info className="h-3 w-3 text-blue-400 flex-shrink-0" />;
+                        default: return null;
+                      }
+                    };
+                    
+                    return (
+                      <div 
+                        key={log.id} 
+                        className={`hover:bg-gray-800 px-2 py-1 rounded break-all ${getLogStyle()}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          {getIcon()}
+                          <span className="text-gray-500 flex-shrink-0">[{log.timestamp}]</span>
+                          <span className="flex-1 whitespace-pre-wrap">{log.message}</span>
+                        </div>
+                        {log.source && (
+                          <div className="text-gray-500 text-[10px] mr-5 mt-1">📍 {log.source}</div>
+                        )}
+                        {log.stack && (
+                          <details className="mt-1">
+                            <summary className="text-gray-500 text-[10px] cursor-pointer hover:text-gray-300">
+                              📜 הצג Stack Trace
+                            </summary>
+                            <pre className="text-gray-500 text-[10px] mt-1 whitespace-pre-wrap bg-gray-800 p-2 rounded">{log.stack}</pre>
+                          </details>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
             
-            <div className="p-2 bg-gray-800 border-t border-gray-700 text-[10px] text-gray-400 text-center">
-              לחץ ESC לסגירה | {new Date().toLocaleString('he-IL')}
+            <div className="p-2 bg-gray-800 border-t border-gray-700 text-[10px] text-gray-400 flex justify-between items-center" dir="rtl">
+              <span>💡 ESC לסגירה | גלגל עכבר לגלילה</span>
+              <span>{new Date().toLocaleString('he-IL')}</span>
             </div>
           </div>
         </Card>
       )}
 
       {/* מסגרת תקציר קצרה */}
-      {inspectedElement && (
-        <Card className="dev-inspector-ui fixed bottom-20 start-4 z-[9999] w-80 max-w-[calc(100vw-2rem)] shadow-xl border-2 border-blue-500">
+      {inspectedElement && !showHistory && (
+        <Card className="dev-inspector-ui fixed bottom-20 start-4 z-[9999] w-96 max-w-[calc(100vw-2rem)] shadow-xl border-2 border-blue-500">
           <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50">
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex-1">
-                <div className="text-xs font-semibold text-blue-600 mb-1">תקציר מהיר</div>
+                <div className="text-xs font-semibold text-blue-600 mb-1">🔍 תקציר מהיר</div>
                 <div className="font-mono font-bold text-sm text-blue-900 break-all">
                   {inspectedElement.componentName}
                 </div>
               </div>
               <div className="flex gap-1">
+                {/* כפתור פתח ב-Copilot */}
                 <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6"
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                  }}
+                  size="sm"
+                  variant="default"
+                  className="h-7 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs px-2"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    e.nativeEvent.stopImmediatePropagation();
-                    console.log('🟢🟢🟢 כפתור העתקה בתקציר נלחץ!!!');
-                    addLog('🟢 לחצת על כפתור העתקה');
-                    copyToClipboard();
+                    openInCopilot(inspectedElement);
                   }}
-                  title="העתק מידע"
+                  title="פתח ב-VS Code Copilot Chat"
                 >
-                  {copied ? (
-                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  {copiedForCopilot ? (
+                    <>
+                      <CheckCircle2 className="h-3 w-3 ml-1" />
+                      נפתח!
+                    </>
                   ) : (
-                    <Copy className="h-3 w-3" />
+                    <>
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                      פתח ב-Copilot
+                    </>
                   )}
                 </Button>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-6 w-6"
+                  className="h-7 w-7"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('🔴 כפתור סגירה נלחץ');
+                    captureAndSave(inspectedElement);
+                  }}
+                  disabled={isCapturingScreenshot}
+                  title="צלם ושמור"
+                >
+                  <Camera className={`h-3 w-3 ${isCapturingScreenshot ? 'animate-pulse' : ''}`} />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     setInspectedElement(null);
                   }}
                 >

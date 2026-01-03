@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Timer, Play, Pause, Square, Clock, Plus, Trash2, Briefcase, Book, BookOpen, Dumbbell, Heart, Rocket, Bell, Hourglass } from "lucide-react";
+import { Timer, Play, Pause, Square, Clock, Plus, Trash2, Briefcase, Book, BookOpen, Dumbbell, Heart, Rocket, Bell, Hourglass, Coffee, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,14 @@ export function FloatingTimer() {
   const [countdownMinutes, setCountdownMinutes] = useState(25);
   const [countdownSeconds, setCountdownSeconds] = useState(0);
   const [countdownCompleted, setCountdownCompleted] = useState(false);
+  const [pomodoroMode, setPomodoroMode] = useState(false);
+  const [pomodoroCount, setPomodoroCount] = useState(0);
+  const [isBreak, setIsBreak] = useState(false);
+
+  // Pomodoro presets
+  const POMODORO_WORK = 25;
+  const POMODORO_SHORT_BREAK = 5;
+  const POMODORO_LONG_BREAK = 15;
 
   // Set up countdown complete notification
   useEffect(() => {
@@ -328,8 +336,41 @@ export function FloatingTimer() {
             </Button>
           </div>
 
+          {/* Pomodoro Mode Toggle */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-red-50 border border-red-200">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-red-600" />
+              <div>
+                <span className="font-medium text-red-700">מצב פומודורו</span>
+                <p className="text-xs text-red-600/70">25 דק' עבודה → 5 דק' הפסקה</p>
+              </div>
+            </div>
+            <Button
+              variant={pomodoroMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setPomodoroMode(!pomodoroMode);
+                if (!pomodoroMode) {
+                  setIsCountdownMode(true);
+                  setCountdownMinutes(POMODORO_WORK);
+                  setCountdownSeconds(0);
+                }
+              }}
+              className={cn("gap-2", pomodoroMode && "bg-red-600 hover:bg-red-700")}
+            >
+              {pomodoroMode ? (
+                <>
+                  <Coffee className="h-4 w-4" />
+                  פעיל ({pomodoroCount} 🍅)
+                </>
+              ) : (
+                "כבוי"
+              )}
+            </Button>
+          </div>
+
           {/* Countdown Time Selector */}
-          {isCountdownMode && (
+          {isCountdownMode && !pomodoroMode && (
             <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
               <Label className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />

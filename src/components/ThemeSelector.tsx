@@ -91,26 +91,31 @@ export const ThemeSelector = () => {
             </div>
           </div>
           
-          {theme.isCustom && (
-            <div className="absolute top-2 left-2 flex gap-1">
-              <CustomThemeDialog 
-                editTheme={themeToEdit} 
-                onSaveTheme={handleEditTheme} 
-                onEditComplete={() => setThemeToEdit(null)} 
-                trigger={
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-7 w-7 p-0 hover:bg-primary/10" 
-                    onClick={e => {
-                      e.stopPropagation();
+          {/* אייקוני עריכה ומחיקה - לכל ערכות הנושא */}
+          <div className="absolute top-2 left-2 flex gap-1">
+            <CustomThemeDialog 
+              editTheme={theme.isCustom ? themeToEdit : null}
+              onSaveTheme={theme.isCustom ? handleEditTheme : handleAddTheme}
+              onEditComplete={() => setThemeToEdit(null)}
+              defaultValues={!theme.isCustom ? { name: `${theme.label} (מותאם)`, colors: theme.colors as ExtendedThemeColors } : undefined}
+              trigger={
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 w-7 p-0 hover:bg-primary/10" 
+                  onClick={e => {
+                    e.stopPropagation();
+                    if (theme.isCustom) {
                       setThemeToEdit(theme);
-                    }}
-                  >
-                    <Edit2 className="w-3 h-3 text-primary" />
-                  </Button>
-                } 
-              />
+                    }
+                  }}
+                  title={theme.isCustom ? "ערוך ערכת נושא" : "צור עותק מותאם"}
+                >
+                  <Edit2 className="w-3 h-3 text-primary" />
+                </Button>
+              } 
+            />
+            {theme.isCustom && (
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -119,11 +124,12 @@ export const ThemeSelector = () => {
                   e.stopPropagation();
                   setThemeToDelete(theme.name);
                 }}
+                title="מחק ערכת נושא"
               >
                 <Trash2 className="w-3 h-3 text-destructive" />
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       ))}
     </div>
