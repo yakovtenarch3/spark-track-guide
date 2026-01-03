@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import html2canvas from 'html2canvas';
 import { useDeveloperMode } from '@/hooks/useDeveloperMode';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface LogEntry {
   id: number;
@@ -44,6 +45,7 @@ const LOG_TYPE_LABELS: Record<string, string> = {
 
 export function DevInspector() {
   const { enabled, consoleEnabled, inspectorEnabled, hardRefresh, consoleAutoScroll, consoleFilter } = useDeveloperMode();
+  const isMobile = useIsMobile();
   const [isActive, setIsActive] = useState(false);
   const [inspectedElement, setInspectedElement] = useState<InspectedElement | null>(null);
   const [hoveredElement, setHoveredElement] = useState<HTMLElement | null>(null);
@@ -769,6 +771,11 @@ ${Object.entries(inspectedElement.props).map(([key, value]) =>
 
   // Don't render if dev mode is disabled
   if (!enabled) {
+    return null;
+  }
+
+  // לא להציג במובייל
+  if (isMobile) {
     return null;
   }
 
