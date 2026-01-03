@@ -120,10 +120,12 @@ function Test-Prerequisites {
         $nodeVersion = node --version 2>$null
         if ($nodeVersion) {
             Write-Success "Node.js $nodeVersion מותקן"
-        } else {
+        }
+        else {
             throw "Node.js לא נמצא"
         }
-    } catch {
+    }
+    catch {
         Write-Error "Node.js לא מותקן! התקן מ: https://nodejs.org"
         $allGood = $false
     }
@@ -134,10 +136,12 @@ function Test-Prerequisites {
         $bunVersion = bun --version 2>$null
         if ($bunVersion) {
             Write-Success "Bun $bunVersion מותקן"
-        } else {
+        }
+        else {
             throw "Bun לא נמצא"
         }
-    } catch {
+    }
+    catch {
         Write-Error "Bun לא מותקן!"
         Write-Info "להתקנה: powershell -c `"irm bun.sh/install.ps1 | iex`""
         $allGood = $false
@@ -149,10 +153,12 @@ function Test-Prerequisites {
         $gitVersion = git --version 2>$null
         if ($gitVersion) {
             Write-Success "$gitVersion מותקן"
-        } else {
+        }
+        else {
             throw "Git לא נמצא"
         }
-    } catch {
+    }
+    catch {
         Write-Error "Git לא מותקן! התקן מ: https://git-scm.com"
         $allGood = $false
     }
@@ -163,10 +169,12 @@ function Test-Prerequisites {
         $codeVersion = code --version 2>$null | Select-Object -First 1
         if ($codeVersion) {
             Write-Success "VS Code $codeVersion מותקן"
-        } else {
+        }
+        else {
             throw "VS Code לא נמצא"
         }
-    } catch {
+    }
+    catch {
         Write-Info "VS Code לא נמצא (אופציונלי, נדרש לחיבור Copilot)"
     }
     
@@ -187,7 +195,8 @@ function Clear-ProjectCache {
     if (Test-Path $NodeModulesPath) {
         Remove-Item -Recurse -Force $NodeModulesPath
         Write-Success "node_modules נמחק"
-    } else {
+    }
+    else {
         Write-Info "node_modules לא קיים"
     }
     
@@ -197,7 +206,8 @@ function Clear-ProjectCache {
     if (Test-Path $viteCachePath) {
         Remove-Item -Recurse -Force $viteCachePath
         Write-Success "Vite cache נמחק"
-    } else {
+    }
+    else {
         Write-Info "Vite cache לא קיים"
     }
     
@@ -207,7 +217,8 @@ function Clear-ProjectCache {
     if (Test-Path $distPath) {
         Remove-Item -Recurse -Force $distPath
         Write-Success "dist נמחק"
-    } else {
+    }
+    else {
         Write-Info "dist לא קיים"
     }
     
@@ -216,7 +227,8 @@ function Clear-ProjectCache {
     try {
         bun pm cache rm 2>$null
         Write-Success "Bun cache נוקה"
-    } catch {
+    }
+    catch {
         Write-Info "לא הצלחתי לנקות Bun cache"
     }
     
@@ -236,7 +248,8 @@ function Install-Dependencies {
     try {
         bun install
         Write-Success "כל ה-dependencies הותקנו!"
-    } catch {
+    }
+    catch {
         Write-Error "שגיאה בהתקנה: $_"
         exit 1
     }
@@ -290,13 +303,13 @@ function Initialize-VSCodeSettings {
     # settings.json
     $settingsPath = Join-Path $vscodeDir "settings.json"
     $settings = @{
-        "editor.formatOnSave" = $true
-        "editor.defaultFormatter" = "esbenp.prettier-vscode"
+        "editor.formatOnSave"                          = $true
+        "editor.defaultFormatter"                      = "esbenp.prettier-vscode"
         "typescript.preferences.importModuleSpecifier" = "relative"
-        "editor.codeActionsOnSave" = @{
+        "editor.codeActionsOnSave"                     = @{
             "source.fixAll.eslint" = "explicit"
         }
-        "files.associations" = @{
+        "files.associations"                           = @{
             "*.css" = "tailwindcss"
         }
     }
