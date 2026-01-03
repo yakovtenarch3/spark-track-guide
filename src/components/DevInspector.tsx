@@ -538,8 +538,11 @@ ${Object.entries(element.props).map(([key, value]) => `  ${key}: ${typeof value 
     }
   };
 
-  // הוספת/הסרת event listeners
+  // הוספת/הסרת event listeners - רק אם לא מובייל
   useEffect(() => {
+    // לא לרשום event listeners במובייל
+    if (isMobile) return;
+    
     if (isActive) {
       document.addEventListener('mousemove', handleMouseMove, true);
       document.addEventListener('click', handleClick, true);
@@ -562,7 +565,7 @@ ${Object.entries(element.props).map(([key, value]) => `  ${key}: ${typeof value 
       document.removeEventListener('mouseup', handleClick, true);
       document.body.style.cursor = '';
     };
-  }, [isActive, handleMouseMove, handleClick]);
+  }, [isActive, isMobile, handleMouseMove, handleClick]);
 
   // סימון האלמנט שמרחפים מעליו
   useEffect(() => {
