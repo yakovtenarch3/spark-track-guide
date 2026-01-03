@@ -121,14 +121,12 @@ const Accountability = () => {
   const handleBackupData = async () => {
     setIsBackingUp(true);
     try {
-      const [habits, habitCompletions, dailyGoals, dailyGoalLogs, wakeUpLogs, tasks, journalEntries, timerSessions, timerTopics] = await Promise.all([
+      const [habits, habitCompletions, dailyGoals, dailyGoalLogs, wakeUpLogs, timerSessions, timerTopics] = await Promise.all([
         supabase.from('habits').select('*'),
         supabase.from('habit_completions').select('*'),
         supabase.from('daily_goals').select('*'),
         supabase.from('daily_goal_logs').select('*'),
         supabase.from('wake_up_logs').select('*'),
-        supabase.from('tasks').select('*'),
-        supabase.from('journal_entries').select('*'),
         supabase.from('timer_sessions').select('*'),
         supabase.from('timer_topics').select('*'),
       ]);
@@ -142,8 +140,6 @@ const Accountability = () => {
           dailyGoals: dailyGoals.data || [],
           dailyGoalLogs: dailyGoalLogs.data || [],
           wakeUpLogs: wakeUpLogs.data || [],
-          tasks: tasks.data || [],
-          journalEntries: journalEntries.data || [],
           timerSessions: timerSessions.data || [],
           timerTopics: timerTopics.data || [],
         }
@@ -208,16 +204,6 @@ const Accountability = () => {
       if (dataToRestore.wakeUpLogs?.length) {
         for (const log of dataToRestore.wakeUpLogs) {
           await supabase.from('wake_up_logs').upsert(log, { onConflict: 'id' });
-        }
-      }
-      if (dataToRestore.tasks?.length) {
-        for (const task of dataToRestore.tasks) {
-          await supabase.from('tasks').upsert(task, { onConflict: 'id' });
-        }
-      }
-      if (dataToRestore.journalEntries?.length) {
-        for (const entry of dataToRestore.journalEntries) {
-          await supabase.from('journal_entries').upsert(entry, { onConflict: 'id' });
         }
       }
       if (dataToRestore.timerSessions?.length) {
@@ -404,7 +390,7 @@ const Accountability = () => {
                   <Settings2 className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56" dir="rtl">
+              <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>ניהול מעקב</DropdownMenuLabel>
                 <DropdownMenuSeparator />
 

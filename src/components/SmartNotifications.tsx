@@ -115,7 +115,6 @@ export const SmartNotifications = () => {
         icon: "/favicon.ico",
         badge: "/favicon.ico",
         tag: "test-notification",
-        vibrate: settings.vibrationEnabled ? [200, 100, 200] : undefined,
         silent: !settings.soundEnabled,
       });
       toast.success("התראת בדיקה נשלחה!");

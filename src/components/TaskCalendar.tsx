@@ -91,11 +91,10 @@ export const TaskCalendar = () => {
     };
 
     // Add the item as a task with special prefix
-    addTask({
+    addTask.mutate({
       title: `${addType === "meeting" ? "👥 " : addType === "reminder" ? "🔔 " : ""}${newItemTitle}`,
       description: newItemDescription + (newItemTime ? `\n⏰ שעה: ${newItemTime}` : ""),
       priority: priorityMap[addType],
-      category: categoryMap[addType],
       due_date: selectedDate,
     });
 
@@ -165,7 +164,7 @@ export const TaskCalendar = () => {
             </div>
           </Card>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" className="w-48" dir="rtl">
+        <DropdownMenuContent align="center" className="w-48">
           <DropdownMenuItem onClick={() => openAddDialog("task")} className="cursor-pointer">
             <ListTodo className="w-4 h-4 ml-2" />
             הוסף משימה
