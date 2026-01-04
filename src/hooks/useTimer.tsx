@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { startOfDay, startOfWeek, isToday, isSameDay, subDays } from 'date-fns';
 
 export interface TimerTopic {
   id: string;
@@ -23,6 +24,18 @@ export interface TimerSession {
   created_at: string;
 }
 
+export interface TimerGoal {
+  id: string;
+  topic_id: string;
+  daily_target_minutes: number;
+  weekly_target_minutes: number;
+  reminder_enabled: boolean;
+  reminder_time: string | null;
+  reminder_days: number[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TimerState {
   isRunning: boolean;
   isPaused: boolean;
@@ -32,6 +45,18 @@ export interface TimerState {
   isCountdown: boolean;
   countdownDuration: number;
   remainingSeconds: number;
+}
+
+export interface TopicWithStats {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  sessionCount: number;
+  totalTime: number;
+  todayMinutes: number;
+  weekMinutes: number;
+  goal?: TimerGoal;
 }
 
 export function useTimer() {
@@ -73,6 +98,58 @@ export function useTimer() {
       return data as TimerSession[];
     },
   });
+
+  // Fetch goals
+  const { data: goals = [], isLoading: goalsLoading } = useQuery({
+    queryKey: ['timer-goals'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('timer_goals')
+        .select('*')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data as TimerGoal[];
+    },
+  });
+
+  // Calculate topics with stats
+  const topicsWithStats: TopicWithStats[] = useMemo(() => {
+    const now = new Date();
+    const today = startOfDay(now);
+    const weekStart = startOfWeek(now, { weekStartsOn: 0 });
+
+    return topics.map((topic) => {
+      const topicSessions = sessions.filter((s) => s.topic_id === topic.id);
+      const totalTime = topicSessions.reduce((acc, s) => acc + s.duration_seconds, 0);
+
+      const todaySessions = topicSessions.filter((s) =>
+        isToday(new Date(s.created_at))
+      );
+      const todaySeconds = todaySessions.reduce(
+        (acc, s) => acc + s.duration_seconds,
+        0
+      );
+
+      const weekSessions = topicSessions.filter(
+        (s) => new Date(s.created_at) >= weekStart
+      );
+      const weekSeconds = weekSessions.reduce(
+        (acc, s) => acc + s.duration_seconds,
+        0
+      );
+
+      const goal = goals.find((g) => g.topic_id === topic.id);
+
+      return {
+        ...topic,
+        sessionCount: topicSessions.length,
+        totalTime,
+        todayMinutes: Math.round(todaySeconds / 60),
+        weekMinutes: Math.round(weekSeconds / 60),
+        goal,
+      };
+    });
+  }, [topics, sessions, goals]);
 
   // Add topic mutation
   const addTopicMutation = useMutation({
@@ -154,6 +231,71 @@ export function useTimer() {
     },
     onError: () => {
       toast.error('שגיאה במחיקת רשומה');
+    },
+  });
+
+  // Add goal mutation
+  const addGoalMutation = useMutation({
+    mutationFn: async (goal: Omit<TimerGoal, 'id' | 'created_at' | 'updated_at'>) => {
+      const { data, error } = await supabase
+        .from('timer_goals')
+        .insert([goal])
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timer-goals'] });
+      toast.success('יעד נוסף בהצלחה');
+    },
+    onError: () => {
+      toast.error('שגיאה בהוספת יעד');
+    },
+  });
+
+  // Update goal mutation
+  const updateGoalMutation = useMutation({
+    mutationFn: async ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: Partial<TimerGoal>;
+    }) => {
+      const { data, error } = await supabase
+        .from('timer_goals')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timer-goals'] });
+      toast.success('יעד עודכן');
+    },
+    onError: () => {
+      toast.error('שגיאה בעדכון יעד');
+    },
+  });
+
+  // Delete goal mutation
+  const deleteGoalMutation = useMutation({
+    mutationFn: async (goalId: string) => {
+      const { error } = await supabase
+        .from('timer_goals')
+        .delete()
+        .eq('id', goalId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timer-goals'] });
+      toast.success('יעד נמחק');
+    },
+    onError: () => {
+      toast.error('שגיאה במחיקת יעד');
     },
   });
 
@@ -279,8 +421,11 @@ export function useTimer() {
   return {
     topics,
     sessions,
+    goals,
+    topicsWithStats,
     topicsLoading,
     sessionsLoading,
+    goalsLoading,
     timerState,
     startTimer,
     pauseTimer,
@@ -291,6 +436,10 @@ export function useTimer() {
     deleteTopic: deleteTopicMutation.mutate,
     saveSession: saveSessionMutation.mutate,
     deleteSession: deleteSessionMutation.mutate,
+    addGoal: addGoalMutation.mutate,
+    updateGoal: (id: string, updates: Partial<TimerGoal>) =>
+      updateGoalMutation.mutate({ id, updates }),
+    deleteGoal: deleteGoalMutation.mutate,
     formatTime,
     setOnCountdownComplete,
   };

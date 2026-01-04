@@ -599,6 +599,50 @@ export type Database = {
           },
         ]
       }
+      timer_goals: {
+        Row: {
+          created_at: string
+          daily_target_minutes: number
+          id: string
+          reminder_days: number[] | null
+          reminder_enabled: boolean
+          reminder_time: string | null
+          topic_id: string | null
+          updated_at: string
+          weekly_target_minutes: number
+        }
+        Insert: {
+          created_at?: string
+          daily_target_minutes?: number
+          id?: string
+          reminder_days?: number[] | null
+          reminder_enabled?: boolean
+          reminder_time?: string | null
+          topic_id?: string | null
+          updated_at?: string
+          weekly_target_minutes?: number
+        }
+        Update: {
+          created_at?: string
+          daily_target_minutes?: number
+          id?: string
+          reminder_days?: number[] | null
+          reminder_enabled?: boolean
+          reminder_time?: string | null
+          topic_id?: string | null
+          updated_at?: string
+          weekly_target_minutes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timer_goals_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "timer_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       timer_sessions: {
         Row: {
           created_at: string
