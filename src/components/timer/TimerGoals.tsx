@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Target,
   Trophy,
@@ -29,6 +29,12 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { 
+  saveTimerReminder, 
+  removeTimerReminder, 
+  requestNotificationPermission 
+} from "@/utils/notificationScheduler";
+import { toast } from "sonner";
 
 interface TimerGoal {
   id: string;
@@ -84,6 +90,22 @@ export function TimerGoals({
   const [reminderTime, setReminderTime] = useState("09:00");
   const [reminderDays, setReminderDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
 
+  // Sync reminders with localStorage when goals change
+  useEffect(() => {
+    goals.forEach((goal) => {
+      const topic = topicsWithStats.find((t) => t.id === goal.topic_id);
+      if (goal.reminder_enabled && goal.reminder_time && topic) {
+        saveTimerReminder({
+          goalId: goal.id,
+          topicName: topic.name,
+          time: goal.reminder_time,
+          days: goal.reminder_days || [0, 1, 2, 3, 4, 5, 6],
+          enabled: true,
+        });
+      }
+    });
+  }, [goals, topicsWithStats]);
+
   const resetForm = () => {
     setSelectedTopicId("");
     setDailyTarget(60);
@@ -94,17 +116,41 @@ export function TimerGoals({
     setEditingGoal(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedTopicId && !editingGoal) return;
 
+    const topicId = editingGoal?.topic_id || selectedTopicId;
+    const topic = topicsWithStats.find((t) => t.id === topicId);
+
     const goalData = {
-      topic_id: editingGoal?.topic_id || selectedTopicId,
+      topic_id: topicId,
       daily_target_minutes: dailyTarget,
       weekly_target_minutes: weeklyTarget,
       reminder_enabled: reminderEnabled,
       reminder_time: reminderEnabled ? reminderTime : null,
       reminder_days: reminderDays,
     };
+
+    // Request notification permission if reminder is enabled
+    if (reminderEnabled) {
+      const hasPermission = await requestNotificationPermission();
+      if (!hasPermission) {
+        toast.error('יש לאשר התראות בדפדפן כדי לקבל תזכורות');
+      } else {
+        // Save reminder to localStorage for the scheduler
+        saveTimerReminder({
+          goalId: editingGoal?.id || topicId,
+          topicName: topic?.name || 'נושא',
+          time: reminderTime,
+          days: reminderDays,
+          enabled: true,
+        });
+        toast.success('התראות push הופעלו בהצלחה!');
+      }
+    } else {
+      // Remove reminder if disabled
+      removeTimerReminder(editingGoal?.id || topicId);
+    }
 
     if (editingGoal) {
       onUpdateGoal(editingGoal.id, goalData);
@@ -131,6 +177,13 @@ export function TimerGoals({
     setReminderDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
     );
+  };
+
+  const handleDeleteGoal = (goalId: string) => {
+    // Remove reminder from localStorage
+    removeTimerReminder(goalId);
+    // Delete goal from database
+    onDeleteGoal(goalId);
   };
 
   // Get topics that don't have goals yet
@@ -253,7 +306,7 @@ export function TimerGoals({
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => onDeleteGoal(goal.id)}
+                            onClick={() => handleDeleteGoal(goal.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
